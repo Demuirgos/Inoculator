@@ -53,12 +53,12 @@ public class PropertyParser {
             if(code[index] != ".set") {
                 return;
             }
-            while(code[index + 1] != "}" ) {
+            while(code[index - 1] != "void" ) {
                 index += 1;
             }
-            var token = code[index];
             property.Setter = code[index].Substring(0, code[index].IndexOf("("));
-            index++;
+
+            while(code[index++] != "}" ){}
         }
 
         void ParseAttributes (ref int index, ref string[] code, ref Property property)

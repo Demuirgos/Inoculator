@@ -1,0 +1,66 @@
+using System;
+using System.Reflection;
+class Name {
+[Interceptor]
+int testOverwritten() {
+    int j = 0;
+    Point X = new Point{
+        x = 23
+        };
+    Console.WriteLine("Hello World");
+    return j; 
+}
+
+[Interceptor]
+static void statictestOverwritten2() {
+    Console.WriteLine("Hello World");
+}
+
+[Interceptor]
+private Object testOverwritten3() {
+    Console.WriteLine("Hello World");
+    return new object(); 
+}
+
+
+int test() {
+    var InterceptorAttribute = new InterceptorAttribute();
+    var method = new MethodMetadata{
+        MethodName = nameof(testOverwritten)
+        };
+    InterceptorAttribute.OnEntry(method);
+    try {
+        method.ReturnValue = testOverwritten();
+        InterceptorAttribute.OnSuccess(method);
+        return (int)method.ReturnValue;
+    } catch (Exception e) {
+        method.Exception = e;
+        InterceptorAttribute.OnException(method);
+    } finally {
+        InterceptorAttribute.OnExit(method);
+    }
+    return default;
+}        
+
+
+public class MethodMetadata {
+    public String MethodName { get; set; }
+    public String[] Attributes { get; set; } 
+    public object[] Parameters { get; set; }
+    public object ReturnValue { get; set; }
+    public Exception? Exception { get; set; }
+}
+
+public class InterceptorAttribute : Attribute {
+    public InterceptorAttribute() { }
+    public void OnEntry(MethodMetadata method) {}
+    public void OnException(MethodMetadata method) {}
+    public void OnSuccess(MethodMetadata method) {}
+    public void OnExit(MethodMetadata method) {}
+
+}
+    
+public struct Point {
+    public int x;
+}
+}

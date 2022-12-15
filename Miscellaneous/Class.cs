@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 
-public class Class {
+public class Class : Printable<Class> {
     public enum ClassType {
         Class,
         Struct,
@@ -19,19 +19,14 @@ public class Class {
     public Class[] TypeDefs { get; set; }
     public string[] Attributes { get; set; }
     public string[] Modifiers { get; set; }
-    public ClassType Type => BaseClass switch 
+    public ClassType? Type => BaseClass switch 
     {
         "[System.Runtime]System.MulticastDelegate" => ClassType.Delegate,
         "[System.Runtime]System.Enum" => ClassType.Enum,
         "[System.Runtime]System.ValueType" => ClassType.Struct,
-        _ => Modifiers.Contains("interface") ? ClassType.Interface : ClassType.Class
+        _ => Modifiers is not null 
+                ? Modifiers.Contains("interface") ? ClassType.Interface : ClassType.Class
+                : null
     };
     public string[] Body { get; set; }
-
-    public override string ToString()
-    {
-        return JsonSerializer.Serialize(this, new JsonSerializerOptions {
-            WriteIndented = true
-        });
-    }
 }

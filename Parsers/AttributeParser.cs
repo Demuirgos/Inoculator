@@ -23,7 +23,9 @@ public class AttributeParser {
             && code[index] != ".property" && code[index] != ".event" 
             && code[index] != ".get"      && code[index] != ".set" 
             && code[index] != ".removeon" && code[index] != ".addon" 
-            && code[index] != "}"         && code[index] != ".class" ) {
+            && code[index] != "}"         && code[index] != ".class" 
+            && code[index] != ".hash"     && code[index] != ".permissionset" 
+            && code[index] != ".ver") {
             if(code[index].Contains("::.ctor")) {
                 var token = code[index++]; 
                 attribute = token.Substring(0, token.IndexOf("::.ctor"));
