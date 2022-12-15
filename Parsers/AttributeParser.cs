@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Text;
 using System.ComponentModel;
+using System.ComponentModel.Design;
 
 namespace Inoculator.Core;
 
@@ -17,15 +18,11 @@ public class AttributeParser {
         if(code[index] != ".custom") {
             return;
         }
+        index += 1;
+        //  Note: This is a very naive implementation of this method.
+        bool IsNextBlockStarting(string keywork) => keywork[0] == '.' ;
 
-        while(index < code.Length - 1 
-            && code[index] != ".field"    && code[index] != ".method" 
-            && code[index] != ".property" && code[index] != ".event" 
-            && code[index] != ".get"      && code[index] != ".set" 
-            && code[index] != ".removeon" && code[index] != ".addon" 
-            && code[index] != "}"         && code[index] != ".class" 
-            && code[index] != ".hash"     && code[index] != ".permissionset" 
-            && code[index] != ".ver") {
+        while(index < code.Length - 1 && !IsNextBlockStarting(code[index])) {
             if(code[index].Contains("::.ctor")) {
                 var token = code[index++]; 
                 attribute = token.Substring(0, token.IndexOf("::.ctor"));

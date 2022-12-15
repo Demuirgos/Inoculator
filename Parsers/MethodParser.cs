@@ -84,6 +84,7 @@ public class MethodParser {
             }
 
             method.MaxStack = int.Parse(code[++index]);
+            index += 1;
         }
 
         void  ParseLocalInits (ref int index, ref string[] code, ref Method method)
@@ -134,11 +135,24 @@ public class MethodParser {
 
         void ParseBody (ref int index, ref string[] code, ref Method method)
         {
-            List<String> body = new List<String>();
+            Dictionary<String, String> body = new();
+            String currentKey = String.Empty;
+            StringBuilder sb = new();
             while(code[index] != "}") {
-                body.Add(code[index++]);
+                if(code[index].EndsWith(":")) {
+                    if(currentKey != String.Empty) {
+                        body.Add(currentKey, sb.ToString());
+                        sb.Clear();
+                    }
+                    currentKey = code[index][..^1];
+                    index++;
+                    continue;
+                } else {
+                    sb.Append(code[index++]);
+                    sb.Append(" ");
+                }
             }
-            method.Body = body.ToArray();
+            method.Body = body;
             index++;
         }
 

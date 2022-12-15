@@ -3,12 +3,13 @@ using System.Extensions;
 using Inoculator.Core;
 
 string fieldIl = File.ReadAllText("./Test.il");
-var tokens = fieldIl.Split(new char[] { ' ', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-int i = 0;
-Result<Assembly, Exception> result = AssemblyParser.Parse(ref i, tokens);
+var tokens = fieldIl.Split(
+        new char[] { ' ', '\n', '\r' }, 
+        StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+    );
 
-if(result is Success<Assembly, Exception> success) {
-    Console.WriteLine(success.Value);
-} else {
-    Console.WriteLine(result);
-}
+AssemblyParser.Parse(tokens)
+    .Bind(assembly => {
+        Console.WriteLine(assembly);
+        return Success<Assembly, Exception>.From(assembly);
+    });

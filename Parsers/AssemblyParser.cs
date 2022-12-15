@@ -74,8 +74,9 @@ public class AssemblyParser {
         }
 
     }
-    public static Result<Assembly, Exception> Parse(ref int i, string[] tokens)
+    public static Result<Assembly, Exception> Parse(string[] tokens)
     {
+        int i = 0;
         ParseAssembly(ref i, ref tokens, out Assembly module);
         if(module == null) {
             return Error<Assembly, Exception>.From(new Exception("Failed to parse assembly"));

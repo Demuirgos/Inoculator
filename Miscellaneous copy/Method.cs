@@ -7,7 +7,7 @@ public class Method : Printable<Method> {
     public String Name { get; set; }
     public String Type { get; set; }
     public String[] Modifiers { get; set; }
-    public String[] Body { get; set; }
+    public Dictionary<string, String> Body { get; set; }
     public string[] Lines { get; set; }
     public Argument[] LocalsInits { get; set; }
     public bool? IsStatic => Modifiers?.Contains("static");
