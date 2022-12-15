@@ -14,7 +14,6 @@ public class MethodParser {
     public static void ParseMethod(ref int index, ref string[] code, out Method method)
     {
         method = new Method();
-
         void ParseModifiers(ref int index, ref string[] code, ref Method method)
         {
             List<String> modifiers = new List<String>();
@@ -24,13 +23,6 @@ public class MethodParser {
             }
             modifiers.Add(code[index++]);
             
-            Console.Write($"Modifiers : ");
-            foreach (var modifier in modifiers)
-            {
-                Console.Write($"{modifier}, ");
-            }
-            Console.WriteLine();
-
             method.Modifiers = modifiers.ToArray();
         }
         
@@ -48,23 +40,14 @@ public class MethodParser {
                 });
                 index++;
             } else {
+                index++;
                 while(code[index] != ")") {
-                    
                     ArgumentTokens.Add(new Argument {
                         Type = code[index++],
-                        Name = code[index++]
+                        Name = code[index++].Replace(",", String.Empty)
                     });
-                    if(code[index] == ",") {
-                        index += 1;
-                    }
                 }
             }
-            Console.Write($"Signature : ");
-            foreach (var param in ArgumentTokens)
-            {
-                Console.Write($"({param.Type} ");
-            }
-            Console.WriteLine(") => {0} as {1}", method.ReturnValue.Type, method.Name);
 
             method.Parameters = ArgumentTokens.ToArray();
             index += 1;
@@ -76,15 +59,19 @@ public class MethodParser {
                 index += 1;
             }
             index++;
+            return;
         }
+
         void ParseAttributes (ref int index, ref string[] code, ref Method method)
         {
             List<String> attributes = new List<String>();
-            while(code[index] != ".maxstack") {
-                if(code[index].EndsWith("Attribute::.ctor")) {
-                    attributes.Add(code[index++].Replace("::.ctor", String.Empty));
-                } else {
-                    index += 1;
+            while(code[index] == ".custom") {
+                var attributeResult = AttributeParser.Parse(ref index, code);
+                switch(attributeResult) {
+                    case Success<String, Exception> success:
+                        attributes.Add(success.Value);
+                        break;
+                    default : break;
                 }
             }
             method.Attributes = attributes.ToArray();
@@ -92,13 +79,19 @@ public class MethodParser {
 
         void ParseStackSize (ref int index, ref string[] code, ref Method method)
         {
-            if(code[index++] == ".maxstack") {
-                method.MaxStack = int.Parse(code[index++]);
+            if(code[index] != ".maxstack") {
+                return;
             }
+
+            method.MaxStack = int.Parse(code[++index]);
         }
 
         void  ParseLocalInits (ref int index, ref string[] code, ref Method method)
         {
+            if(code[index] != ".locals") {
+                return;
+            }
+
             List<Argument> locals = new List<Argument>();
             while(code[index] is ".locals" or "init" or "(") {
                 index += 1;
@@ -146,6 +139,7 @@ public class MethodParser {
                 body.Add(code[index++]);
             }
             method.Body = body.ToArray();
+            index++;
         }
 
         if(code[index++] == ".method") {
@@ -156,50 +150,14 @@ public class MethodParser {
             ParseStackSize(ref index, ref code, ref method);
             ParseLocalInits(ref index, ref code, ref method);
             ParseBody(ref index, ref code, ref method);
-        }
+        } else method = null;
     }
-    public static Result<Method, Exception> Parse(string code)
+    public static Result<Method, Exception> Parse(ref int i, string[] tokens)
     {
-        string[] tokens = code.Split(new char[] {'\n', ' '}, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        // print tokens
-        foreach (var token in tokens)
-        {
-            Console.WriteLine($"{token}, ");
+        ParseMethod(ref i, ref tokens, out Method method);
+        if(method is null) {
+            return Error<Method, Exception>.From(new Exception("Method is null"));
         }
-        int index = 0;
-        ParseMethod(ref index, ref tokens, out Method method);
         return Success<Method, Exception>.From(method);
     }
 }
-/*
-.method public hidebysig static 
-        object test (
-            string code,
-            string path
-        ) cil managed 
-    {
-        .custom instance void System.Runtime.CompilerServices.NullableContextAttribute::.ctor(uint8) = (
-            01 00 01 00 00
-        )
-        .custom instance void Inoculator.Core.InterceptorAttribute::.ctor() = (
-            01 00 00 00
-        )
-        .param [0]
-            .custom instance void System.Runtime.CompilerServices.NullableAttribute::.ctor(uint8) = (
-                01 00 02 00 00
-            )
-        // Method begins at RVA 0x20fc
-        // Code size 11 (0xb)
-        .maxstack 1
-        .locals init (
-            [0] object
-        )
-
-        IL_0000: nop
-        IL_0001: newobj instance void [System.Runtime]System.Object::.ctor()
-        IL_0006: stloc.0
-        IL_0007: br.s IL_0009
-
-        IL_0009: ldloc.0
-        IL_000a: ret
-    }*/
