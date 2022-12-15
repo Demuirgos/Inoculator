@@ -78,7 +78,6 @@ public class EventParser {
             ParseAttributes(ref index, ref code, ref eventProp);
             ParseAdder(ref index, ref code, ref eventProp);
             ParseRemover(ref index, ref code, ref eventProp);
-            Console.WriteLine(code[index]);
         } else eventProp = null;
 
     }

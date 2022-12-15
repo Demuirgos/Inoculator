@@ -18,7 +18,7 @@ public class AssemblyParser {
         void ParseModifiers(ref int index, ref string[] code, ref Assembly module)
         {
             module.Name =code[++index];
-            index++;
+            index+=2;
         }
 
         void ParseClasses (ref int index, ref string[] code, ref Assembly module)
