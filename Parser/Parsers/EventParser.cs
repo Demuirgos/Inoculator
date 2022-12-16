@@ -1,14 +1,10 @@
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Extensions;
-using System.Diagnostics;
-using System.Reflection;
-using System.Text;
-using System.ComponentModel;
+using Inoculator.Parser.Models;
+using Attribute = Inoculator.Parser.Models.Attribute;
 
-namespace Inoculator.Core;
+namespace Inoculator.Parser.Core;
 
 public class EventParser {
     public static void ParseEvent(ref int index, ref string[] code, out Event eventProp)
@@ -17,7 +13,7 @@ public class EventParser {
 
         void ParseModifiers(ref int index, ref string[] code, ref Event eventProp)
         {
-            List<String> modifiers = new List<String>();
+            List<string> modifiers = new List<string>();
             while(code[index + 2] != "{") 
             {
                 modifiers.Add(code[index++]);
@@ -60,11 +56,11 @@ public class EventParser {
 
         void ParseAttributes (ref int index, ref string[] code, ref Event eventProp)
         {
-            List<String> attributes = new List<String>();
+            List<Attribute> attributes = new List<Attribute>();
             while(code[index] == ".custom") {
                 var attributeResult = AttributeParser.Parse(ref index, code);
                 switch(attributeResult) {
-                    case Success<String, Exception> success:
+                    case Success<Attribute, System.Exception> success:
                         attributes.Add(success.Value);
                         break;
                     default : break;
@@ -81,12 +77,14 @@ public class EventParser {
         } else eventProp = null;
 
     }
-    public static Result<Event, Exception> Parse(ref int i, string[] tokens)
+    public static Result<Event, System.Exception> Parse(ref int i, string[] tokens)
     {
+        var start = i;
         ParseEvent(ref i, ref tokens, out Event eventProp);
         if(eventProp == null) {
-            return Error<Event, Exception>.From(new Exception("Failed to parse event"));
+            return Error<Event, System.Exception>.From(new System.Exception("Failed to parse event"));
         }
-        return Success<Event, Exception>.From(eventProp);
+        eventProp.Code = tokens[start..i].Join(" ");
+        return Success<Event, System.Exception>.From(eventProp);
     }
 }

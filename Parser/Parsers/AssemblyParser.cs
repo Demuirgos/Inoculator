@@ -1,14 +1,9 @@
 
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Extensions;
-using System.Diagnostics;
-using System.Reflection;
-using System.Text;
-using System.ComponentModel;
+using Inoculator.Parser.Models;
+using Attribute = Inoculator.Parser.Models.Attribute;
 
-namespace Inoculator.Core;
+namespace Inoculator.Parser.Core;
 
 public class AssemblyParser {
     public static void ParseAssembly(ref int index, ref string[] code, out Assembly module)
@@ -28,7 +23,7 @@ public class AssemblyParser {
                 
                 var attributeResult = ClassParser.Parse(ref index, code);
                 switch(attributeResult) {
-                    case Success<Class, Exception> success:
+                    case Success<Class, System.Exception> success:
                         typedefs.Add(success.Value);
                         break;
                     default : 
@@ -51,11 +46,11 @@ public class AssemblyParser {
 
         void ParseAttributes (ref int index, ref string[] code, ref Assembly module)
         {
-            List<String> attributes = new List<String>();
+            List<Attribute> attributes = new List<Attribute>();
             while(code[index] == ".custom") {
                 var attributeResult = AttributeParser.Parse(ref index, code);
                 switch(attributeResult) {
-                    case Success<String, Exception> success:
+                    case Success<Attribute, System.Exception> success:
                         attributes.Add(success.Value);
                         break;
                     default : break;
@@ -74,13 +69,19 @@ public class AssemblyParser {
         }
 
     }
-    public static Result<Assembly, Exception> Parse(string[] tokens)
+    public static Result<Assembly, System.Exception> Parse(string code)
     {
         int i = 0;
+        var tokens = code.Split(
+            new char[] { ' ', '\n', '\r' }, 
+            System.StringSplitOptions.RemoveEmptyEntries | System.StringSplitOptions.TrimEntries
+        );
+
         ParseAssembly(ref i, ref tokens, out Assembly module);
         if(module == null) {
-            return Error<Assembly, Exception>.From(new Exception("Failed to parse assembly"));
+            return Error<Assembly, System.Exception>.From(new System.Exception("Failed to parse assembly"));
         }
-        return Success<Assembly, Exception>.From(module);
+        module.Code = code;
+        return Success<Assembly, System.Exception>.From(module);
     }
 }

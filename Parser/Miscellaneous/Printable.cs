@@ -3,7 +3,9 @@ public class Printable<T> where T : class {
     public override string ToString()
     {
         return JsonSerializer.Serialize<T>(this as T, new JsonSerializerOptions {
-            WriteIndented = true
+            WriteIndented = true,
+            IgnoreNullValues = true,
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         });
     }
 } 

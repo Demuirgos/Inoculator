@@ -1,14 +1,11 @@
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Extensions;
-using System.Diagnostics;
-using System.Reflection;
 using System.Text;
-using System.ComponentModel;
+using Inoculator.Parser.Models;
+using Attribute = Inoculator.Parser.Models.Attribute;
 
-namespace Inoculator.Core;
+namespace Inoculator.Parser.Core;
 
 public class MethodParser {
     public static void ParseMethod(ref int index, ref string[] code, out Method method)
@@ -16,7 +13,7 @@ public class MethodParser {
         method = new Method();
         void ParseModifiers(ref int index, ref string[] code, ref Method method)
         {
-            List<String> modifiers = new List<String>();
+            List<string> modifiers = new List<string>();
             while(code[index] is not "static" and not "instance") {
                 modifiers.Add(code[index]);
                 index += 1;
@@ -42,10 +39,13 @@ public class MethodParser {
             } else {
                 index++;
                 while(code[index] != ")") {
-                    ArgumentTokens.Add(new Argument {
-                        Type = code[index++],
-                        Name = code[index++].Replace(",", String.Empty)
-                    });
+                    var attributeResult = ArgumentParser.Parse(ref index, code);
+                    switch(attributeResult) {
+                        case Success<Argument, System.Exception> success:
+                            ArgumentTokens.Add(success.Value);
+                            break;
+                        default : break;
+                    }
                 }
             }
 
@@ -64,11 +64,11 @@ public class MethodParser {
 
         void ParseAttributes (ref int index, ref string[] code, ref Method method)
         {
-            List<String> attributes = new List<String>();
+            List<Attribute> attributes = new List<Attribute>();
             while(code[index] == ".custom") {
                 var attributeResult = AttributeParser.Parse(ref index, code);
                 switch(attributeResult) {
-                    case Success<String, Exception> success:
+                    case Success<Attribute, System.Exception> success:
                         attributes.Add(success.Value);
                         break;
                     default : break;
@@ -107,7 +107,7 @@ public class MethodParser {
                         bool isLast = code[index+2] is ")"; 
                         locals.Add(new Argument {
                             Type = isNameless && !isLast ? code[index+1][..^1] : code[index+1],
-                            Name = isLast || isLast ? String.Empty : code[index+2]
+                            Name = isLast || isLast ? string.Empty : code[index+2]
                         });
                         index += 2;
                         break;
@@ -117,7 +117,7 @@ public class MethodParser {
                         bool isLast = code[index+1] is ")"; 
                         locals.Add(new Argument {
                             Type = isNameless && !isLast ? code[index][..^1] : code[index],
-                            Name = isLast || isLast ? String.Empty : code[index + 1]
+                            Name = isLast || isLast ? string.Empty : code[index + 1]
                         });
                         index += 1;
                         break;
@@ -135,12 +135,12 @@ public class MethodParser {
 
         void ParseBody (ref int index, ref string[] code, ref Method method)
         {
-            Dictionary<String, String> body = new();
-            String currentKey = String.Empty;
+            Dictionary<string, string> body = new();
+            string currentKey = string.Empty;
             StringBuilder sb = new();
             while(code[index] != "}") {
                 if(code[index].EndsWith(":")) {
-                    if(currentKey != String.Empty) {
+                    if(currentKey != string.Empty) {
                         body.Add(currentKey, sb.ToString());
                         sb.Clear();
                     }
@@ -166,12 +166,14 @@ public class MethodParser {
             ParseBody(ref index, ref code, ref method);
         } else method = null;
     }
-    public static Result<Method, Exception> Parse(ref int i, string[] tokens)
+    public static Result<Method, System.Exception> Parse(ref int i, string[] tokens)
     {
+        var start = i;
         ParseMethod(ref i, ref tokens, out Method method);
         if(method is null) {
-            return Error<Method, Exception>.From(new Exception("Method is null"));
+            return Error<Method, System.Exception>.From(new System.Exception("Method is null"));
         }
-        return Success<Method, Exception>.From(method);
+        method.Code = tokens[start..i].Join(" ");
+        return Success<Method, System.Exception>.From(method);
     }
 }

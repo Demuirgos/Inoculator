@@ -1,14 +1,10 @@
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Extensions;
-using System.Diagnostics;
-using System.Reflection;
-using System.Text;
-using System.ComponentModel;
+using Inoculator.Parser.Models;
+using Attribute = Inoculator.Parser.Models.Attribute;
 
-namespace Inoculator.Core;
+namespace Inoculator.Parser.Core;
 
 public class PropertyParser {
     public static void ParseProperty(ref int index, ref string[] code, out Property property)
@@ -17,14 +13,14 @@ public class PropertyParser {
 
         void ParseModifiers(ref int index, ref string[] code, ref Property property)
         {
-            List<String> modifiers = new List<String>();
+            List<string> modifiers = new List<string>();
             while(!code[index + 1].EndsWith("()")) 
             {
                 modifiers.Add(code[index++]);
             }
             property.Modifiers = modifiers.ToArray();
             property.Type = code[index++];
-            property.Name = code[index++].Replace("()", String.Empty);
+            property.Name = code[index++].Replace("()", string.Empty);
         }
 
         bool IgnoreTokens(ref int index, ref string[] code, ref Property _)
@@ -63,11 +59,11 @@ public class PropertyParser {
 
         void ParseAttributes (ref int index, ref string[] code, ref Property property)
         {
-            List<String> attributes = new List<String>();
+            List<Attribute> attributes = new List<Attribute>();
             while(code[index] == ".custom") {
                 var attributeResult = AttributeParser.Parse(ref index, code);
                 switch(attributeResult) {
-                    case Success<String, Exception> success:
+                    case Success<Attribute, System.Exception> success:
                         attributes.Add(success.Value);
                         break;
                     default : break;
@@ -85,12 +81,14 @@ public class PropertyParser {
         } else property = null;
 
     }
-    public static Result<Property, Exception> Parse(ref int i, string[] tokens)
+    public static Result<Property, System.Exception> Parse(ref int i, string[] tokens)
     {
+        var start = i;
         ParseProperty(ref i, ref tokens, out Property property);
-        if(property == null) {
-            return Error<Property, Exception>.From(new Exception());
+        if(property is null) {
+            return Error<Property, System.Exception>.From(new System.Exception());
         }
-        return Success<Property, Exception>.From(property);
+        property.Code = tokens[start..i].Join(" ");
+        return Success<Property, System.Exception>.From(property);
     }
 }

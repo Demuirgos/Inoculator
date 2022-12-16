@@ -1,14 +1,10 @@
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Extensions;
-using System.Diagnostics;
-using System.Reflection;
-using System.Text;
-using System.ComponentModel;
+using Inoculator.Parser.Models;
+using Attribute = Inoculator.Parser.Models.Attribute;
 
-namespace Inoculator.Core;
+namespace Inoculator.Parser.Core;
 
 public class FieldParser {
     public static void ParseField(ref int index, ref string[] code, out Field field)
@@ -17,7 +13,7 @@ public class FieldParser {
 
         void ParseModifiers(ref int index, ref string[] code, ref Field field)
         {
-            List<String> modifiers = new List<String>();
+            List<string> modifiers = new List<string>();
             bool NextBlock(ref string[] code, ref int index, int offset) 
                 => code[index + offset] == ".custom" || code[index + offset] == ".field" 
                 || code[index + offset] == ".method" || code[index + offset] == ".property" 
@@ -39,11 +35,11 @@ public class FieldParser {
 
         void ParseAttributes (ref int index, ref string[] code, ref Field field)
         {
-            List<String> attributes = new List<String>();
+            List<Attribute> attributes = new List<Attribute>();
             while(code[index] == ".custom") {
                 var attributeResult = AttributeParser.Parse(ref index, code);
                 switch(attributeResult) {
-                    case Success<String, Exception> success:
+                    case Success<Attribute, System.Exception> success:
                         attributes.Add(success.Value);
                         break;
                     default : break;
@@ -58,12 +54,14 @@ public class FieldParser {
         } else field = null;
 
     }
-    public static Result<Field, Exception> Parse(ref int i, string[] tokens)
+    public static Result<Field, System.Exception> Parse(ref int i, string[] tokens)
     {
+        var start = i;
         ParseField(ref i, ref tokens, out Field field);
         if(field is null) {
-            return Error<Field, Exception>.From(new Exception("Failed to parse field"));
+            return Error<Field, System.Exception>.From(new System.Exception("Failed to parse field"));
         }
-        return Success<Field, Exception>.From(field);
+        field.Code = tokens[start..i].Join(" ");
+        return Success<Field, System.Exception>.From(field);
     }
 }

@@ -1,0 +1,1014 @@
+{
+  "Name": "_",
+  "Classes": [
+    {
+      "Name": "'<Module>'",
+      "Methods": [],
+      "Fields": [],
+      "Events": [],
+      "Properties": [],
+      "TypeDefs": [],
+      "Attributes": [],
+      "Code": ".class private auto ansi '<Module>' { }"
+    },
+    {
+      "Name": "testsspace.testClass",
+      "BaseClass": "[System.Runtime]System.Object",
+      "Methods": [
+        {
+          "Attributes": [
+            {
+              "Modifiers": [
+                "instance"
+              ],
+              "Name": "[System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute",
+              "Constructor": "[System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor()",
+              "Bytes": [
+                "01",
+                "00",
+                "00",
+                "00"
+              ],
+              "Code": ".custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor() = ( 01 00 00 00 )"
+            }
+          ],
+          "Parameters": [
+            {
+              "Type": "void"
+            }
+          ],
+          "ReturnValue": {
+            "Type": "string"
+          },
+          "Name": "get_Name",
+          "Modifiers": [
+            "public",
+            "hidebysig",
+            "specialname",
+            "instance"
+          ],
+          "Body": {
+            "IL_0000": "ldarg.0 ",
+            "IL_0001": "ldfld string testsspace.testClass::'<Name>k__BackingField' "
+          },
+          "IsStatic": false,
+          "IsConstructor": false,
+          "MaxStack": 8,
+          "Code": ".method public hidebysig specialname instance string get_Name () cil managed { .custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor() = ( 01 00 00 00 ) .maxstack 8 IL_0000: ldarg.0 IL_0001: ldfld string testsspace.testClass::'<Name>k__BackingField' IL_0006: ret }"
+        },
+        {
+          "Attributes": [
+            {
+              "Modifiers": [
+                "instance"
+              ],
+              "Name": "[System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute",
+              "Constructor": "[System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor()",
+              "Bytes": [
+                "01",
+                "00",
+                "00",
+                "00"
+              ],
+              "Code": ".custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor() = ( 01 00 00 00 )"
+            }
+          ],
+          "Parameters": [
+            {
+              "Name": "'value'",
+              "Type": "string",
+              "Code": "string 'value'"
+            }
+          ],
+          "ReturnValue": {
+            "Type": "void"
+          },
+          "Name": "set_Name",
+          "Modifiers": [
+            "public",
+            "hidebysig",
+            "specialname",
+            "instance"
+          ],
+          "Body": {
+            "IL_0000": "ldarg.0 ",
+            "IL_0001": "ldarg.1 ",
+            "IL_0002": "stfld string testsspace.testClass::'<Name>k__BackingField' "
+          },
+          "IsStatic": false,
+          "IsConstructor": false,
+          "MaxStack": 8,
+          "Code": ".method public hidebysig specialname instance void set_Name ( string 'value' ) cil managed { .custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor() = ( 01 00 00 00 ) .maxstack 8 IL_0000: ldarg.0 IL_0001: ldarg.1 IL_0002: stfld string testsspace.testClass::'<Name>k__BackingField' IL_0007: ret }"
+        },
+        {
+          "Attributes": [],
+          "Parameters": [
+            {
+              "Type": "void"
+            }
+          ],
+          "ReturnValue": {
+            "Type": "void"
+          },
+          "Name": ".ctor",
+          "Modifiers": [
+            "public",
+            "hidebysig",
+            "specialname",
+            "rtspecialname",
+            "instance"
+          ],
+          "Body": {
+            "IL_0000": "ldarg.0 ",
+            "IL_0001": "call instance void [System.Runtime]System.Object::.ctor() ",
+            "IL_0006": "nop "
+          },
+          "IsStatic": false,
+          "IsConstructor": true,
+          "MaxStack": 8,
+          "Code": ".method public hidebysig specialname rtspecialname instance void .ctor () cil managed { .maxstack 8 IL_0000: ldarg.0 IL_0001: call instance void [System.Runtime]System.Object::.ctor() IL_0006: nop IL_0007: ret }"
+        }
+      ],
+      "Fields": [
+        {
+          "Attributes": [
+            {
+              "Modifiers": [
+                "instance"
+              ],
+              "Name": "[System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute",
+              "Constructor": "[System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor()",
+              "Bytes": [
+                "01",
+                "00",
+                "00",
+                "00"
+              ],
+              "Code": ".custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor() = ( 01 00 00 00 )"
+            },
+            {
+              "Modifiers": [
+                "instance"
+              ],
+              "Name": "[System.Runtime]System.Diagnostics.DebuggerBrowsableAttribute",
+              "Constructor": "[System.Runtime]System.Diagnostics.DebuggerBrowsableAttribute::.ctor(valuetype[System.Runtime]System.Diagnostics.DebuggerBrowsableState)",
+              "Bytes": [
+                "01",
+                "00",
+                "00",
+                "00",
+                "00",
+                "00",
+                "00",
+                "00"
+              ],
+              "Code": ".custom instance void [System.Runtime]System.Diagnostics.DebuggerBrowsableAttribute::.ctor(valuetype [System.Runtime]System.Diagnostics.DebuggerBrowsableState) = ( 01 00 00 00 00 00 00 00 )"
+            }
+          ],
+          "Name": "'<Name>k__BackingField'",
+          "Type": "string",
+          "Modifiers": [
+            "private"
+          ],
+          "IsStatic": false,
+          "IsGenerated": true,
+          "Code": ".field private string '<Name>k__BackingField' .custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor() = ( 01 00 00 00 ) .custom instance void [System.Runtime]System.Diagnostics.DebuggerBrowsableAttribute::.ctor(valuetype [System.Runtime]System.Diagnostics.DebuggerBrowsableState) = ( 01 00 00 00 00 00 00 00 )"
+        }
+      ],
+      "Events": [
+        {
+          "Attributes": [],
+          "Modifiers": [
+            "instance"
+          ],
+          "Name": "tests",
+          "Type": "[System.Runtime]System.Action",
+          "Adder": "testsspace.testClass::add_tests",
+          "Remover": "testsspace.testClass::remove_tests",
+          "IsStatic": false,
+          "Code": ".event [System.Runtime]System.Action tests { .addon instance void testsspace.testClass::add_tests(class [System.Runtime]System.Action) .removeon instance void testsspace.testClass::remove_tests(class [System.Runtime]System.Action) }"
+        }
+      ],
+      "Properties": [
+        {
+          "Attributes": [],
+          "Modifiers": [
+            "instance"
+          ],
+          "Name": "Name",
+          "Type": "string",
+          "Getter": "testsspace.testClass::get_Name",
+          "Setter": "testsspace.testClass::set_Name",
+          "IsStatic": false,
+          "Code": ".property instance string Name() { .get instance string testsspace.testClass::get_Name() .set instance void testsspace.testClass::set_Name(string) }"
+        }
+      ],
+      "TypeDefs": [
+        {
+          "Name": "TestChild",
+          "BaseClass": "[System.Runtime]System.Object",
+          "Methods": [
+            {
+              "Attributes": [],
+              "Parameters": [
+                {
+                  "Type": "void"
+                }
+              ],
+              "ReturnValue": {
+                "Type": "void"
+              },
+              "Name": ".ctor",
+              "Modifiers": [
+                "public",
+                "hidebysig",
+                "specialname",
+                "rtspecialname",
+                "instance"
+              ],
+              "Body": {
+                "IL_0000": "ldarg.0 ",
+                "IL_0001": "call instance void [System.Runtime]System.Object::.ctor() ",
+                "IL_0006": "nop "
+              },
+              "IsStatic": false,
+              "IsConstructor": true,
+              "MaxStack": 8,
+              "Code": ".method public hidebysig specialname rtspecialname instance void .ctor () cil managed { .maxstack 8 IL_0000: ldarg.0 IL_0001: call instance void [System.Runtime]System.Object::.ctor() IL_0006: nop IL_0007: ret }"
+            }
+          ],
+          "Fields": [],
+          "Events": [],
+          "Properties": [],
+          "TypeDefs": [],
+          "Attributes": [
+            {
+              "Modifiers": [
+                "instance"
+              ],
+              "Name": "System.Runtime.CompilerServices.NullableContextAttribute",
+              "Constructor": "System.Runtime.CompilerServices.NullableContextAttribute::.ctor(uint8)",
+              "Bytes": [
+                "01",
+                "00",
+                "00",
+                "00",
+                "00"
+              ],
+              "Code": ".custom instance void System.Runtime.CompilerServices.NullableContextAttribute::.ctor(uint8) = ( 01 00 00 00 00 )"
+            }
+          ],
+          "Modifiers": [
+            "nested",
+            "private",
+            "auto",
+            "ansi",
+            "beforefieldinit"
+          ],
+          "Type": 0,
+          "Code": ".class nested private auto ansi beforefieldinit TestChild extends [System.Runtime]System.Object { .custom instance void System.Runtime.CompilerServices.NullableContextAttribute::.ctor(uint8) = ( 01 00 00 00 00 ) .method public hidebysig specialname rtspecialname instance void .ctor () cil managed { .maxstack 8 IL_0000: ldarg.0 IL_0001: call instance void [System.Runtime]System.Object::.ctor() IL_0006: nop IL_0007: ret } }"
+        },
+        {
+          "Name": "Test",
+          "BaseClass": "[System.Runtime]System.Enum",
+          "Methods": [],
+          "Fields": [
+            {
+              "Attributes": [],
+              "Name": "value__",
+              "Type": "int32",
+              "Modifiers": [
+                "public",
+                "specialname",
+                "rtspecialname"
+              ],
+              "IsStatic": false,
+              "IsGenerated": false,
+              "Code": ".field public specialname rtspecialname int32 value__"
+            },
+            {
+              "Attributes": [],
+              "Name": "test1",
+              "Type": "testsspace.testClass/Test",
+              "Modifiers": [
+                "public",
+                "static",
+                "literal",
+                "valuetype"
+              ],
+              "IsStatic": true,
+              "IsGenerated": false,
+              "Code": ".field public static literal valuetype testsspace.testClass/Test test1 = int32(0)"
+            },
+            {
+              "Attributes": [],
+              "Name": "test2",
+              "Type": "testsspace.testClass/Test",
+              "Modifiers": [
+                "public",
+                "static",
+                "literal",
+                "valuetype"
+              ],
+              "IsStatic": true,
+              "IsGenerated": false,
+              "Code": ".field public static literal valuetype testsspace.testClass/Test test2 = int32(1)"
+            }
+          ],
+          "Events": [],
+          "Properties": [],
+          "TypeDefs": [],
+          "Attributes": [
+            {
+              "Modifiers": [
+                "instance"
+              ],
+              "Name": "System.Runtime.CompilerServices.NullableContextAttribute",
+              "Constructor": "System.Runtime.CompilerServices.NullableContextAttribute::.ctor(uint8)",
+              "Bytes": [
+                "01",
+                "00",
+                "00",
+                "00",
+                "00"
+              ],
+              "Code": ".custom instance void System.Runtime.CompilerServices.NullableContextAttribute::.ctor(uint8) = ( 01 00 00 00 00 )"
+            }
+          ],
+          "Modifiers": [
+            "nested",
+            "private",
+            "auto",
+            "ansi",
+            "sealed"
+          ],
+          "Type": 3,
+          "Code": ".class nested private auto ansi sealed Test extends [System.Runtime]System.Enum { .custom instance void System.Runtime.CompilerServices.NullableContextAttribute::.ctor(uint8) = ( 01 00 00 00 00 ) .field public specialname rtspecialname int32 value__ .field public static literal valuetype testsspace.testClass/Test test1 = int32(0) .field public static literal valuetype testsspace.testClass/Test test2 = int32(1) }"
+        }
+      ],
+      "Attributes": [
+        {
+          "Modifiers": [
+            "instance"
+          ],
+          "Name": "System.Runtime.CompilerServices.NullableContextAttribute",
+          "Constructor": "System.Runtime.CompilerServices.NullableContextAttribute::.ctor(uint8)",
+          "Bytes": [
+            "01",
+            "00",
+            "01",
+            "00",
+            "00"
+          ],
+          "Code": ".custom instance void System.Runtime.CompilerServices.NullableContextAttribute::.ctor(uint8) = ( 01 00 01 00 00 )"
+        },
+        {
+          "Modifiers": [
+            "instance"
+          ],
+          "Name": "System.Runtime.CompilerServices.NullableAttribute",
+          "Constructor": "System.Runtime.CompilerServices.NullableAttribute::.ctor(uint8)",
+          "Bytes": [
+            "01",
+            "00",
+            "00",
+            "00",
+            "00"
+          ],
+          "Code": ".custom instance void System.Runtime.CompilerServices.NullableAttribute::.ctor(uint8) = ( 01 00 00 00 00 )"
+        }
+      ],
+      "Modifiers": [
+        "private",
+        "auto",
+        "ansi",
+        "beforefieldinit"
+      ],
+      "Type": 0,
+      "Code": ".class private auto ansi beforefieldinit testsspace.testClass extends [System.Runtime]System.Object { .custom instance void System.Runtime.CompilerServices.NullableContextAttribute::.ctor(uint8) = ( 01 00 01 00 00 ) .custom instance void System.Runtime.CompilerServices.NullableAttribute::.ctor(uint8) = ( 01 00 00 00 00 ) .class nested private auto ansi beforefieldinit TestChild extends [System.Runtime]System.Object { .custom instance void System.Runtime.CompilerServices.NullableContextAttribute::.ctor(uint8) = ( 01 00 00 00 00 ) .method public hidebysig specialname rtspecialname instance void .ctor () cil managed { .maxstack 8 IL_0000: ldarg.0 IL_0001: call instance void [System.Runtime]System.Object::.ctor() IL_0006: nop IL_0007: ret } } .class nested private auto ansi sealed Test extends [System.Runtime]System.Enum { .custom instance void System.Runtime.CompilerServices.NullableContextAttribute::.ctor(uint8) = ( 01 00 00 00 00 ) .field public specialname rtspecialname int32 value__ .field public static literal valuetype testsspace.testClass/Test test1 = int32(0) .field public static literal valuetype testsspace.testClass/Test test2 = int32(1) } .field private string '<Name>k__BackingField' .custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor() = ( 01 00 00 00 ) .custom instance void [System.Runtime]System.Diagnostics.DebuggerBrowsableAttribute::.ctor(valuetype [System.Runtime]System.Diagnostics.DebuggerBrowsableState) = ( 01 00 00 00 00 00 00 00 ) .method public hidebysig specialname instance string get_Name () cil managed { .custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor() = ( 01 00 00 00 ) .maxstack 8 IL_0000: ldarg.0 IL_0001: ldfld string testsspace.testClass::'<Name>k__BackingField' IL_0006: ret } .method public hidebysig specialname instance void set_Name ( string 'value' ) cil managed { .custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor() = ( 01 00 00 00 ) .maxstack 8 IL_0000: ldarg.0 IL_0001: ldarg.1 IL_0002: stfld string testsspace.testClass::'<Name>k__BackingField' IL_0007: ret } .method public hidebysig specialname rtspecialname instance void .ctor () cil managed { .maxstack 8 IL_0000: ldarg.0 IL_0001: call instance void [System.Runtime]System.Object::.ctor() IL_0006: nop IL_0007: ret } .event [System.Runtime]System.Action tests { .addon instance void testsspace.testClass::add_tests(class [System.Runtime]System.Action) .removeon instance void testsspace.testClass::remove_tests(class [System.Runtime]System.Action) } .property instance string Name() { .get instance string testsspace.testClass::get_Name() .set instance void testsspace.testClass::set_Name(string) } }"
+    },
+    {
+      "Name": "Microsoft.CodeAnalysis.EmbeddedAttribute",
+      "BaseClass": "[System.Runtime]System.Attribute",
+      "Methods": [
+        {
+          "Attributes": [],
+          "Parameters": [
+            {
+              "Type": "void"
+            }
+          ],
+          "ReturnValue": {
+            "Type": "void"
+          },
+          "Name": ".ctor",
+          "Modifiers": [
+            "public",
+            "hidebysig",
+            "specialname",
+            "rtspecialname",
+            "instance"
+          ],
+          "Body": {
+            "IL_0000": "ldarg.0 ",
+            "IL_0001": "call instance void [System.Runtime]System.Attribute::.ctor() ",
+            "IL_0006": "nop "
+          },
+          "IsStatic": false,
+          "IsConstructor": true,
+          "MaxStack": 8,
+          "Code": ".method public hidebysig specialname rtspecialname instance void .ctor () cil managed { .maxstack 8 IL_0000: ldarg.0 IL_0001: call instance void [System.Runtime]System.Attribute::.ctor() IL_0006: nop IL_0007: ret }"
+        }
+      ],
+      "Fields": [],
+      "Events": [],
+      "Properties": [],
+      "TypeDefs": [],
+      "Attributes": [
+        {
+          "Modifiers": [
+            "instance"
+          ],
+          "Name": "[System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute",
+          "Constructor": "[System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor()",
+          "Bytes": [
+            "01",
+            "00",
+            "00",
+            "00"
+          ],
+          "Code": ".custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor() = ( 01 00 00 00 )"
+        },
+        {
+          "Modifiers": [
+            "instance"
+          ],
+          "Name": "Microsoft.CodeAnalysis.EmbeddedAttribute",
+          "Constructor": "Microsoft.CodeAnalysis.EmbeddedAttribute::.ctor()",
+          "Bytes": [
+            "01",
+            "00",
+            "00",
+            "00"
+          ],
+          "Code": ".custom instance void Microsoft.CodeAnalysis.EmbeddedAttribute::.ctor() = ( 01 00 00 00 )"
+        }
+      ],
+      "Modifiers": [
+        "private",
+        "auto",
+        "ansi",
+        "sealed",
+        "beforefieldinit"
+      ],
+      "Type": 0,
+      "Code": ".class private auto ansi sealed beforefieldinit Microsoft.CodeAnalysis.EmbeddedAttribute extends [System.Runtime]System.Attribute { .custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor() = ( 01 00 00 00 ) .custom instance void Microsoft.CodeAnalysis.EmbeddedAttribute::.ctor() = ( 01 00 00 00 ) .method public hidebysig specialname rtspecialname instance void .ctor () cil managed { .maxstack 8 IL_0000: ldarg.0 IL_0001: call instance void [System.Runtime]System.Attribute::.ctor() IL_0006: nop IL_0007: ret } }"
+    },
+    {
+      "Name": "System.Runtime.CompilerServices.NullableAttribute",
+      "BaseClass": "[System.Runtime]System.Attribute",
+      "Methods": [
+        {
+          "Attributes": [],
+          "Parameters": [
+            {
+              "Name": "''",
+              "Type": "uint8",
+              "Code": "uint8 ''"
+            }
+          ],
+          "ReturnValue": {
+            "Type": "void"
+          },
+          "Name": ".ctor",
+          "Modifiers": [
+            "public",
+            "hidebysig",
+            "specialname",
+            "rtspecialname",
+            "instance"
+          ],
+          "Body": {
+            "IL_0000": "ldarg.0 ",
+            "IL_0001": "call instance void [System.Runtime]System.Attribute::.ctor() ",
+            "IL_0006": "nop ",
+            "IL_0007": "ldarg.0 ",
+            "IL_0008": "ldc.i4.1 ",
+            "IL_0009": "newarr [System.Runtime]System.Byte ",
+            "IL_000e": "dup ",
+            "IL_000f": "ldc.i4.0 ",
+            "IL_0010": "ldarg.1 ",
+            "IL_0011": "stelem.i1 ",
+            "IL_0012": "stfld uint8[] System.Runtime.CompilerServices.NullableAttribute::NullableFlags "
+          },
+          "IsStatic": false,
+          "IsConstructor": true,
+          "MaxStack": 8,
+          "Code": ".method public hidebysig specialname rtspecialname instance void .ctor ( uint8 '' ) cil managed { .maxstack 8 IL_0000: ldarg.0 IL_0001: call instance void [System.Runtime]System.Attribute::.ctor() IL_0006: nop IL_0007: ldarg.0 IL_0008: ldc.i4.1 IL_0009: newarr [System.Runtime]System.Byte IL_000e: dup IL_000f: ldc.i4.0 IL_0010: ldarg.1 IL_0011: stelem.i1 IL_0012: stfld uint8[] System.Runtime.CompilerServices.NullableAttribute::NullableFlags IL_0017: ret }"
+        },
+        {
+          "Attributes": [],
+          "Parameters": [
+            {
+              "Name": "''",
+              "Type": "uint8[]",
+              "Code": "uint8[] ''"
+            }
+          ],
+          "ReturnValue": {
+            "Type": "void"
+          },
+          "Name": ".ctor",
+          "Modifiers": [
+            "public",
+            "hidebysig",
+            "specialname",
+            "rtspecialname",
+            "instance"
+          ],
+          "Body": {
+            "IL_0000": "ldarg.0 ",
+            "IL_0001": "call instance void [System.Runtime]System.Attribute::.ctor() ",
+            "IL_0006": "nop ",
+            "IL_0007": "ldarg.0 ",
+            "IL_0008": "ldarg.1 ",
+            "IL_0009": "stfld uint8[] System.Runtime.CompilerServices.NullableAttribute::NullableFlags "
+          },
+          "IsStatic": false,
+          "IsConstructor": true,
+          "MaxStack": 8,
+          "Code": ".method public hidebysig specialname rtspecialname instance void .ctor ( uint8[] '' ) cil managed { .maxstack 8 IL_0000: ldarg.0 IL_0001: call instance void [System.Runtime]System.Attribute::.ctor() IL_0006: nop IL_0007: ldarg.0 IL_0008: ldarg.1 IL_0009: stfld uint8[] System.Runtime.CompilerServices.NullableAttribute::NullableFlags IL_000e: ret }"
+        }
+      ],
+      "Fields": [
+        {
+          "Attributes": [],
+          "Name": "NullableFlags",
+          "Type": "uint8[]",
+          "Modifiers": [
+            "public",
+            "initonly"
+          ],
+          "IsStatic": false,
+          "IsGenerated": false,
+          "Code": ".field public initonly uint8[] NullableFlags"
+        }
+      ],
+      "Events": [],
+      "Properties": [],
+      "TypeDefs": [],
+      "Attributes": [
+        {
+          "Modifiers": [
+            "instance"
+          ],
+          "Name": "[System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute",
+          "Constructor": "[System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor()",
+          "Bytes": [
+            "01",
+            "00",
+            "00",
+            "00"
+          ],
+          "Code": ".custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor() = ( 01 00 00 00 )"
+        },
+        {
+          "Modifiers": [
+            "instance"
+          ],
+          "Name": "Microsoft.CodeAnalysis.EmbeddedAttribute",
+          "Constructor": "Microsoft.CodeAnalysis.EmbeddedAttribute::.ctor()",
+          "Bytes": [
+            "01",
+            "00",
+            "00",
+            "00"
+          ],
+          "Code": ".custom instance void Microsoft.CodeAnalysis.EmbeddedAttribute::.ctor() = ( 01 00 00 00 )"
+        },
+        {
+          "Modifiers": [
+            "instance"
+          ],
+          "Name": "[System.Runtime]System.AttributeUsageAttribute",
+          "Constructor": "[System.Runtime]System.AttributeUsageAttribute::.ctor(valuetype[System.Runtime]System.AttributeTargets)",
+          "Bytes": [
+            "01",
+            "00",
+            "84",
+            "6b",
+            "00",
+            "00",
+            "02",
+            "00",
+            "54",
+            "02",
+            "0d",
+            "41",
+            "6c",
+            "6c",
+            "6f",
+            "77",
+            "4d",
+            "75",
+            "6c",
+            "74",
+            "69",
+            "70",
+            "6c",
+            "65",
+            "00",
+            "54",
+            "02",
+            "09",
+            "49",
+            "6e",
+            "68",
+            "65",
+            "72",
+            "69",
+            "74",
+            "65",
+            "64",
+            "00"
+          ],
+          "Code": ".custom instance void [System.Runtime]System.AttributeUsageAttribute::.ctor(valuetype [System.Runtime]System.AttributeTargets) = ( 01 00 84 6b 00 00 02 00 54 02 0d 41 6c 6c 6f 77 4d 75 6c 74 69 70 6c 65 00 54 02 09 49 6e 68 65 72 69 74 65 64 00 )"
+        }
+      ],
+      "Modifiers": [
+        "private",
+        "auto",
+        "ansi",
+        "sealed",
+        "beforefieldinit"
+      ],
+      "Type": 0,
+      "Code": ".class private auto ansi sealed beforefieldinit System.Runtime.CompilerServices.NullableAttribute extends [System.Runtime]System.Attribute { .custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor() = ( 01 00 00 00 ) .custom instance void Microsoft.CodeAnalysis.EmbeddedAttribute::.ctor() = ( 01 00 00 00 ) .custom instance void [System.Runtime]System.AttributeUsageAttribute::.ctor(valuetype [System.Runtime]System.AttributeTargets) = ( 01 00 84 6b 00 00 02 00 54 02 0d 41 6c 6c 6f 77 4d 75 6c 74 69 70 6c 65 00 54 02 09 49 6e 68 65 72 69 74 65 64 00 ) .field public initonly uint8[] NullableFlags .method public hidebysig specialname rtspecialname instance void .ctor ( uint8 '' ) cil managed { .maxstack 8 IL_0000: ldarg.0 IL_0001: call instance void [System.Runtime]System.Attribute::.ctor() IL_0006: nop IL_0007: ldarg.0 IL_0008: ldc.i4.1 IL_0009: newarr [System.Runtime]System.Byte IL_000e: dup IL_000f: ldc.i4.0 IL_0010: ldarg.1 IL_0011: stelem.i1 IL_0012: stfld uint8[] System.Runtime.CompilerServices.NullableAttribute::NullableFlags IL_0017: ret } .method public hidebysig specialname rtspecialname instance void .ctor ( uint8[] '' ) cil managed { .maxstack 8 IL_0000: ldarg.0 IL_0001: call instance void [System.Runtime]System.Attribute::.ctor() IL_0006: nop IL_0007: ldarg.0 IL_0008: ldarg.1 IL_0009: stfld uint8[] System.Runtime.CompilerServices.NullableAttribute::NullableFlags IL_000e: ret } }"
+    },
+    {
+      "Name": "System.Runtime.CompilerServices.NullableContextAttribute",
+      "BaseClass": "[System.Runtime]System.Attribute",
+      "Methods": [
+        {
+          "Attributes": [],
+          "Parameters": [
+            {
+              "Name": "''",
+              "Type": "uint8",
+              "Code": "uint8 ''"
+            }
+          ],
+          "ReturnValue": {
+            "Type": "void"
+          },
+          "Name": ".ctor",
+          "Modifiers": [
+            "public",
+            "hidebysig",
+            "specialname",
+            "rtspecialname",
+            "instance"
+          ],
+          "Body": {
+            "IL_0000": "ldarg.0 ",
+            "IL_0001": "call instance void [System.Runtime]System.Attribute::.ctor() ",
+            "IL_0006": "nop ",
+            "IL_0007": "ldarg.0 ",
+            "IL_0008": "ldarg.1 ",
+            "IL_0009": "stfld uint8 System.Runtime.CompilerServices.NullableContextAttribute::Flag "
+          },
+          "IsStatic": false,
+          "IsConstructor": true,
+          "MaxStack": 8,
+          "Code": ".method public hidebysig specialname rtspecialname instance void .ctor ( uint8 '' ) cil managed { .maxstack 8 IL_0000: ldarg.0 IL_0001: call instance void [System.Runtime]System.Attribute::.ctor() IL_0006: nop IL_0007: ldarg.0 IL_0008: ldarg.1 IL_0009: stfld uint8 System.Runtime.CompilerServices.NullableContextAttribute::Flag IL_000e: ret }"
+        }
+      ],
+      "Fields": [
+        {
+          "Attributes": [],
+          "Name": "Flag",
+          "Type": "uint8",
+          "Modifiers": [
+            "public",
+            "initonly"
+          ],
+          "IsStatic": false,
+          "IsGenerated": false,
+          "Code": ".field public initonly uint8 Flag"
+        }
+      ],
+      "Events": [],
+      "Properties": [],
+      "TypeDefs": [],
+      "Attributes": [
+        {
+          "Modifiers": [
+            "instance"
+          ],
+          "Name": "[System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute",
+          "Constructor": "[System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor()",
+          "Bytes": [
+            "01",
+            "00",
+            "00",
+            "00"
+          ],
+          "Code": ".custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor() = ( 01 00 00 00 )"
+        },
+        {
+          "Modifiers": [
+            "instance"
+          ],
+          "Name": "Microsoft.CodeAnalysis.EmbeddedAttribute",
+          "Constructor": "Microsoft.CodeAnalysis.EmbeddedAttribute::.ctor()",
+          "Bytes": [
+            "01",
+            "00",
+            "00",
+            "00"
+          ],
+          "Code": ".custom instance void Microsoft.CodeAnalysis.EmbeddedAttribute::.ctor() = ( 01 00 00 00 )"
+        },
+        {
+          "Modifiers": [
+            "instance"
+          ],
+          "Name": "[System.Runtime]System.AttributeUsageAttribute",
+          "Constructor": "[System.Runtime]System.AttributeUsageAttribute::.ctor(valuetype[System.Runtime]System.AttributeTargets)",
+          "Bytes": [
+            "01",
+            "00",
+            "4c",
+            "14",
+            "00",
+            "00",
+            "02",
+            "00",
+            "54",
+            "02",
+            "0d",
+            "41",
+            "6c",
+            "6c",
+            "6f",
+            "77",
+            "4d",
+            "75",
+            "6c",
+            "74",
+            "69",
+            "70",
+            "6c",
+            "65",
+            "00",
+            "54",
+            "02",
+            "09",
+            "49",
+            "6e",
+            "68",
+            "65",
+            "72",
+            "69",
+            "74",
+            "65",
+            "64",
+            "00"
+          ],
+          "Code": ".custom instance void [System.Runtime]System.AttributeUsageAttribute::.ctor(valuetype [System.Runtime]System.AttributeTargets) = ( 01 00 4c 14 00 00 02 00 54 02 0d 41 6c 6c 6f 77 4d 75 6c 74 69 70 6c 65 00 54 02 09 49 6e 68 65 72 69 74 65 64 00 )"
+        }
+      ],
+      "Modifiers": [
+        "private",
+        "auto",
+        "ansi",
+        "sealed",
+        "beforefieldinit"
+      ],
+      "Type": 0,
+      "Code": ".class private auto ansi sealed beforefieldinit System.Runtime.CompilerServices.NullableContextAttribute extends [System.Runtime]System.Attribute { .custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor() = ( 01 00 00 00 ) .custom instance void Microsoft.CodeAnalysis.EmbeddedAttribute::.ctor() = ( 01 00 00 00 ) .custom instance void [System.Runtime]System.AttributeUsageAttribute::.ctor(valuetype [System.Runtime]System.AttributeTargets) = ( 01 00 4c 14 00 00 02 00 54 02 0d 41 6c 6c 6f 77 4d 75 6c 74 69 70 6c 65 00 54 02 09 49 6e 68 65 72 69 74 65 64 00 ) .field public initonly uint8 Flag .method public hidebysig specialname rtspecialname instance void .ctor ( uint8 '' ) cil managed { .maxstack 8 IL_0000: ldarg.0 IL_0001: call instance void [System.Runtime]System.Attribute::.ctor() IL_0006: nop IL_0007: ldarg.0 IL_0008: ldarg.1 IL_0009: stfld uint8 System.Runtime.CompilerServices.NullableContextAttribute::Flag IL_000e: ret } }"
+    },
+    {
+      "Name": "System.Runtime.CompilerServices.RefSafetyRulesAttribute",
+      "BaseClass": "[System.Runtime]System.Attribute",
+      "Methods": [
+        {
+          "Attributes": [],
+          "Parameters": [
+            {
+              "Name": "''",
+              "Type": "int32",
+              "Code": "int32 ''"
+            }
+          ],
+          "ReturnValue": {
+            "Type": "void"
+          },
+          "Name": ".ctor",
+          "Modifiers": [
+            "public",
+            "hidebysig",
+            "specialname",
+            "rtspecialname",
+            "instance"
+          ],
+          "Body": {
+            "IL_0000": "ldarg.0 ",
+            "IL_0001": "call instance void [System.Runtime]System.Attribute::.ctor() ",
+            "IL_0006": "nop ",
+            "IL_0007": "ldarg.0 ",
+            "IL_0008": "ldarg.1 ",
+            "IL_0009": "stfld int32 System.Runtime.CompilerServices.RefSafetyRulesAttribute::Version "
+          },
+          "IsStatic": false,
+          "IsConstructor": true,
+          "MaxStack": 8,
+          "Code": ".method public hidebysig specialname rtspecialname instance void .ctor ( int32 '' ) cil managed { .maxstack 8 IL_0000: ldarg.0 IL_0001: call instance void [System.Runtime]System.Attribute::.ctor() IL_0006: nop IL_0007: ldarg.0 IL_0008: ldarg.1 IL_0009: stfld int32 System.Runtime.CompilerServices.RefSafetyRulesAttribute::Version IL_000e: ret }"
+        }
+      ],
+      "Fields": [
+        {
+          "Attributes": [],
+          "Name": "Version",
+          "Type": "int32",
+          "Modifiers": [
+            "public",
+            "initonly"
+          ],
+          "IsStatic": false,
+          "IsGenerated": false,
+          "Code": ".field public initonly int32 Version"
+        }
+      ],
+      "Events": [],
+      "Properties": [],
+      "TypeDefs": [],
+      "Attributes": [
+        {
+          "Modifiers": [
+            "instance"
+          ],
+          "Name": "[System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute",
+          "Constructor": "[System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor()",
+          "Bytes": [
+            "01",
+            "00",
+            "00",
+            "00"
+          ],
+          "Code": ".custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor() = ( 01 00 00 00 )"
+        },
+        {
+          "Modifiers": [
+            "instance"
+          ],
+          "Name": "Microsoft.CodeAnalysis.EmbeddedAttribute",
+          "Constructor": "Microsoft.CodeAnalysis.EmbeddedAttribute::.ctor()",
+          "Bytes": [
+            "01",
+            "00",
+            "00",
+            "00"
+          ],
+          "Code": ".custom instance void Microsoft.CodeAnalysis.EmbeddedAttribute::.ctor() = ( 01 00 00 00 )"
+        },
+        {
+          "Modifiers": [
+            "instance"
+          ],
+          "Name": "[System.Runtime]System.AttributeUsageAttribute",
+          "Constructor": "[System.Runtime]System.AttributeUsageAttribute::.ctor(valuetype[System.Runtime]System.AttributeTargets)",
+          "Bytes": [
+            "01",
+            "00",
+            "02",
+            "00",
+            "00",
+            "00",
+            "02",
+            "00",
+            "54",
+            "02",
+            "0d",
+            "41",
+            "6c",
+            "6c",
+            "6f",
+            "77",
+            "4d",
+            "75",
+            "6c",
+            "74",
+            "69",
+            "70",
+            "6c",
+            "65",
+            "00",
+            "54",
+            "02",
+            "09",
+            "49",
+            "6e",
+            "68",
+            "65",
+            "72",
+            "69",
+            "74",
+            "65",
+            "64",
+            "00"
+          ],
+          "Code": ".custom instance void [System.Runtime]System.AttributeUsageAttribute::.ctor(valuetype [System.Runtime]System.AttributeTargets) = ( 01 00 02 00 00 00 02 00 54 02 0d 41 6c 6c 6f 77 4d 75 6c 74 69 70 6c 65 00 54 02 09 49 6e 68 65 72 69 74 65 64 00 )"
+        }
+      ],
+      "Modifiers": [
+        "private",
+        "auto",
+        "ansi",
+        "sealed",
+        "beforefieldinit"
+      ],
+      "Type": 0,
+      "Code": ".class private auto ansi sealed beforefieldinit System.Runtime.CompilerServices.RefSafetyRulesAttribute extends [System.Runtime]System.Attribute { .custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor() = ( 01 00 00 00 ) .custom instance void Microsoft.CodeAnalysis.EmbeddedAttribute::.ctor() = ( 01 00 00 00 ) .custom instance void [System.Runtime]System.AttributeUsageAttribute::.ctor(valuetype [System.Runtime]System.AttributeTargets) = ( 01 00 02 00 00 00 02 00 54 02 0d 41 6c 6c 6f 77 4d 75 6c 74 69 70 6c 65 00 54 02 09 49 6e 68 65 72 69 74 65 64 00 ) .field public initonly int32 Version .method public hidebysig specialname rtspecialname instance void .ctor ( int32 '' ) cil managed { .maxstack 8 IL_0000: ldarg.0 IL_0001: call instance void [System.Runtime]System.Attribute::.ctor() IL_0006: nop IL_0007: ldarg.0 IL_0008: ldarg.1 IL_0009: stfld int32 System.Runtime.CompilerServices.RefSafetyRulesAttribute::Version IL_000e: ret } }"
+    }
+  ],
+  "Attributes": [
+    {
+      "Modifiers": [
+        "instance"
+      ],
+      "Name": "[System.Runtime]System.Runtime.CompilerServices.CompilationRelaxationsAttribute",
+      "Constructor": "[System.Runtime]System.Runtime.CompilerServices.CompilationRelaxationsAttribute::.ctor(int32)",
+      "Bytes": [
+        "01",
+        "00",
+        "08",
+        "00",
+        "00",
+        "00",
+        "00",
+        "00"
+      ],
+      "Code": ".custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilationRelaxationsAttribute::.ctor(int32) = ( 01 00 08 00 00 00 00 00 )"
+    },
+    {
+      "Modifiers": [
+        "instance"
+      ],
+      "Name": "[System.Runtime]System.Runtime.CompilerServices.RuntimeCompatibilityAttribute",
+      "Constructor": "[System.Runtime]System.Runtime.CompilerServices.RuntimeCompatibilityAttribute::.ctor()",
+      "Bytes": [
+        "01",
+        "00",
+        "01",
+        "00",
+        "54",
+        "02",
+        "16",
+        "57",
+        "72",
+        "61",
+        "70",
+        "4e",
+        "6f",
+        "6e",
+        "45",
+        "78",
+        "63",
+        "65",
+        "70",
+        "74",
+        "69",
+        "6f",
+        "6e",
+        "54",
+        "68",
+        "72",
+        "6f",
+        "77",
+        "73",
+        "01"
+      ],
+      "Code": ".custom instance void [System.Runtime]System.Runtime.CompilerServices.RuntimeCompatibilityAttribute::.ctor() = ( 01 00 01 00 54 02 16 57 72 61 70 4e 6f 6e 45 78 63 65 70 74 69 6f 6e 54 68 72 6f 77 73 01 )"
+    },
+    {
+      "Modifiers": [
+        "instance"
+      ],
+      "Name": "[System.Runtime]System.Diagnostics.DebuggableAttribute",
+      "Constructor": "[System.Runtime]System.Diagnostics.DebuggableAttribute::.ctor(valuetype[System.Runtime]System.Diagnostics.DebuggableAttribute/DebuggingModes)",
+      "Bytes": [
+        "01",
+        "00",
+        "07",
+        "01",
+        "00",
+        "00",
+        "00",
+        "00"
+      ],
+      "Code": ".custom instance void [System.Runtime]System.Diagnostics.DebuggableAttribute::.ctor(valuetype [System.Runtime]System.Diagnostics.DebuggableAttribute/DebuggingModes) = ( 01 00 07 01 00 00 00 00 )"
+    }
+  ],
+  "Code": ".assembly _\r\n{\r\n    .custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilationRelaxationsAttribute::.ctor(int32) = (\r\n        01 00 08 00 00 00 00 00\r\n    )\r\n    .custom instance void [System.Runtime]System.Runtime.CompilerServices.RuntimeCompatibilityAttribute::.ctor() = (\r\n        01 00 01 00 54 02 16 57 72 61 70 4e 6f 6e 45 78\r\n        63 65 70 74 69 6f 6e 54 68 72 6f 77 73 01\r\n    )\r\n    .custom instance void [System.Runtime]System.Diagnostics.DebuggableAttribute::.ctor(valuetype [System.Runtime]System.Diagnostics.DebuggableAttribute/DebuggingModes) = (\r\n        01 00 07 01 00 00 00 00\r\n    )\r\n    .permissionset reqmin = (\r\n        2e 01 80 8a 53 79 73 74 65 6d 2e 53 65 63 75 72\r\n        69 74 79 2e 50 65 72 6d 69 73 73 69 6f 6e 73 2e\r\n        53 65 63 75 72 69 74 79 50 65 72 6d 69 73 73 69\r\n        6f 6e 41 74 74 72 69 62 75 74 65 2c 20 53 79 73\r\n        74 65 6d 2e 52 75 6e 74 69 6d 65 2c 20 56 65 72\r\n        73 69 6f 6e 3d 37 2e 30 2e 30 2e 30 2c 20 43 75\r\n        6c 74 75 72 65 3d 6e 65 75 74 72 61 6c 2c 20 50\r\n        75 62 6c 69 63 4b 65 79 54 6f 6b 65 6e 3d 62 30\r\n        33 66 35 66 37 66 31 31 64 35 30 61 33 61 15 01\r\n        54 02 10 53 6b 69 70 56 65 72 69 66 69 63 61 74\r\n        69 6f 6e 01\r\n    )\r\n    .hash algorithm 0x00008004 \r\n    .ver 0:0:0:0\r\n}\r\n\r\n.class private auto ansi '<Module>'\r\n{\r\n}\r\n\r\n.class private auto ansi beforefieldinit testsspace.testClass\r\n    extends [System.Runtime]System.Object\r\n{\r\n    .custom instance void System.Runtime.CompilerServices.NullableContextAttribute::.ctor(uint8) = (\r\n        01 00 01 00 00\r\n    )\r\n    .custom instance void System.Runtime.CompilerServices.NullableAttribute::.ctor(uint8) = (\r\n        01 00 00 00 00\r\n    )\r\n    .class nested private auto ansi beforefieldinit TestChild\r\n        extends [System.Runtime]System.Object\r\n    {\r\n        .custom instance void System.Runtime.CompilerServices.NullableContextAttribute::.ctor(uint8) = (\r\n            01 00 00 00 00\r\n        )\r\n        .method public hidebysig specialname rtspecialname \r\n            instance void .ctor () cil managed \r\n        {\r\n            .maxstack 8\r\n\r\n            IL_0000: ldarg.0\r\n            IL_0001: call instance void [System.Runtime]System.Object::.ctor()\r\n            IL_0006: nop\r\n            IL_0007: ret\r\n        }\r\n\r\n    } \r\n\r\n    .class nested private auto ansi sealed Test\r\n        extends [System.Runtime]System.Enum\r\n    {\r\n        .custom instance void System.Runtime.CompilerServices.NullableContextAttribute::.ctor(uint8) = (\r\n            01 00 00 00 00\r\n        )\r\n        .field public specialname rtspecialname int32 value__\r\n        .field public static literal valuetype testsspace.testClass/Test test1 = int32(0)\r\n        .field public static literal valuetype testsspace.testClass/Test test2 = int32(1)\r\n\r\n    }\r\n\r\n\r\n    .field private string '<Name>k__BackingField'\r\n    .custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor() = (\r\n        01 00 00 00\r\n    )\r\n    .custom instance void [System.Runtime]System.Diagnostics.DebuggerBrowsableAttribute::.ctor(valuetype [System.Runtime]System.Diagnostics.DebuggerBrowsableState) = (\r\n        01 00 00 00 00 00 00 00\r\n    )\r\n\r\n    .method public hidebysig specialname \r\n        instance string get_Name () cil managed \r\n    {\r\n        .custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor() = (\r\n            01 00 00 00\r\n        )\r\n        .maxstack 8\r\n\r\n        IL_0000: ldarg.0\r\n        IL_0001: ldfld string testsspace.testClass::'<Name>k__BackingField'\r\n        IL_0006: ret\r\n    }\r\n\r\n    .method public hidebysig specialname \r\n        instance void set_Name (\r\n            string 'value'\r\n        ) cil managed \r\n    {\r\n        .custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor() = (\r\n            01 00 00 00\r\n        )\r\n        .maxstack 8\r\n\r\n        IL_0000: ldarg.0\r\n        IL_0001: ldarg.1\r\n        IL_0002: stfld string testsspace.testClass::'<Name>k__BackingField'\r\n        IL_0007: ret\r\n    }\r\n\r\n    .method public hidebysig specialname rtspecialname \r\n        instance void .ctor () cil managed \r\n    {\r\n        .maxstack 8\r\n\r\n        IL_0000: ldarg.0\r\n        IL_0001: call instance void [System.Runtime]System.Object::.ctor()\r\n        IL_0006: nop\r\n        IL_0007: ret\r\n    }\r\n\r\n    .event [System.Runtime]System.Action tests\r\n    {\r\n        .addon instance void testsspace.testClass::add_tests(class [System.Runtime]System.Action)\r\n        .removeon instance void testsspace.testClass::remove_tests(class [System.Runtime]System.Action)\r\n    }\r\n\r\n    .property instance string Name()\r\n    {\r\n        .get instance string testsspace.testClass::get_Name()\r\n        .set instance void testsspace.testClass::set_Name(string)\r\n    }\r\n}\r\n\r\n.class private auto ansi sealed beforefieldinit Microsoft.CodeAnalysis.EmbeddedAttribute\r\n    extends [System.Runtime]System.Attribute\r\n{\r\n    .custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor() = (\r\n        01 00 00 00\r\n    )\r\n    .custom instance void Microsoft.CodeAnalysis.EmbeddedAttribute::.ctor() = (\r\n        01 00 00 00\r\n    )\r\n    .method public hidebysig specialname rtspecialname \r\n        instance void .ctor () cil managed \r\n    {\r\n        .maxstack 8\r\n\r\n        IL_0000: ldarg.0\r\n        IL_0001: call instance void [System.Runtime]System.Attribute::.ctor()\r\n        IL_0006: nop\r\n        IL_0007: ret\r\n    }\r\n\r\n}\r\n\r\n.class private auto ansi sealed beforefieldinit System.Runtime.CompilerServices.NullableAttribute\r\n    extends [System.Runtime]System.Attribute\r\n{\r\n    .custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor() = (\r\n        01 00 00 00\r\n    )\r\n    .custom instance void Microsoft.CodeAnalysis.EmbeddedAttribute::.ctor() = (\r\n        01 00 00 00\r\n    )\r\n    .custom instance void [System.Runtime]System.AttributeUsageAttribute::.ctor(valuetype [System.Runtime]System.AttributeTargets) = (\r\n        01 00 84 6b 00 00 02 00 54 02 0d 41 6c 6c 6f 77\r\n        4d 75 6c 74 69 70 6c 65 00 54 02 09 49 6e 68 65\r\n        72 69 74 65 64 00\r\n    )\r\n    .field public initonly uint8[] NullableFlags\r\n\r\n    .method public hidebysig specialname rtspecialname \r\n        instance void .ctor (\r\n            uint8 ''\r\n        ) cil managed \r\n    {\r\n        .maxstack 8\r\n\r\n        IL_0000: ldarg.0\r\n        IL_0001: call instance void [System.Runtime]System.Attribute::.ctor()\r\n        IL_0006: nop\r\n        IL_0007: ldarg.0\r\n        IL_0008: ldc.i4.1\r\n        IL_0009: newarr [System.Runtime]System.Byte\r\n        IL_000e: dup\r\n        IL_000f: ldc.i4.0\r\n        IL_0010: ldarg.1\r\n        IL_0011: stelem.i1\r\n        IL_0012: stfld uint8[] System.Runtime.CompilerServices.NullableAttribute::NullableFlags\r\n        IL_0017: ret\r\n    }\r\n\r\n    .method public hidebysig specialname rtspecialname \r\n        instance void .ctor (\r\n            uint8[] ''\r\n        ) cil managed \r\n    {\r\n        .maxstack 8\r\n\r\n        IL_0000: ldarg.0\r\n        IL_0001: call instance void [System.Runtime]System.Attribute::.ctor()\r\n        IL_0006: nop\r\n        IL_0007: ldarg.0\r\n        IL_0008: ldarg.1\r\n        IL_0009: stfld uint8[] System.Runtime.CompilerServices.NullableAttribute::NullableFlags\r\n        IL_000e: ret\r\n    }\r\n\r\n}\r\n\r\n.class private auto ansi sealed beforefieldinit System.Runtime.CompilerServices.NullableContextAttribute\r\n    extends [System.Runtime]System.Attribute\r\n{\r\n    .custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor() = (\r\n        01 00 00 00\r\n    )\r\n    .custom instance void Microsoft.CodeAnalysis.EmbeddedAttribute::.ctor() = (\r\n        01 00 00 00\r\n    )\r\n    .custom instance void [System.Runtime]System.AttributeUsageAttribute::.ctor(valuetype [System.Runtime]System.AttributeTargets) = (\r\n        01 00 4c 14 00 00 02 00 54 02 0d 41 6c 6c 6f 77\r\n        4d 75 6c 74 69 70 6c 65 00 54 02 09 49 6e 68 65\r\n        72 69 74 65 64 00\r\n    )\r\n    .field public initonly uint8 Flag\r\n\r\n    .method public hidebysig specialname rtspecialname \r\n        instance void .ctor (\r\n            uint8 ''\r\n        ) cil managed \r\n    {\r\n        .maxstack 8\r\n\r\n        IL_0000: ldarg.0\r\n        IL_0001: call instance void [System.Runtime]System.Attribute::.ctor()\r\n        IL_0006: nop\r\n        IL_0007: ldarg.0\r\n        IL_0008: ldarg.1\r\n        IL_0009: stfld uint8 System.Runtime.CompilerServices.NullableContextAttribute::Flag\r\n        IL_000e: ret\r\n    } \r\n\r\n}\r\n\r\n.class private auto ansi sealed beforefieldinit System.Runtime.CompilerServices.RefSafetyRulesAttribute\r\n    extends [System.Runtime]System.Attribute\r\n{\r\n    .custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor() = (\r\n        01 00 00 00\r\n    )\r\n    .custom instance void Microsoft.CodeAnalysis.EmbeddedAttribute::.ctor() = (\r\n        01 00 00 00\r\n    )\r\n    .custom instance void [System.Runtime]System.AttributeUsageAttribute::.ctor(valuetype [System.Runtime]System.AttributeTargets) = (\r\n        01 00 02 00 00 00 02 00 54 02 0d 41 6c 6c 6f 77\r\n        4d 75 6c 74 69 70 6c 65 00 54 02 09 49 6e 68 65\r\n        72 69 74 65 64 00\r\n    )\r\n    .field public initonly int32 Version\r\n\r\n    .method public hidebysig specialname rtspecialname \r\n        instance void .ctor (\r\n            int32 ''\r\n        ) cil managed \r\n    {\r\n        .maxstack 8\r\n\r\n        IL_0000: ldarg.0\r\n        IL_0001: call instance void [System.Runtime]System.Attribute::.ctor()\r\n        IL_0006: nop\r\n        IL_0007: ldarg.0\r\n        IL_0008: ldarg.1\r\n        IL_0009: stfld int32 System.Runtime.CompilerServices.RefSafetyRulesAttribute::Version\r\n        IL_000e: ret\r\n    }\r\n\r\n}"
+}

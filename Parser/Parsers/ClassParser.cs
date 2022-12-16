@@ -1,14 +1,10 @@
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Extensions;
-using System.Diagnostics;
-using System.Reflection;
-using System.Text;
-using System.ComponentModel;
+using Inoculator.Parser.Models;
+using Attribute = Inoculator.Parser.Models.Attribute;
 
-namespace Inoculator.Core;
+namespace Inoculator.Parser.Core;
 
 public class ClassParser {
     public static void ParseClass(ref int index, ref string[] code, out Class type)
@@ -18,7 +14,7 @@ public class ClassParser {
         void ParseModifiers(ref int index, ref string[] code, ref Class type)
         {
             index++;
-            List<String> modifiers = new List<String>();
+            List<string> modifiers = new List<string>();
             while(code[index + 1] is not "extends" and not "implements" and not "{") {
                 modifiers.Add(code[index]);
                 index += 1;
@@ -34,7 +30,7 @@ public class ClassParser {
             type.BaseClass = code[index++];
             if(code[index] == "implements") {
                 index += 1;
-                List<String> interfaces = new List<String>();
+                List<string> interfaces = new List<string>();
                 while(code[index] != "{") {
                     if(code[index] == ".custom") {
                         index += 1; int count = 0;
@@ -46,7 +42,7 @@ public class ClassParser {
                         }
                         index += 1;
                     }
-                    interfaces.Add(code[index++].Replace(",", String.Empty));
+                    interfaces.Add(code[index++].Replace(",", string.Empty));
                 }
                 type.Interfaces = interfaces.ToArray();
             }
@@ -59,7 +55,7 @@ public class ClassParser {
             while(code[index] == ".class") {
                 var attributeResult = ClassParser.Parse(ref index, code);
                 switch(attributeResult) {
-                    case Success<Class, Exception> success:
+                    case Success<Class, System.Exception> success:
                         typedefs.Add(success.Value);
                         break;
                     default : break;
@@ -70,11 +66,11 @@ public class ClassParser {
 
         void ParseAttributes (ref int index, ref string[] code, ref Class type)
         {
-            List<String> attributes = new List<String>();
+            List<Attribute> attributes = new List<Attribute>();
             while(code[index] == ".custom") {
                 var attributeResult = AttributeParser.Parse(ref index, code);
                 switch(attributeResult) {
-                    case Success<String, Exception> success:
+                    case Success<Attribute, System.Exception> success:
                         attributes.Add(success.Value);
                         break;
                     default : break;
@@ -89,7 +85,7 @@ public class ClassParser {
             while(code[index] == ".field") {
                 var attributeResult = FieldParser.Parse(ref index, code);
                 switch(attributeResult) {
-                    case Success<Field, Exception> success:
+                    case Success<Field, System.Exception> success:
                         fields.Add(success.Value);
                         break;
                     default : break;
@@ -104,7 +100,7 @@ public class ClassParser {
             while(code[index] == ".method") {
                 var attributeResult = MethodParser.Parse(ref index, code);
                 switch(attributeResult) {
-                    case Success<Method, Exception> success:
+                    case Success<Method, System.Exception> success:
                         methods.Add(success.Value);
                         break;
                     default : break;
@@ -119,7 +115,7 @@ public class ClassParser {
             while(code[index] == ".property") {
                 var attributeResult = PropertyParser.Parse(ref index, code);
                 switch(attributeResult) {
-                    case Success<Property, Exception> success:
+                    case Success<Property, System.Exception> success:
                         properties.Add(success.Value);
                         break;
                     default : break;
@@ -134,7 +130,7 @@ public class ClassParser {
             while(code[index] == ".event") {
                 var attributeResult = EventParser.Parse(ref index, code);
                 switch(attributeResult) {
-                    case Success<Event, Exception> success:
+                    case Success<Event, System.Exception> success:
                         events.Add(success.Value);
                         break;
                     default : break;
@@ -155,12 +151,14 @@ public class ClassParser {
         }
 
     }
-    public static Result<Class, Exception> Parse(ref int i, string[] tokens)
+    public static Result<Class, System.Exception> Parse(ref int i, string[] tokens)
     {
+        var start = i;
         ParseClass(ref i, ref tokens, out Class type);
         if(type is null) {
-            return Error<Class, Exception>.From(new Exception("Failed to parse class"));
+            return Error<Class, System.Exception>.From(new System.Exception("Failed to parse class"));
         }
-        return Success<Class, Exception>.From(type);
+        type.Code = tokens[start..i].Join(" ");
+        return Success<Class, System.Exception>.From(type);
     }
 }

@@ -1,6 +1,7 @@
-using System.Reflection;
-using System.Text.Json;
+using System;
+using System.Linq;
 
+namespace Inoculator.Parser.Models;
 public class Class : Printable<Class> {
     public enum ClassType {
         Class,
@@ -17,7 +18,7 @@ public class Class : Printable<Class> {
     public Event[] Events { get; set; }
     public Property[] Properties { get; set; }
     public Class[] TypeDefs { get; set; }
-    public string[] Attributes { get; set; }
+    public Attribute[] Attributes { get; set; }
     public string[] Modifiers { get; set; }
     public ClassType? Type => BaseClass switch 
     {
@@ -28,5 +29,5 @@ public class Class : Printable<Class> {
                 ? Modifiers.Contains("interface") ? ClassType.Interface : ClassType.Class
                 : null
     };
-    public string[] Body { get; set; }
+    public string Code { get; set; }
 }

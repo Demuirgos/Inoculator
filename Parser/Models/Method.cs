@@ -1,7 +1,10 @@
-using System.Text.Json;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
+namespace Inoculator.Parser.Models;
 public class Method : Printable<Method> {
-    public String[] Attributes { get; set; } 
+    public Attribute[] Attributes { get; set; } 
     public Argument[] Parameters { get; set; }
     public Argument ReturnValue { get; set; }
     public String Name { get; set; }
@@ -13,5 +16,5 @@ public class Method : Printable<Method> {
     public bool? IsStatic => Modifiers?.Contains("static");
     public bool IsConstructor => Name == ".ctor";
     public int MaxStack { get; set; }
-    public Exception? Exception { get; set; }
+    public string Code { get; set; }
 }
