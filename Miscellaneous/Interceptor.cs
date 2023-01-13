@@ -1,4 +1,4 @@
-using Inoculator.Parser.Models;
+using Inoculator.Builder;
 public class InterceptorAttribute : System.Attribute
 {
     public InterceptorAttribute() { }

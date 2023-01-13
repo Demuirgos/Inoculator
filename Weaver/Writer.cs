@@ -4,10 +4,12 @@ using System.Linq;
 using System.Extensions;
 using System.Diagnostics;
 using Inoculator.Extensions;
+using IL_Unit = RootDecl.Declaration.Collection;
+using System.IO;
 
 namespace Inoculator.Core;
 
-public class Writer : IntermediateIOBase {
+public class Writer : IntermediateIOBase<string> {
     readonly new static string processName = "ilasm";
     public override Result<string, Exception> Run()
     {
