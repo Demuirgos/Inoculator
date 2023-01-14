@@ -83,7 +83,7 @@
     .method public hidebysig specialname 
         instance string get_Name () cil managed 
     {
-        .custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor() = (
+        .custom instance void [System.Runtime]System.Runtime.CompilerServices.DebuggerBrowsableAttribute::.ctor() = (
             01 00 00 00
         )
         .maxstack 8
@@ -98,7 +98,7 @@
             string 'value'
         ) cil managed 
     {
-        .custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor() = (
+        .custom instance void [System.Runtime]System.Runtime.CompilerServices.InterceptorAttribute::.ctor() = (
             01 00 00 00
         )
         .maxstack 8
