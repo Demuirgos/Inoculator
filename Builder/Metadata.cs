@@ -11,6 +11,7 @@ public class Metadata : Printable<Metadata> {
         Success<MethodDecl.Method, Exception> success => success.Value,
         Error<MethodDecl.Method, Exception> failure => throw failure.Message,
     };
+    public IdentifierDecl.Identifier ClassName {get; set;}
     public String Name => Code.Header.Name.ToString();
     public bool IsMarked => Code.Body
         .Items.Values
@@ -40,11 +41,14 @@ public class Metadata : Printable<Metadata> {
     [JsonIgnore]
     public MethodDecl.Method Code { get; set; }
 
-    public MethodDecl.Method ReplaceNameWith(String name) {
-        var code = Code.ToString().Replace(Name, name).Replace("\0", "");
-        return Reader.Parse<MethodDecl.Method>(code) switch {
-            Success<MethodDecl.Method, Exception> success => success.Value,
-            Error<MethodDecl.Method, Exception> failure => throw failure.Message,
-        };
+    public Result<MethodDecl.Method[], Exception> ReplaceNameWith(String name) {
+        var newMethod = Wrapper.Handle(Code, ClassName);
+        if(newMethod is not Success<MethodDecl.Method, Exception> n_method) 
+            return Error<MethodDecl.Method[], Exception>.From(new Exception("failed to wrap nethod"));
+        var odlMethod = Reader.Parse<MethodDecl.Method>(Code.ToString().Replace(Name, name).Replace("\0", ""));
+        if(odlMethod is not Success<MethodDecl.Method, Exception> o_method) 
+            return Error<MethodDecl.Method[], Exception>.From(new Exception("failed to parse modifed old method"));
+
+        return Success<MethodDecl.Method[], Exception>.From(new[] { o_method.Value, n_method.Value });
     }
 }

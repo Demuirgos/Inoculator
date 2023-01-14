@@ -2,27 +2,46 @@ using System.Extensions;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using IdentifierDecl;
 using Inoculator.Core;
 using MethodDecl;
 
 namespace Inoculator.Builder;
 
-public static class Wrap {
+public static class Wrapper {
     static string getNextLabel(ref int labelIdx) => $"IL_{labelIdx++:X4}";
-    public static MethodDecl.Method Handle(this MethodDecl.Method method) {
+    public static Result<MethodDecl.Method, Exception> Handle(this MethodDecl.Method method, Identifier container) {
         int labelIdx = 0;
         StringBuilder builder = new();
         builder.AppendLine(".method");
         builder.AppendLine(method.Header.ToString());
         builder.AppendLine("{");
         foreach (var member in method.Body.Items.Values) {
-            if(member is MethodDecl.LabelItem or MethodDecl.InstructionItem) continue;
+            if(member is MethodDecl.LabelItem or MethodDecl.InstructionItem or MethodDecl.LocalsItem) continue;
             builder.AppendLine(member.ToString());
         }
+        int localsIdx = 0;
+        bool isVoidCall = !ReturnTypeOf(method.Header, out var type);
+        bool isPrimitive = _primitives.Contains(type);
+        builder.AppendLine($$$"""
+        .locals init (
+            [{{{localsIdx++}}}] class InterceptorAttribute interceptor,
+            [{{{localsIdx++}}}] class Metadata metadata,
+            {{{(
+                isVoidCall 
+                    ? String.Empty 
+                    : $@"
+                [{localsIdx++}] {type} result,
+                [{localsIdx++}] {type}," 
+            )}}}
+            [{{{localsIdx++}}}] class [System.Runtime]System.Exception e
+        )
+        """);
+
         builder.Append($$$"""
         {{{getNextLabel(ref labelIdx)}}}: newobj instance void InterceptorAttribute::.ctor()
         {{{getNextLabel(ref labelIdx)}}}: stloc.0
-        {{{getNextLabel(ref labelIdx)}}}: ldstr "{{{method.ToString().Trim(' ', '\0', '\n', '\r', '\t')}}}"
+        {{{getNextLabel(ref labelIdx)}}}: ldstr "{{{new string(method.ToString().ToCharArray().Where(c => !Char.IsWhiteSpace(c)).ToArray())}}}"
         {{{getNextLabel(ref labelIdx)}}}: newobj instance void Metadata::.ctor(string)
         {{{getNextLabel(ref labelIdx)}}}: stloc.1
 
@@ -41,18 +60,33 @@ public static class Wrap {
             .try
             {
                 {{{LoadArguments(method.Header.Parameters, ref labelIdx)}}}
-                {{{getNextLabel(ref labelIdx)}}}: call {{{method.Header}}}
-                {{{getNextLabel(ref labelIdx)}}}: stloc.2
+                {{{getNextLabel(ref labelIdx)}}}: call {{{MkMethodReference(method.Header, container)}}}
+                {{{(
+                    isVoidCall 
+                        ? String.Empty 
+                        : $@"{getNextLabel(ref labelIdx)}: stloc.2"
+                )}}}
                 {{{getNextLabel(ref labelIdx)}}}: ldloc.1
-                {{{getNextLabel(ref labelIdx)}}}: ldloc.2
-                {{{getNextLabel(ref labelIdx)}}}: box [System.Runtime]System.Int32
+                {{{(
+                    isVoidCall 
+                        ? $@"{getNextLabel(ref labelIdx)}: ldnull"
+                        : $@"{getNextLabel(ref labelIdx)}: ldloc.2
+                            {(  isPrimitive 
+                                    ? $@"{getNextLabel(ref labelIdx)}: box [System.Runtime]System.Int32"
+                                    : String.Empty
+                            )}"
+                )}}}
                 {{{getNextLabel(ref labelIdx)}}}: callvirt instance void Metadata::set_ReturnValue(object)
                 {{{getNextLabel(ref labelIdx)}}}: ldloc.0
                 {{{getNextLabel(ref labelIdx)}}}: ldloc.1
                 {{{getNextLabel(ref labelIdx)}}}: callvirt instance void InterceptorAttribute::OnSuccess(class Metadata)
-                {{{getNextLabel(ref labelIdx)}}}: ldloc.2
-                {{{getNextLabel(ref labelIdx)}}}: stloc.3
-                {{{getNextLabel(ref labelIdx)}}}: leave.s IL_007e
+                {{{(
+                    isVoidCall 
+                        ? String.Empty 
+                        : $@"{getNextLabel(ref labelIdx)}: ldloc.2
+                             {getNextLabel(ref labelIdx)}: stloc.3"
+                )}}}
+                {{{getNextLabel(ref labelIdx)}}}: leave.s ***END***
             } 
             catch [System.Runtime]System.Exception
             {
@@ -75,17 +109,39 @@ public static class Wrap {
             {{{getNextLabel(ref labelIdx)}}}: endfinally
         } 
 
-        {{{getNextLabel(ref labelIdx)}}}: ldloc.3
+        {{{( isVoidCall ? String.Empty : $@"{getNextLabel(ref labelIdx)}: ldloc.3" )}}}
         {{{getNextLabel(ref labelIdx)}}}: ret
 
         """);
+
+        string endLabel = $"IL_{labelIdx - (isVoidCall ? 1 : 2):X4}";
+        builder.Replace("***END***", endLabel);
         builder.AppendLine("}");
         var result = builder.ToString().Replace("\0", "");
-        Console.WriteLine(result);
-        return Reader.Parse<MethodDecl.Method>(result) switch {
-            Success<MethodDecl.Method, Exception> success => success.Value,
-            Error<MethodDecl.Method, Exception> failure => throw new Exception("Wrap failed"),
+        return Reader.Parse<MethodDecl.Method>(result);
+    }
+
+    private static bool ReturnTypeOf(MethodDecl.Prefix header, out string type) {
+        var typeComp = header.Type.Value.Types.Values.OfType<TypeDecl.TypePrimitive>().FirstOrDefault();
+        type = typeComp.TypeName switch {
+            "void" => null,
+            _ => $"{{{header.Type.ToString()}}}",
         };
+        return type != null;
+    }
+
+    private static string MkMethodReference(MethodDecl.Prefix Name, Identifier container) {
+        // int32 Test::method_old(int32, object, uint8, class [System.Runtime]System.Collections.Generic.IEnumerable`1<string>, valuetype testE, string)
+        var builder = new StringBuilder();
+        builder.Append(Name.Type.ToString());
+        builder.Append(" ");
+        builder.Append(container.ToString());
+        builder.Append("::");
+        builder.Append($"{Name.Name}__Inoculated");
+        builder.Append("(");
+        builder.Append(string.Join(", ", Name.Parameters.Parameters.Values.Select(x => x.ToString())));
+        builder.Append(")");
+        return builder.ToString();
     }
 
     public static string ExtractArguments(ParameterDecl.Parameter.Collection parameter, ref int labelIdx) {
@@ -106,14 +162,13 @@ public static class Wrap {
         return builder.ToString();
     }
 
+    static String[] _primitives = new String[] { "bool", "char", "float32", "float64", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "native" };
     public static string ExtractArgument(ParameterDecl.Parameter parameter, ref int labelIdx, int paramIdx = 0) {
-        String[] _primitives = new String[] { "bool", "char", "float32", "float64", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "native" };
         StringBuilder builder = new StringBuilder();
         if(parameter is not ParameterDecl.DefaultParameter param) {
             throw new Exception("Unknown parameter type");
         }
         var typeComp = param.TypeDeclaration.Value.Types.Values.OfType<TypeDecl.TypePrimitive>().FirstOrDefault();
-        Console.WriteLine(parameter);
         var ilcode = typeComp.TypeName switch {
             _ when _primitives.Contains(typeComp.TypeName) => $$$"""
                 {{{getNextLabel(ref labelIdx)}}}: dup

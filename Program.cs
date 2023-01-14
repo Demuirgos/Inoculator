@@ -14,7 +14,9 @@ Reader
             var result = nestedTypes.SelectMany(c => SearchForMethods(c.Value)).ToList();
 
             var methods = type.Members.Members.Values.OfType<ClassDecl.MethodDefinition>();
-            var metadata = methods.Select(x => new Metadata(x.Value));
+            var metadata = methods.Select(x => new Metadata(x.Value) {
+                ClassName = type.Header.Id
+            });
             result.AddRange(metadata);
             return result;
         }
@@ -24,7 +26,19 @@ Reader
             foreach (var metadata in SearchForMethods(type))
             {
                 if(metadata.Code.IsConstructor || !metadata.IsMarked) continue;
-                Console.WriteLine(Wrap.Handle(metadata.Code));
+                switch(metadata.ReplaceNameWith($"{metadata.Name}__Inoculated"))
+                {
+                    case Success<MethodDecl.Method[], Exception> success:
+                        var (oldMethod, newMethod) = (success.Value[0], success.Value[1]);
+                        File.AppendAllLines("./TestRes.il", new[] {
+                            oldMethod.ToString().Replace("\0", ""),
+                            newMethod.ToString().Replace("\0", "")
+                        });
+                        break;
+                    case Error<MethodDecl.Method[], Exception> error:
+                        Console.WriteLine(error.Message);
+                        break;
+                }
             }
         }
         return Success<int, Exception>.From(0);
