@@ -1,30 +1,31 @@
-# Innoculator
-An IL code Injector using Ilasm and Ildasm (WIP)
-# Progress So far : 
-  * Target function : 
-  ```
-  .method public hidebysig static 
-        int32 method_that_does_stuff (
-            int32 arg1,
-            object arg2,
-            uint8 arg3,
-            class [System.Runtime]System.Collections.Generic.IEnumerable`1<string> arg4,
-            string arg5
-        ) cil managed 
-    {
-        .custom instance void DummyInterceptorAttribute::.ctor() = (
-            01 00 00 00
-        )
-        
-        .maxstack 8
+.assembly _ {
+	.custom instance void [System.Runtime] System.Runtime.CompilerServices.CompilationRelaxationsAttribute::.ctor ( int32 )=(0100080000000000)
+	.custom instance void [System.Runtime] System.Runtime.CompilerServices.RuntimeCompatibilityAttribute::.ctor (  )=(01000100540216577261704E6F6E457863657074696F6E5468726F777301)
+	.custom instance void [System.Runtime] System.Diagnostics.DebuggableAttribute::.ctor ( valuetype [System.Runtime] System.Diagnostics.DebuggableAttribute/DebuggingModes )=(0100020000000000)
+	.permissionset reqmin = (2E 01 80 8A 53 79 73 74 65 6D 2E 53 65 63 75 72 69 74 79 2E 50 65 72 6D 69 73 73 69 6F 6E 73 2E 53 65 63 75 72 69 74 79 50 65 72 6D 69 73 73 69 6F 6E 41 74 74 72 69 62 75 74 65 2C 20 53 79 73 74 65 6D 2E 52 75 6E 74 69 6D 65 2C 20 56 65 72 73 69 6F 6E 3D 37 2E 30 2E 30 2E 30 2C 20 43 75 6C 74 75 72 65 3D 6E 65 75 74 72 61 6C 2C 20 50 75 62 6C 69 63 4B 65 79 54 6F 6B 65 6E 3D 62 30 33 66 35 66 37 66 31 31 64 35 30 61 33 61 15 01 54 02 10 53 6B 69 70 56 65 72 69 66 69 63 61 74 69 6F 6E 01)
+	.hash algorithm 0x8004
+	.ver 0:0:0:0
+}
 
-        IL_0000: ldc.i4.s 69
-        IL_0002: ret
-    } 
-  ```
-  * Result function :
-  ```
- .method public hidebysig static 
+.class private auto ansi '<Module>' 
+{
+
+}
+
+.class public auto ansi beforefieldinit Experiment
+	extends [System.Runtime] System.Object 
+{
+	.method public hidebysig static 
+		int32 method_that_does_stuff__Inoculated (int32 arg1,object arg2,unsigned int8 arg3,class [System.Runtime] System.Collections.Generic.IEnumerable`1<string> arg4,string arg5) cil managed  
+	{
+		.custom instance void DummyInterceptorAttribute::.ctor (  )=(01000000)
+		.maxstack 8
+
+		IL_0000: ldc.i4.s 69
+		IL_0002: ret 
+	}
+		
+	.method public hidebysig static 
 		int32 method_that_does_stuff (int32 arg1,object arg2,unsigned int8 arg3,class [System.Runtime] System.Collections.Generic.IEnumerable`1<string> arg4,string arg5) cil managed  
 	{
 		.custom instance void DummyInterceptorAttribute::.ctor (  )=(01000000)
@@ -114,38 +115,46 @@ An IL code Injector using Ilasm and Ildasm (WIP)
 		IL_0001: call instance void [System.Runtime] System.Object::.ctor (  )
 		IL_0006: ret 
 	}
-  ```
-# Strategy : 
-  ```csharp
-class parentClass {
-    [InterceptorAttr] Output_T FunctionName(Input_T1 input, Input_T2 input, ...) {
-        // body of function
-        return output;
-    } 
 }
 
-// becomes
-class parentClass {
-    private Output_T FunctionName_Old(Input_T1 input, Input_T2 input, ...) {
-        // body of function
-        return output;
-    }
-    
-    public Output_T invoke(Input_T1 input, Input_T2 input) {
-        var interceptor = new InterceptorAttribute();
-        var metadata = new Metadata(Code);
-        metadata.Parameters = new object[] { input, input, .. };
-        interceptor.OnEntry(metadata);
-        try {
-            Output_T result = FunctionName_Old(input, input, ...);
-            metadata.ReturnValue = result;
-            interceptor.OnSuccess(metadata);
-        } catch (Exception e) {
-            metadata.Exception = e;
-            interceptor.OnException(metadata);
-        } finally {
-            interceptor.OnExit(metadata);
-        }
-    }
+.class public auto ansi beforefieldinit DummyInterceptorAttribute
+	extends [Inoculator.Injector] Inoculator.Attributes.InterceptorAttribute 
+{
+		
+	.method public hidebysig specialname rtspecialname instance 
+		void .ctor ( ) cil managed  
+	{
+		.maxstack 8
+		IL_0000: ldarg.0 
+		IL_0001: call instance void [Inoculator.Injector] Inoculator.Attributes.InterceptorAttribute::.ctor (  )
+		IL_0006: ret 
+	}
+
+	.method public hidebysig newslot virtual instance 
+		void OnEntry (class Metadata 'method') cil managed  
+	{
+		.maxstack 8
+		IL_0000: ret 
+	}
+
+	.method public hidebysig newslot virtual instance 
+		void OnException (class Metadata 'method') cil managed  
+	{
+		.maxstack 8
+		IL_0000: ret 
+	}
+	
+	.method public hidebysig newslot virtual instance 
+		void OnSuccess (class Metadata 'method') cil managed  
+	{
+		.maxstack 8
+		IL_0000: ret 
+	}
+
+	.method public hidebysig newslot virtual instance 
+		void OnExit (class Metadata 'method') cil managed  
+	{
+		.maxstack 8
+		IL_0000: ret 
+	}
 }
-``` 

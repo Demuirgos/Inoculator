@@ -43,7 +43,10 @@ public static class Searcher {
         var toplevel = ilfile
             .Declarations.Values
             .OfType<ClassDecl.Class>()
-            .Where(type => type.Header.Extends?.Type.ToString().Contains("InterceptorAttribute") ?? false);
+            .Where(type => {
+                var inheritedType = new String(type.Header.Extends?.Type.ToString().Where(c => !Char.IsWhiteSpace(c) && c != '\0').ToArray());
+                return inheritedType == "[Inoculator.Injector]Inoculator.Attributes.InterceptorAttribute";
+            });
         return toplevel.Select(x => x.Header.Id).ToList();
     }
 }

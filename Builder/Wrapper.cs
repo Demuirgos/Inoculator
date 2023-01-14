@@ -23,6 +23,8 @@ public static class Wrapper {
         int localsIdx = 0;
         bool isVoidCall = !ReturnTypeOf(method.Header, out var type);
         bool isPrimitive = _primitives.Contains(type);
+        bool isStatic = method.Header.Convention is null || method.Header.MethodAttributes.Attributes.Values.Any(a => a is AttributeDecl.MethodSimpleAttribute { Name: "static" });
+
         builder.AppendLine($$$"""
         .locals init (
             [{{{localsIdx++}}}] class InterceptorAttribute interceptor,
@@ -59,6 +61,7 @@ public static class Wrapper {
         {
             .try
             {
+                {{{(isStatic ? String.Empty : $@"{getNextLabel(ref labelIdx)}: ldarg.0")}}}
                 {{{LoadArguments(method.Header.Parameters, ref labelIdx)}}}
                 {{{getNextLabel(ref labelIdx)}}}: call {{{MkMethodReference(method.Header, container)}}}
                 {{{(
@@ -125,7 +128,7 @@ public static class Wrapper {
         var typeComp = header.Type.Value.Types.Values.OfType<TypeDecl.TypePrimitive>().FirstOrDefault();
         type = typeComp.TypeName switch {
             "void" => null,
-            _ => $"{{{header.Type.ToString()}}}",
+            _ => $"{header.Type.ToString()}",
         };
         return type != null;
     }
@@ -134,9 +137,11 @@ public static class Wrapper {
         // int32 Test::method_old(int32, object, uint8, class [System.Runtime]System.Collections.Generic.IEnumerable`1<string>, valuetype testE, string)
         var builder = new StringBuilder();
         builder.Append(Name.Type.ToString());
-        builder.Append(" ");
-        builder.Append(container.ToString());
-        builder.Append("::");
+        if(container is not null) {
+            builder.Append(" ");
+            builder.Append(container.ToString());
+            builder.Append("::");
+        }
         builder.Append($"{Name.Name}__Inoculated");
         builder.Append("(");
         builder.Append(string.Join(", ", Name.Parameters.Parameters.Values.Select(x => x.ToString())));
@@ -157,7 +162,7 @@ public static class Wrapper {
         StringBuilder builder = new StringBuilder();
         int paramIdx = 0;
         foreach(ParameterDecl.DefaultParameter param in parameter.Parameters.Values.OfType<ParameterDecl.DefaultParameter>()){
-            builder.AppendLine(LoadArgument(param, ref labelIdx, paramIdx));
+            builder.AppendLine(LoadArgument(param, ref labelIdx, paramIdx++));
         }
         return builder.ToString();
     }
@@ -169,38 +174,38 @@ public static class Wrapper {
             throw new Exception("Unknown parameter type");
         }
         var typeComp = param.TypeDeclaration.Value.Types.Values.OfType<TypeDecl.TypePrimitive>().FirstOrDefault();
-        var ilcode = typeComp.TypeName switch {
-            _ when _primitives.Contains(typeComp.TypeName) => $$$"""
-                {{{getNextLabel(ref labelIdx)}}}: dup
-                {{{getNextLabel(ref labelIdx)}}}: ldc.i4.{{{paramIdx}}}
-                {{{getNextLabel(ref labelIdx)}}}: ldarg.{{{paramIdx + 1}}}
-                {{{getNextLabel(ref labelIdx)}}}: box {{{typeComp.TypeName}}}
-                {{{getNextLabel(ref labelIdx)}}}: stelem.ref
-                """,
-            _ => $$$"""
-                {{{getNextLabel(ref labelIdx)}}}: dup
-                {{{getNextLabel(ref labelIdx)}}}: ldc.i4.{{{paramIdx}}}
-                {{{LoadArgument(param, ref labelIdx, paramIdx + 1)}}}
-                {{{getNextLabel(ref labelIdx)}}}: stelem.ref
-                """
-        };
+        var ilcode = typeComp is null ? string.Empty  : typeComp.TypeName switch {
+                _ when _primitives.Contains(typeComp.TypeName) => $$$"""
+                    {{{getNextLabel(ref labelIdx)}}}: dup
+                    {{{getNextLabel(ref labelIdx)}}}: ldc.i4.{{{paramIdx}}}
+                    {{{getNextLabel(ref labelIdx)}}}: ldarg.{{{paramIdx + 1}}}
+                    {{{getNextLabel(ref labelIdx)}}}: box {{{typeComp.TypeName}}}
+                    {{{getNextLabel(ref labelIdx)}}}: stelem.ref
+                    """,
+                _ => $$$"""
+                    {{{getNextLabel(ref labelIdx)}}}: dup
+                    {{{getNextLabel(ref labelIdx)}}}: ldc.i4.{{{paramIdx}}}
+                    {{{LoadArgument(param, ref labelIdx, paramIdx + 1)}}}
+                    {{{getNextLabel(ref labelIdx)}}}: stelem.ref
+                    """
+            };
 
         builder.Append(ilcode);
         return builder.ToString();
     }
 
     public static string LoadArgument(ParameterDecl.Parameter parameter, ref int labelIdx, int paramIdx = 0) {
-        String[] _primitives = new String[] { "bool", "char", "float32", "float64", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "native" };
+        String[] _primitives = new String[] { "bool", "char", "float32", "float64", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "unsigned int8", "unsigned int16", "unsigned int32" , "native" };
         StringBuilder builder = new StringBuilder();
         if(parameter is not ParameterDecl.DefaultParameter param) {
             throw new Exception("Unknown parameter type");
         }
-        var typeComp = param.TypeDeclaration.Value.Types.Values.OfType<TypeDecl.TypePrimitive>().FirstOrDefault();
-        var ilcode = typeComp.TypeName switch {
+        var typeComp = param.TypeDeclaration?.ToString().Replace("\0", "");
+        var ilcode = typeComp is null ? String.Empty : typeComp switch {
             "object" => $$$"""
                 {{{getNextLabel(ref labelIdx)}}}: ldarg.{{{paramIdx + 1}}}
                 """,
-            _ when _primitives.Contains(typeComp.TypeName) => $$$"""
+            _ when _primitives.Contains(typeComp) => $$$"""
                 {{{getNextLabel(ref labelIdx)}}}: ldarg.{{{paramIdx + 1}}}
                 """,
             _ => $$$"""
