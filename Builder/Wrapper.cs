@@ -75,7 +75,7 @@ public static class Wrapper {
                         ? $@"{getNextLabel(ref labelIdx)}: ldnull"
                         : $@"{getNextLabel(ref labelIdx)}: ldloc.2
                             {(  isPrimitive 
-                                    ? $@"{getNextLabel(ref labelIdx)}: box [System.Runtime]System.Int32"
+                                    ? $@"{getNextLabel(ref labelIdx)}: box {type}"
                                     : String.Empty
                             )}"
                 )}}}
@@ -128,7 +128,7 @@ public static class Wrapper {
         var typeComp = header.Type.Value.Types.Values.OfType<TypeDecl.TypePrimitive>().FirstOrDefault();
         type = typeComp.TypeName switch {
             "void" => null,
-            _ => $"{header.Type.ToString()}",
+            _ => header.Type.ToString().Replace("\0", ""),
         };
         return type != null;
     }

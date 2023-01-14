@@ -77,6 +77,7 @@ An IL code Injector using Ilasm and Ildasm (WIP)
 				IL_0024: stloc.2 
 				IL_0025: ldloc.1 
 				IL_0026: ldloc.2 
+                IL_0026: box int32
 				IL_0027: callvirt instance void [Inoculator.Injector] Inoculator.Builder.Metadata::set_ReturnValue ( object )
 				IL_0028: ldloc.0 
 				IL_0029: ldloc.1 
@@ -103,16 +104,6 @@ An IL code Injector using Ilasm and Ildasm (WIP)
 		}
 		IL_003B: ldloc.3 
 		IL_003C: ret 
-	}
-		
-		.method public hidebysig specialname rtspecialname instance 
-			void .ctor ( ) cil managed  
-		{
-		.maxstack 8
-
-		IL_0000: ldarg.0 
-		IL_0001: call instance void [System.Runtime] System.Object::.ctor (  )
-		IL_0006: ret 
 	}
   ```
 # Strategy : 
