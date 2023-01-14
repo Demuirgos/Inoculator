@@ -13,12 +13,6 @@ public class Metadata : Printable<Metadata> {
     };
     public IdentifierDecl.Identifier ClassName {get; set;}
     public String Name => Code.Header.Name.ToString();
-    public bool IsMarked => Code.Body
-        .Items.Values
-        .OfType<MethodDecl.CustomAttributeItem>()
-        .Any(
-            attr => attr.Value.AttributeCtor.Spec.ToString().Contains("InterceptorAttribute")
-        );
     [JsonIgnore]
     public (String[] Input, String Output)  Signature 
         => (

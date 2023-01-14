@@ -39,10 +39,10 @@ public static class Wrapper {
         """);
 
         builder.Append($$$"""
-        {{{getNextLabel(ref labelIdx)}}}: newobj instance void InterceptorAttribute::.ctor()
+        {{{getNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Injector]Inoculator.Attributes.InterceptorAttribute::.ctor()
         {{{getNextLabel(ref labelIdx)}}}: stloc.0
         {{{getNextLabel(ref labelIdx)}}}: ldstr "{{{new string(method.ToString().ToCharArray().Where(c => !Char.IsWhiteSpace(c)).ToArray())}}}"
-        {{{getNextLabel(ref labelIdx)}}}: newobj instance void Metadata::.ctor(string)
+        {{{getNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Injector]Inoculator.Builder.Metadata::.ctor(string)
         {{{getNextLabel(ref labelIdx)}}}: stloc.1
 
         {{{getNextLabel(ref labelIdx)}}}: ldloc.1
@@ -50,11 +50,11 @@ public static class Wrapper {
         {{{getNextLabel(ref labelIdx)}}}: newarr [System.Runtime]System.Object
         
         {{{ExtractArguments(method.Header.Parameters, ref labelIdx)}}}
-        {{{getNextLabel(ref labelIdx)}}}: callvirt instance void Metadata::set_Parameters(object[])
+        {{{getNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.Metadata::set_Parameters(object[])
 
         {{{getNextLabel(ref labelIdx)}}}: ldloc.0
         {{{getNextLabel(ref labelIdx)}}}: ldloc.1
-        {{{getNextLabel(ref labelIdx)}}}: callvirt instance void InterceptorAttribute::OnEntry(class Metadata)
+        {{{getNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Attributes.InterceptorAttribute::OnEntry(class Metadata)
         .try
         {
             .try
@@ -76,10 +76,10 @@ public static class Wrapper {
                                     : String.Empty
                             )}"
                 )}}}
-                {{{getNextLabel(ref labelIdx)}}}: callvirt instance void Metadata::set_ReturnValue(object)
+                {{{getNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.Metadata::set_ReturnValue(object)
                 {{{getNextLabel(ref labelIdx)}}}: ldloc.0
                 {{{getNextLabel(ref labelIdx)}}}: ldloc.1
-                {{{getNextLabel(ref labelIdx)}}}: callvirt instance void InterceptorAttribute::OnSuccess(class Metadata)
+                {{{getNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Attributes.InterceptorAttribute::OnSuccess(class Metadata)
                 {{{(
                     isVoidCall 
                         ? String.Empty 
@@ -93,10 +93,10 @@ public static class Wrapper {
                 {{{getNextLabel(ref labelIdx)}}}: stloc.s 4
                 {{{getNextLabel(ref labelIdx)}}}: ldloc.1
                 {{{getNextLabel(ref labelIdx)}}}: ldloc.s 4
-                {{{getNextLabel(ref labelIdx)}}}: callvirt instance void Metadata::set_Exception(class [System.Runtime]System.Exception)
+                {{{getNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.Metadata::set_Exception(class [System.Runtime]System.Exception)
                 {{{getNextLabel(ref labelIdx)}}}: ldloc.0
                 {{{getNextLabel(ref labelIdx)}}}: ldloc.1
-                {{{getNextLabel(ref labelIdx)}}}: callvirt instance void InterceptorAttribute::OnException(class Metadata)
+                {{{getNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Attributes.InterceptorAttribute::OnException(class Metadata)
                 {{{getNextLabel(ref labelIdx)}}}: ldloc.s 4
                 {{{getNextLabel(ref labelIdx)}}}: throw
             } 
@@ -105,7 +105,7 @@ public static class Wrapper {
         {
             {{{getNextLabel(ref labelIdx)}}}: ldloc.0
             {{{getNextLabel(ref labelIdx)}}}: ldloc.1
-            {{{getNextLabel(ref labelIdx)}}}: callvirt instance void InterceptorAttribute::OnExit(class Metadata)
+            {{{getNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Attributes.InterceptorAttribute::OnExit(class Metadata)
             {{{getNextLabel(ref labelIdx)}}}: endfinally
         } 
 

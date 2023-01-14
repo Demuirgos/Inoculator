@@ -98,7 +98,7 @@
             string 'value'
         ) cil managed 
     {
-        .custom instance void [System.Runtime]System.Runtime.CompilerServices.InterceptorAttribute::.ctor() = (
+        .custom instance void [System.Runtime]System.Runtime.CompilerServices.InterceptorChildAttribute::.ctor() = (
             01 00 00 00
         )
         .maxstack 8
@@ -277,3 +277,75 @@
     }
 
 }
+
+.class public auto ansi beforefieldinit InterceptorChildAttribute
+    extends InterceptorAttribute
+{
+    .custom instance void System.Runtime.CompilerServices.NullableContextAttribute::.ctor(uint8) = (
+        01 00 01 00 00
+    )
+    .custom instance void System.Runtime.CompilerServices.NullableAttribute::.ctor(uint8) = (
+        01 00 00 00 00
+    )
+    
+    .method public hidebysig specialname rtspecialname 
+        instance void .ctor () cil managed 
+    {
+        
+        
+        .maxstack 8
+
+        IL_0000: ldarg.0
+        IL_0001: call instance void InterceptorAttribute::.ctor()
+        IL_0006: ret
+    } 
+
+    .method public hidebysig newslot virtual 
+        instance void OnEntry (
+            class Metadata 'method'
+        ) cil managed 
+    {
+        
+        
+        .maxstack 8
+
+        IL_0000: ret
+    } 
+
+    .method public hidebysig newslot virtual 
+        instance void OnException (
+            class Metadata 'method'
+        ) cil managed 
+    {
+        
+        
+        .maxstack 8
+
+        IL_0000: ret
+    } 
+
+    .method public hidebysig newslot virtual 
+        instance void OnSuccess (
+            class Metadata 'method'
+        ) cil managed 
+    {
+        
+        
+        .maxstack 8
+
+        IL_0000: ret
+    } 
+
+    .method public hidebysig newslot virtual 
+        instance void OnExit (
+            class Metadata 'method'
+        ) cil managed 
+    {
+        
+        
+        .maxstack 8
+
+        IL_0000: ret
+    } 
+
+} 
