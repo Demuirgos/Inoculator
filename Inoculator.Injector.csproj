@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dove.Parser" Version="0.1.3.2" />
+    <PackageReference Include="Dove.Parser" Version="0.1.3.3" />
     <PackageReference Include="runtime.linux-x64.Microsoft.NETCore.ILDAsm" Version="7.0.0" Condition="$([MSBuild]::IsOsPlatform('Linux'))" />
     <PackageReference Include="runtime.osx-arm64.Microsoft.NETCore.ILDAsm" Version="7.0.0" Condition="$([MSBuild]::IsOsPlatform('OSX'))" />
     <PackageReference Include="runtime.win-x64.Microsoft.NETCore.ILDAsm" Version="7.0.0" Condition="$([MSBuild]::IsOsPlatform('Windows'))" />
