@@ -9,6 +9,7 @@ using RootDecl;
 using IL_Unit = RootDecl.Declaration.Collection;
 using System.IO;
 using System.Text.RegularExpressions;
+using Dove.Core;
 
 namespace Inoculator.Core;
 
