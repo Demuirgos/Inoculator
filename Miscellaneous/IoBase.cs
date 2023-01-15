@@ -4,14 +4,20 @@ using System.Linq;
 using System.Extensions;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace Inoculator.Extensions;
 
 public abstract class IntermediateIOBase<TOutput> {
-    readonly static string coreRoot = Environment.GetEnvironmentVariable("CORE_ROOT");
-    readonly static string processName = string.Empty;
-    protected Process process = null; 
+    readonly static string defaultPath = 
+          RuntimeInformation.IsOSPlatform(OSPlatform.Windows)   ? "runtimes\\win-x64\\native\\" 
+        : RuntimeInformation.IsOSPlatform(OSPlatform.Linux)     ? "runtimes\\linux-x64\\native\\" 
+        : RuntimeInformation.IsOSPlatform(OSPlatform.OSX)       ? "runtimes\\osx-arm64\\native\\"
+        : throw new PlatformNotSupportedException();
 
+    readonly static string coreRoot = Environment.GetEnvironmentVariable("CORE_ROOT") ?? defaultPath;
+    internal virtual string ProcessName {get; set;} = string.Empty;
+    protected Process process = null; 
     public abstract Result<TOutput, Exception> Run();
 
     public static Result<T, Exception> Create<T>(string ilFilePath) 
@@ -19,7 +25,7 @@ public abstract class IntermediateIOBase<TOutput> {
     {
         var reader = (T)Activator.CreateInstance(typeof(T));
 
-        var PathResult = RetrievePath();
+        var PathResult = RetrievePath(reader.ProcessName);
         switch (PathResult)
         {
             case Success<string, ArgumentException> path :
@@ -34,21 +40,28 @@ public abstract class IntermediateIOBase<TOutput> {
 
     protected abstract ProcessStartInfo MakeProcess(string ilasmPath, string targetFile);
 
-    private static Result<string, ArgumentException> RetrievePath() {
+    private static Result<string, ArgumentException> RetrievePath(string processName) {
+        //  get path of current process
+        var current = Process.GetCurrentProcess();
+        var currentPath = current.MainModule.FileName;
+        var currentDirectory = Path.GetDirectoryName(currentPath);
+
         var ProcessPath = String.Empty;
-        if (string.IsNullOrWhiteSpace(coreRoot))
+        if (coreRoot != defaultPath && string.IsNullOrWhiteSpace(coreRoot))
         {
             return Error<string, ArgumentException>.From(new ArgumentException("Environment variable is not set: 'CORE_ROOT'"));
         }
-        if (!Directory.Exists(coreRoot))
+
+        var fileLocation = Path.Combine(currentDirectory, coreRoot);
+        if (!Directory.Exists(fileLocation))
         {
-            return Error<string, ArgumentException>.From(new ArgumentException($"Did not find CORE_ROOT directory: {coreRoot}"));
+            return Error<string, ArgumentException>.From(new ArgumentException($"Did not find CORE_ROOT directory: {fileLocation}"));
         }
 
         var nativeExeExtensions = new string[] { string.Empty, ".exe" };
         foreach (string nativeExeExtension in nativeExeExtensions)
         {
-            ProcessPath = Path.Combine(coreRoot, $"{processName}{nativeExeExtension}");
+            ProcessPath = Path.Combine(fileLocation, $"{processName}{nativeExeExtension}");
             if (File.Exists(ProcessPath))
             {
                 break;
@@ -57,7 +70,7 @@ public abstract class IntermediateIOBase<TOutput> {
 
         if (ProcessPath is null)
         {
-            return Error<string, ArgumentException>.From(new ArgumentException($"Did not find ilasm or ildasm in CORE_ROOT directory: {coreRoot}"));
+            return Error<string, ArgumentException>.From(new ArgumentException($"Did not find ilasm or ildasm in CORE_ROOT directory: {fileLocation}"));
         }
         return Success<string, ArgumentException>.From(ProcessPath);
     }

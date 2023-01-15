@@ -75,7 +75,7 @@ public static class Wrapper {
                         ? $@"{getNextLabel(ref labelIdx)}: ldnull"
                         : $@"{getNextLabel(ref labelIdx)}: ldloc.2
                             {(  isPrimitive 
-                                    ? $@"{getNextLabel(ref labelIdx)}: box {type}"
+                                    ? $@"{getNextLabel(ref labelIdx)}: box {ToProperNamedType(type)}"
                                     : String.Empty
                             )}"
                 )}}}
@@ -179,7 +179,7 @@ public static class Wrapper {
                     {{{getNextLabel(ref labelIdx)}}}: dup
                     {{{getNextLabel(ref labelIdx)}}}: ldc.i4.{{{paramIdx}}}
                     {{{getNextLabel(ref labelIdx)}}}: ldarg.{{{paramIdx + 1}}}
-                    {{{getNextLabel(ref labelIdx)}}}: box {{{typeComp.TypeName}}}
+                    {{{getNextLabel(ref labelIdx)}}}: box {{{ToProperNamedType(typeComp.TypeName)}}}
                     {{{getNextLabel(ref labelIdx)}}}: stelem.ref
                     """,
                 _ => $$$"""
@@ -215,5 +215,86 @@ public static class Wrapper {
 
         builder.Append(ilcode);
         return builder.ToString();
+    }
+
+    private static string ToProperNamedType(string type)
+    {
+        string ret = type;
+
+        if (!type.Contains("[System.Runtime]"))
+        {
+            ret = "[System.Runtime]System.";
+            switch (type.ToLower())
+            {
+                case "int32":
+                    ret += "Int32";
+                    break;
+                case "int16":
+                    ret += "Int16";
+                    break;
+                case "int64":
+                    ret += "Int64";
+                    break;
+                case "uint32":
+                    ret += "UInt32";
+                    break;
+                case "uint16":
+                    ret += "UInt16";
+                    break;
+                case "uint64":
+                    ret += "UInt64";
+                    break;
+                case "long":
+                    ret += "Int64";
+                    break;
+                case "ulong":
+                    ret += "UInt64";
+                    break;
+                case "short":
+                    ret += "Int16";
+                    break;
+                case "ushort":
+                    ret += "UInt16";
+                    break;
+                case "decimal":
+                    ret += "Decimal";
+                    break;
+                case "string":
+                    ret += "Object";
+                    break;
+                case "bool":
+                    ret += "Boolean";
+                    break;
+                case "float64":
+                    ret += "Double";
+                    break;
+                case "double":
+                    ret += "Double";
+                    break;
+                case "float32":
+                    ret += "Single";
+                    break;
+                case "object":
+                    ret += "Object";
+                    break;
+                case "byte":
+                    ret += "Byte";
+                    break;
+                case "sbyte":
+                    ret += "SByte";
+                    break;
+                case "char":
+                    ret += "Char";
+                    break;
+                default:
+                    if (type.StartsWith("valuetype "))
+                        ret = ret.Replace("valuetype ", "");
+                    else
+                        ret = type;
+                    break;
+            }
+        }
+
+        return ret;
     }
 }

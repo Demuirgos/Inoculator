@@ -14,6 +14,7 @@ public class Writer : IntermediateIOBase<string> {
     public override Result<string, Exception> Run()
     {
         ArgumentNullException.ThrowIfNull(process);
+        process.Start();
         process.WaitForExit();
         if (process.ExitCode != 0)
         {
@@ -22,13 +23,13 @@ public class Writer : IntermediateIOBase<string> {
         return Success<string, Exception>.From(string.Empty);
     }
 
-    protected override ProcessStartInfo MakeProcess(string ilasmPath, string targetFile) {
+    protected override ProcessStartInfo MakeProcess(string? ilasmPath, string targetFile) {
         string currentDirectory = Environment.CurrentDirectory;
         var ilasmPsi = new ProcessStartInfo();
         ilasmPsi.UseShellExecute = false;
         ilasmPsi.WorkingDirectory = currentDirectory;
         ilasmPsi.CreateNoWindow = true;
-        ilasmPsi.FileName = ilasmPath;
+        ilasmPsi.FileName = ilasmPath ?? processName;
         string asmDllFileName = $"{Path.GetFileNameWithoutExtension(targetFile)}.dll";
         ilasmPsi.Arguments =
             $"-nologo -dll -optimize -output={asmDllFileName} {targetFile}";
