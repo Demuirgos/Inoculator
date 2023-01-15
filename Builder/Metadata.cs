@@ -6,6 +6,7 @@ using Inoculator.Core;
 namespace Inoculator.Builder;
 
 public class Metadata : Printable<Metadata> {
+    public Object EmbededResource { get; set; }
     public Metadata(MethodDecl.Method source) => Code = source;
     public Metadata(string sourceCode) => Code = Reader.Parse<MethodDecl.Method>(sourceCode) switch {
         Success<MethodDecl.Method, Exception> success => success.Value,
@@ -39,7 +40,7 @@ public class Metadata : Printable<Metadata> {
         var newMethod = Wrapper.Handle(Code, ClassName);
         if(newMethod is not Success<MethodDecl.Method, Exception> n_method) 
             return Error<MethodDecl.Method[], Exception>.From(new Exception("failed to wrap nethod"));
-        var odlMethod = Reader.Parse<MethodDecl.Method>(Code.ToString().Replace(Name, name).Replace("\0", ""));
+        var odlMethod = Reader.Parse<MethodDecl.Method>(Code.ToString().Replace(Name, name));
         if(odlMethod is not Success<MethodDecl.Method, Exception> o_method) 
             return Error<MethodDecl.Method[], Exception>.From(new Exception("failed to parse modifed old method"));
 

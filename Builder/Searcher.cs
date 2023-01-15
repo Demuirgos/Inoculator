@@ -33,8 +33,8 @@ public static class Searcher {
     public static bool IsMarked(MethodDecl.Method method, List<IdentifierDecl.Identifier> targets) {
         var attrs = method.Body.Items
             .Values.OfType<MethodDecl.CustomAttributeItem>()
-            .Select(attr => attr.Value.AttributeCtor.Spec.ToString().Replace("\0", ""));
-        var interceptors = targets.Select(x => x.ToString().Replace("\0", ""));
+            .Select(attr => attr.Value.AttributeCtor.Spec.ToString());
+        var interceptors = targets.Select(x => x.ToString());
         return attrs.Any(attr => interceptors.Any(id => attr.Contains(id)));
     }
 
@@ -44,7 +44,7 @@ public static class Searcher {
             .Declarations.Values
             .OfType<ClassDecl.Class>()
             .Where(type => {
-                var inheritedType = new String(type.Header.Extends?.Type.ToString().Where(c => !Char.IsWhiteSpace(c) && c != '\0').ToArray());
+                var inheritedType = new String(type.Header.Extends?.Type.ToString().Where(c => !Char.IsWhiteSpace(c)).ToArray());
                 return inheritedType == "[Inoculator.Injector]Inoculator.Attributes.InterceptorAttribute";
             });
         return toplevel.Select(x => x.Header.Id).ToList();

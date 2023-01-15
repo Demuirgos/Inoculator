@@ -120,7 +120,7 @@ public static class Wrapper {
         string endLabel = $"IL_{labelIdx - (isVoidCall ? 1 : 2):X4}";
         builder.Replace("***END***", endLabel);
         builder.AppendLine("}");
-        var result = builder.ToString().Replace("\0", "");
+        var result = builder.ToString();
         return Reader.Parse<MethodDecl.Method>(result);
     }
 
@@ -128,7 +128,7 @@ public static class Wrapper {
         var typeComp = header.Type.Value.Types.Values.OfType<TypeDecl.TypePrimitive>().FirstOrDefault();
         type = typeComp.TypeName switch {
             "void" => null,
-            _ => header.Type.ToString().Replace("\0", ""),
+            _ => header.Type.ToString(),
         };
         return type != null;
     }
@@ -200,7 +200,7 @@ public static class Wrapper {
         if(parameter is not ParameterDecl.DefaultParameter param) {
             throw new Exception("Unknown parameter type");
         }
-        var typeComp = param.TypeDeclaration?.ToString().Replace("\0", "");
+        var typeComp = param.TypeDeclaration?.ToString();
         var ilcode = typeComp is null ? String.Empty : typeComp switch {
             "object" => $$$"""
                 {{{getNextLabel(ref labelIdx)}}}: ldarg.{{{paramIdx + 1}}}
