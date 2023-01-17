@@ -48,8 +48,10 @@ public class Weaver {
                 .ToArray();
 
             return new[] { @class with { Members = @class.Members with { Members = new ARRAY<ClassDecl.Member>(newMembers) {
-                Delimiters = ('\0', '\n', '\0')
-            } } } };
+                Options = new ARRAY<ClassDecl.Member>.ArrayOptions() {
+                    Delimiters = ('\0', '\n', '\0')
+                }
+            }}}};
         }
 
         MethodDecl.Method[] HandleMethod(MethodDecl.Method method, IdentifierDecl.Identifier parent) {
@@ -72,8 +74,10 @@ public class Weaver {
             .ToArray();
 
         return new Success<IL_Unit, Exception>(assembly with { Declarations = new ARRAY<Declaration>(topLevel) {
-            Delimiters = ('\0', '\n', '\0')
-        } });
+            Options = new ARRAY<Declaration>.ArrayOptions() {
+                Delimiters = ('\0', '\n', '\0')
+            }
+        }});
     }
 
     public static Result<IL_Unit, Exception> Disassemble(string path)

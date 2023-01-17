@@ -13,15 +13,15 @@ using Dove.Core;
 
 namespace Inoculator.Core;
 
-public class Reader : IntermediateIOBase<IL_Unit> {
+public partial class Reader : IntermediateIOBase<IL_Unit> {
     internal override string ProcessName => "ildasm";
     private static string TempFilePath = Path.Combine(Environment.CurrentDirectory, "result.tmp");
     public static Result<T, Exception> Parse<T>(string code) where T : IDeclaration<T> {
-        code = Regex.Replace(code, @"//.*", string.Empty);
-        if(Parser.TryParse(code, out T assembly)) {
+        code = MyRegex().Replace(code, string.Empty);
+        if(Parser.TryParse(code, out T assembly, out string error)) {
             return Success<T, Exception>.From(assembly);
         } else {
-            return Error<T, Exception>.From(new Exception("Failed to parse IL"));
+            return Error<T, Exception>.From(new Exception($"Failed to parse IL with error : \n{error}"));
         }
     }
     public override Result<IL_Unit, Exception> Run()
@@ -36,7 +36,7 @@ public class Reader : IntermediateIOBase<IL_Unit> {
 
         try {
             string disasmIl = File.ReadAllText(TempFilePath);
-            File.Delete(TempFilePath);
+            //File.Delete(TempFilePath);
             return Parse<IL_Unit>(disasmIl);
         } catch (Exception exception) {
             return Error<IL_Unit, Exception>.From(exception);
@@ -53,4 +53,7 @@ public class Reader : IntermediateIOBase<IL_Unit> {
         File.Create(TempFilePath).Dispose();
         return ildasmPsi;
     }
+
+    [GeneratedRegex("//.*")]
+    private static partial Regex MyRegex();
 }

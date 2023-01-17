@@ -125,7 +125,7 @@ public static class Wrapper {
     }
 
     private static bool ReturnTypeOf(MethodDecl.Prefix header, out string type) {
-        var typeComp = header.Type.Value.Types.Values.OfType<TypeDecl.TypePrimitive>().FirstOrDefault();
+        var typeComp = header.Type.Components.Types.Values.First().AsTypePrefix()?.AsTypePrimitive();
         type = typeComp.TypeName switch {
             "void" => null,
             _ => header.Type.ToString(),
@@ -173,7 +173,7 @@ public static class Wrapper {
         if(parameter is not ParameterDecl.DefaultParameter param) {
             throw new Exception("Unknown parameter type");
         }
-        var typeComp = param.TypeDeclaration.Value.Types.Values.OfType<TypeDecl.TypePrimitive>().FirstOrDefault();
+        var typeComp = param.TypeDeclaration.Components.Types.Values.First().AsTypePrefix()?.AsTypePrimitive();
         var ilcode = typeComp is null ? string.Empty  : typeComp.TypeName switch {
                 _ when _primitives.Contains(typeComp.TypeName) => $$$"""
                     {{{getNextLabel(ref labelIdx)}}}: dup
