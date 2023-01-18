@@ -30,13 +30,15 @@ public static class Searcher {
         return toplevel.Where(x => predicate?.Invoke(x) ?? true).ToList();
     }
 
-    public static bool IsMarked(MethodDecl.Method method, List<IdentifierDecl.Identifier> targets) {
+    public static bool IsMarked(MethodDecl.Method method, List<IdentifierDecl.Identifier> targets, out string[] foundAttributes) {
         var attrs = method.Body.Items
             .Values.OfType<MethodDecl.CustomAttributeItem>()
             .Select(attr => attr.Value.AttributeCtor.Spec.ToString());
         var interceptors = targets.Select(x => x.ToString());
         // TODO : Handle multiple interceptors
-        return attrs.Where(attr => interceptors.Any(id => attr.Contains(id))).Count() == 1;
+        foundAttributes = attrs.Where(attr => interceptors.Any(id => attr.Contains(id))).ToArray();
+
+        return foundAttributes.Length > 0;
     }
 
     public static List<IdentifierDecl.Identifier> SearchForInterceptors(Declaration.Collection ilfile)

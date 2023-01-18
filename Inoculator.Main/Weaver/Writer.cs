@@ -10,7 +10,9 @@ using System.IO;
 namespace Inoculator.Core;
 
 public class Writer : IntermediateIOBase<string> {
-    readonly new static string processName = "ilasm";
+    internal override string ProcessName => "ilasm";
+    public static string TempFilePath = Path.Combine(Environment.CurrentDirectory, "part2.tmp");
+
     public override Result<string, Exception> Run()
     {
         ArgumentNullException.ThrowIfNull(process);
@@ -18,7 +20,8 @@ public class Writer : IntermediateIOBase<string> {
         process.WaitForExit();
         if (process.ExitCode != 0)
         {
-            return Error<string, Exception>.From(new Exception($"ilasm failed with exit code: {process.ExitCode}"));
+            string inner_error = process.StandardError.ReadToEnd();
+            return Error<string, Exception>.From(new Exception($"ilasm failed with exit code: {process.ExitCode}\n{inner_error}"));
         }
         return Success<string, Exception>.From(string.Empty);
     }
@@ -29,10 +32,11 @@ public class Writer : IntermediateIOBase<string> {
         ilasmPsi.UseShellExecute = false;
         ilasmPsi.WorkingDirectory = currentDirectory;
         ilasmPsi.CreateNoWindow = true;
-        ilasmPsi.FileName = ilasmPath ?? processName;
+        ilasmPsi.FileName = ilasmPath ?? ProcessName;
         string asmDllFileName = $"{Path.GetFileNameWithoutExtension(targetFile)}.dll";
         ilasmPsi.Arguments =
-            $"-nologo -dll -optimize -output={asmDllFileName} {targetFile}";
+            $"/DLL /NOLOGO /QUIET /OPTIMIZE /OUTPUT={asmDllFileName} {TempFilePath}";
+        ilasmPsi.RedirectStandardError = true;
         return ilasmPsi;
     }
 }

@@ -15,7 +15,7 @@ namespace Inoculator.Core;
 
 public partial class Reader : IntermediateIOBase<IL_Unit> {
     internal override string ProcessName => "ildasm";
-    private static string TempFilePath = Path.Combine(Environment.CurrentDirectory, "result.tmp");
+    public static string TempFilePath = Path.Combine(Environment.CurrentDirectory, "part1.tmp");
     public static Result<T, Exception> Parse<T>(string code) where T : IDeclaration<T> {
         code = MyRegex().Replace(code, string.Empty);
         if(Parser.TryParse(code, out T assembly, out string error)) {
@@ -31,7 +31,8 @@ public partial class Reader : IntermediateIOBase<IL_Unit> {
         process.WaitForExit();
         if (process.ExitCode != 0)
         {
-            return Error<IL_Unit, Exception>.From(new Exception($"ildasm failed with exit code: {process.ExitCode}"));
+            string inner_error = process.StandardError.ReadToEnd();
+            return Error<IL_Unit, Exception>.From(new Exception($"ildasm failed with exit code: {process.ExitCode}\n{inner_error}"));
         }
 
         try {
@@ -50,6 +51,7 @@ public partial class Reader : IntermediateIOBase<IL_Unit> {
             FileName = ildasmPath,
             Arguments =  $"{targetFile} /OUT={TempFilePath}"
         };
+        ildasmPsi.RedirectStandardError = true;
         File.Create(TempFilePath).Dispose();
         return ildasmPsi;
     }

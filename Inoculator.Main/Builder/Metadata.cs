@@ -38,7 +38,7 @@ public class Metadata : Printable<Metadata> {
     [JsonIgnore]
     public MethodDecl.Method Code { get; set; }
 
-    public Result<MethodDecl.Method[], Exception> ReplaceNameWith(String name, string attributeName) {
+    public Result<MethodDecl.Method[], Exception> ReplaceNameWith(String name, string[] attributeName) {
         var newMethod = Wrapper.Handle(Code, ClassName, attributeName);
         if(newMethod is not Success<MethodDecl.Method, Exception> n_method) 
             return Error<MethodDecl.Method[], Exception>.From(new Exception("failed to wrap method"));

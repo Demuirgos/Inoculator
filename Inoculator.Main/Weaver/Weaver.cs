@@ -60,8 +60,8 @@ public class Weaver {
                 ClassName = parent
             };
 
-            if(!metadata.Code.IsConstructor && Searcher.IsMarked(metadata.Code, targetAttributes)) {
-                var result = metadata.ReplaceNameWith($"{metadata.Name}__Inoculated", targetAttributes.First().ToString());
+            if(!metadata.Code.IsConstructor && Searcher.IsMarked(metadata.Code, targetAttributes, out string[] marks)) {
+                var result = metadata.ReplaceNameWith($"{metadata.Name}__Inoculated", marks);
                 if(result is Success<MethodDecl.Method[], Exception> success) {
                     return success.Value;
                 } else if(result is Error<MethodDecl.Method[], Exception> failure) {
