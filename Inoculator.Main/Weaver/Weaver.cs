@@ -32,6 +32,7 @@ public class Weaver {
         }
 
         ClassDecl.Class[] HandleClass(ClassDecl.Class @class) {
+            // TODO: Handle nested classes name collisions
             ClassDecl.Member[] HandleMember(ClassDecl.Member member){
                 switch(member) {
                     case ClassDecl.MethodDefinition method:
@@ -58,10 +59,13 @@ public class Weaver {
             var metadata = new Metadata(method) {
                 ClassName = parent
             };
+
             if(!metadata.Code.IsConstructor && Searcher.IsMarked(metadata.Code, targetAttributes)) {
-                var result = metadata.ReplaceNameWith($"{metadata.Name}__Inoculated");
+                var result = metadata.ReplaceNameWith($"{metadata.Name}__Inoculated", targetAttributes.First().ToString());
                 if(result is Success<MethodDecl.Method[], Exception> success) {
                     return success.Value;
+                } else if(result is Error<MethodDecl.Method[], Exception> failure) {
+                    throw failure.Message;
                 }
             }
             return new[] { method };

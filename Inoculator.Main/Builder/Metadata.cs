@@ -17,11 +17,13 @@ public class Metadata : Printable<Metadata> {
     [JsonIgnore]
     public (String[] Input, String Output)  Signature 
         => (
-            Code.Header.Parameters.Parameters.Values.Select(
-                x => x switch {
-                    ParameterDecl.DefaultParameter p => p.TypeDeclaration.ToString(),
-                    ParameterDecl.VarargParameter p => "...",
-                }).ToArray(),
+            Code.Header.Parameters.Parameters.Values.Length > 0 
+                ? Code.Header.Parameters.Parameters.Values.Select(
+                    x => x switch {
+                        ParameterDecl.DefaultParameter p => p.TypeDeclaration.ToString(),
+                        ParameterDecl.VarargParameter p => "...",
+                    }).ToArray() 
+                : new string[1] { "void" },
             Code.Header.Type.ToString()
         );
 
@@ -36,13 +38,13 @@ public class Metadata : Printable<Metadata> {
     [JsonIgnore]
     public MethodDecl.Method Code { get; set; }
 
-    public Result<MethodDecl.Method[], Exception> ReplaceNameWith(String name) {
-        var newMethod = Wrapper.Handle(Code, ClassName);
+    public Result<MethodDecl.Method[], Exception> ReplaceNameWith(String name, string attributeName) {
+        var newMethod = Wrapper.Handle(Code, ClassName, attributeName);
         if(newMethod is not Success<MethodDecl.Method, Exception> n_method) 
-            return Error<MethodDecl.Method[], Exception>.From(new Exception("failed to wrap nethod"));
+            return Error<MethodDecl.Method[], Exception>.From(new Exception("failed to wrap method"));
         var odlMethod = Reader.Parse<MethodDecl.Method>(Code.ToString().Replace(Name, name));
         if(odlMethod is not Success<MethodDecl.Method, Exception> o_method) 
-            return Error<MethodDecl.Method[], Exception>.From(new Exception("failed to parse modifed old method"));
+            return Error<MethodDecl.Method[], Exception>.From(new Exception("failed to parse modified old method"));
 
         return Success<MethodDecl.Method[], Exception>.From(new[] { o_method.Value, n_method.Value });
     }

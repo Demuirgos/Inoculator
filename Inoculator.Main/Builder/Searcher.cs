@@ -35,7 +35,8 @@ public static class Searcher {
             .Values.OfType<MethodDecl.CustomAttributeItem>()
             .Select(attr => attr.Value.AttributeCtor.Spec.ToString());
         var interceptors = targets.Select(x => x.ToString());
-        return attrs.Any(attr => interceptors.Any(id => attr.Contains(id)));
+        // TODO : Handle multiple interceptors
+        return attrs.Where(attr => interceptors.Any(id => attr.Contains(id))).Count() == 1;
     }
 
     public static List<IdentifierDecl.Identifier> SearchForInterceptors(Declaration.Collection ilfile)
