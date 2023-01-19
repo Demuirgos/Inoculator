@@ -1,9 +1,9 @@
 # Innoculator
 An IL code Injector using Ilasm and Ildasm (WIP)
 # Limitations
-    * (that I know of): Only Works on Synchronous functions
+    * Only Works on Synchronous functions
 # Plan 
-    * make it Work on Asynchronous functions
+    * Handle State Machines based rewrites
     * Automatically Add MSbuild PostBuild event handler
 # Usage
 * Reference Inoculator.Injecter
