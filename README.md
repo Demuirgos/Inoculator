@@ -4,7 +4,14 @@ An IL code Injector using Ilasm and Ildasm (WIP)
     * (that I know of): Only Works on Synchronous functions
 # Plan 
     * make it Work on Asynchronous functions
+    * Automatically Add MSbuild PostBuild event handler
 # Usage
+* Reference Inoculator.Injecter
+* Add to Msbuild :
+   ```
+      <Target Name="InjectionStep" BeforeTargets="AfterBuild">
+       <Exec Command="$(MSbuildProjectDirectory)\$(BaseOutputPath)$(Configuration)\$(TargetFramework)\Inoculator.Injector.exe   $(MSbuildProjectDirectory)\$(BaseOutputPath)$(Configuration)\$(TargetFramework)\$(AssemblyName).dll" />
+     </Target>```
 * Inherit InterceptorAttribute and override Function lifecycle nodes :  
 ```csharp
 public class ElapsedTimeAttribute : InterceptorAttribute
