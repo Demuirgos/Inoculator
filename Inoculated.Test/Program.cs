@@ -23,5 +23,12 @@
             }
             Console.WriteLine(i);
         }
+
+        [ElapsedTime, LogEntrency]
+        public static IEnumerable<int> TestEnum() {
+            for (int j = 0; j < 100; j++) {
+                yield return j;
+            }
+        }
     }
 }

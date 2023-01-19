@@ -14,13 +14,17 @@ public static class Wrapper {
     {
         int labelIdx = 0;
         StringBuilder builder = new();
-        if(!method.IsAsync) {
-            bool isVoidCall = !ReturnTypeOf(method.Code.Header, out var type);
-            bool isPrimitive = _primitives.Contains(type);
-            bool hasArgs = method.Code.Header.Parameters.Parameters.Values.Length > 0;
-            labelIdx = HandleSyncMethod(method.Code, container, AttributeClass, labelIdx, builder, isVoidCall, type, isPrimitive, hasArgs, method.IsStatic);
-        } else {
-            builder.Append(method.Code.ToString());
+        switch (method.MethodBehaviour)
+        {
+            case Metadata.MethodType.Sync:
+                bool isVoidCall = !ReturnTypeOf(method.Code.Header, out var type);
+                bool isPrimitive = _primitives.Contains(type);
+                bool hasArgs = method.Code.Header.Parameters.Parameters.Values.Length > 0;
+                labelIdx = HandleSyncMethod(method.Code, container, AttributeClass, labelIdx, builder, isVoidCall, type, isPrimitive, hasArgs, method.MethodCall == Metadata.CallType.Static);
+                break;
+            default:
+                builder.Append(method.Code.ToString());
+                break;
         }
         var result = builder.ToString();
         return Reader.Parse<MethodDecl.Method>(result);
@@ -153,8 +157,9 @@ public static class Wrapper {
     }
 
     private static bool ReturnTypeOf(MethodDecl.Prefix header, out string type) {
-        var typeComp = header.Type.Components.Types.Values.First().AsTypePrefix()?.AsTypePrimitive();
-        type = typeComp.TypeName switch {
+        var typeComp = header.Type.Components.Types.Values.First().AsTypePrefix();
+        Console.WriteLine(header);
+        type = typeComp?.ToString() switch {
             "void" => null,
             _ => header.Type.ToString(),
         };

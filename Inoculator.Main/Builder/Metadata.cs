@@ -6,6 +6,14 @@ using Inoculator.Core;
 namespace Inoculator.Builder;
 
 public class Metadata : Printable<Metadata> {
+    public enum MethodType {
+        Async, Sync, Iter
+    }
+
+    public enum CallType {
+        Static, Instance
+    }
+
     public Object EmbededResource { get; set; }
     public Metadata(MethodDecl.Method source) => Code = source;
     public Metadata(string sourceCode) => Code = Reader.Parse<MethodDecl.Method>(sourceCode) switch {
@@ -27,8 +35,16 @@ public class Metadata : Printable<Metadata> {
             Code.Header.Type.ToString()
         );
 
-    public bool IsAsync => Code.Body.Items.Values.OfType<MethodDecl.CustomAttributeItem>().Any(a => a.Value.AttributeCtor.Spec.ToString() == "[System.Runtime] System.Runtime.CompilerServices.AsyncStateMachineAttribute");
-    public bool IsStatic => Code.Header.Convention is null || Code.Header.MethodAttributes.Attributes.Values.Any(a => a is AttributeDecl.MethodSimpleAttribute { Name: "static" });
+    public MethodType MethodBehaviour =>
+        Code.Body.Items.Values.
+            OfType<MethodDecl.CustomAttributeItem>()
+            .Any(a => a.Value.AttributeCtor.Spec.ToString() == "[System.Runtime] System.Runtime.CompilerServices.AsyncStateMachineAttribute")
+            ? MethodType.Async : 
+                Code.Body.Items.Values
+                    .OfType<MethodDecl.CustomAttributeItem>()
+                    .Any(a => a.Value.AttributeCtor.Spec.ToString() == "[System.Runtime] System.Runtime.CompilerServices.IteratorStateMachineAttribute")
+                ? MethodType.Iter  : MethodType.Sync;
+    public CallType MethodCall => Code.Header.Convention is null || Code.Header.MethodAttributes.Attributes.Values.Any(a => a is AttributeDecl.MethodSimpleAttribute { Name: "static" }) ? CallType.Static : CallType.Instance;
     public string TypeSignature => $"({string.Join(", ", Signature.Input)} -> {Signature.Output})";
     public string[] TypeParameters => Code.Header?.TypeParameters?
         .Parameters.Values
@@ -48,17 +64,19 @@ public class Metadata : Printable<Metadata> {
         }
 
         var n_method = newMethod as Success<MethodDecl.Method, Exception>;
-
-        if(!IsAsync) {
-            var renamedMethod = Reader.Parse<MethodDecl.Method>(Code.ToString().Replace(Name, name));
-            switch(renamedMethod) {
-                case Error<MethodDecl.Method, Exception> e_method :
-                    return Error<MethodDecl.Method[], Exception>.From(new Exception($"failed to parse modified old method\n{e_method.Message}"));
-                case Success<MethodDecl.Method, Exception> o_method :
-                    return Success<MethodDecl.Method[], Exception>.From(new[] { o_method.Value, n_method.Value });
-            }
-
-        } 
+        switch (MethodBehaviour)
+        {
+            case MethodType.Sync:
+                var renamedMethod = Reader.Parse<MethodDecl.Method>(Code.ToString().Replace(Name, name));
+                return renamedMethod switch{
+                    Error<MethodDecl.Method, Exception> e_method
+                        => Error<MethodDecl.Method[], Exception>.From(new Exception($"failed to parse modified old method\n{e_method.Message}")),
+                    Success<MethodDecl.Method, Exception> o_method
+                        => Success<MethodDecl.Method[], Exception>.From(new[] { o_method.Value, n_method.Value })
+                };
+            default:
+                break;
+        }
         return Success<MethodDecl.Method[], Exception>.From(new[] { n_method.Value });
     }
 }
