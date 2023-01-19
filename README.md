@@ -1,6 +1,10 @@
 # Innoculator
 An IL code Injector using Ilasm and Ildasm (WIP)
-# Usage :
+# Limitations
+    * (that I know of): Only Works on Synchronous functions
+# Plan 
+    * make it Work on Asynchronous functions
+# Usage
 * Inherit InterceptorAttribute and override Function lifecycle nodes :  
 ```csharp
 public class ElapsedTimeAttribute : InterceptorAttribute
