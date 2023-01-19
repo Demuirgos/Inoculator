@@ -9,9 +9,10 @@ An IL code Injector using Ilasm and Ildasm (WIP)
 * Reference Inoculator.Injecter
 * Add to Msbuild :
    ```
-      <Target Name="InjectionStep" BeforeTargets="AfterBuild">
+   <Target Name="InjectionStep" BeforeTargets="AfterBuild">
        <Exec Command="$(MSbuildProjectDirectory)\$(BaseOutputPath)$(Configuration)\$(TargetFramework)\Inoculator.Injector.exe   $(MSbuildProjectDirectory)\$(BaseOutputPath)$(Configuration)\$(TargetFramework)\$(AssemblyName).dll" />
-     </Target>```
+   </Target>
+  ```
 * Inherit InterceptorAttribute and override Function lifecycle nodes :  
 ```csharp
 public class ElapsedTimeAttribute : InterceptorAttribute
