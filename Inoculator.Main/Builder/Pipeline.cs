@@ -24,7 +24,7 @@ public class Pipeline
         return reader.Run().Bind(assembly => {
             var result = Weaver.Modify(assembly);
             return result switch {
-                Success<RootDecl.Declaration.Collection, Exception> success => Success<string, Exception>.From(success.Value.ToString()),//Continuation(success.Value),
+                Success<RootDecl.Declaration.Collection, Exception> success => Continuation(success.Value),
                 Error<RootDecl.Declaration.Collection, Exception> failure => Error<string, Exception>.From(failure.Message) as Result<string, Exception>,
             };
         });
