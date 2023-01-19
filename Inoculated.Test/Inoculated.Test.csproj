@@ -9,4 +9,7 @@
   <ItemGroup>
       <ProjectReference Include="..\Inoculator.Main\Inoculator.Injector.csproj"/>
   </ItemGroup>
+  <Target Name="InjectionStep" BeforeTargets="AfterBuild">
+    <Exec Command="$(MSbuildProjectDirectory)\$(BaseOutputPath)$(Configuration)\$(TargetFramework)\Inoculator.Injector.exe $(MSbuildProjectDirectory)\$(BaseOutputPath)$(Configuration)\$(TargetFramework)\$(AssemblyName).dll" />
+  </Target>
 </Project>

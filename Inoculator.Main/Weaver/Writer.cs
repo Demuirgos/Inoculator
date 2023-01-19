@@ -10,12 +10,14 @@ using System.IO;
 namespace Inoculator.Core;
 
 public class Writer : IntermediateIOBase<string> {
+    internal string TargetFile {get; set;}
     internal override string ProcessName => "ilasm";
-    public static string TempFilePath = Path.Combine(Environment.CurrentDirectory, "part2.tmp");
+    public static string TempFilePath = Path.Combine(Environment.CurrentDirectory, "part2.il");
 
     public override Result<string, Exception> Run()
     {
         ArgumentNullException.ThrowIfNull(process);
+        File.Delete(TargetFile);
         process.Start();
         process.WaitForExit();
         if (process.ExitCode != 0)
@@ -28,15 +30,16 @@ public class Writer : IntermediateIOBase<string> {
 
     protected override ProcessStartInfo MakeProcess(string? ilasmPath, string targetFile) {
         string currentDirectory = Environment.CurrentDirectory;
-        var ilasmPsi = new ProcessStartInfo();
-        ilasmPsi.UseShellExecute = false;
-        ilasmPsi.WorkingDirectory = currentDirectory;
-        ilasmPsi.CreateNoWindow = true;
-        ilasmPsi.FileName = ilasmPath ?? ProcessName;
-        string asmDllFileName = $"{Path.GetFileNameWithoutExtension(targetFile)}.dll";
-        ilasmPsi.Arguments =
-            $"/DLL /NOLOGO /QUIET /OPTIMIZE /OUTPUT={asmDllFileName} {TempFilePath}";
-        ilasmPsi.RedirectStandardError = true;
+        this.TargetFile = targetFile;
+        var ilasmPsi = new ProcessStartInfo
+        {
+            UseShellExecute = false,
+            WorkingDirectory = currentDirectory,
+            CreateNoWindow = true,
+            FileName = ilasmPath ?? ProcessName,
+            Arguments = $"/DLL /NOLOGO /QUIET /OPTIMIZE /OUTPUT={targetFile} {TempFilePath}",
+            RedirectStandardError = true
+        };
         return ilasmPsi;
     }
 }

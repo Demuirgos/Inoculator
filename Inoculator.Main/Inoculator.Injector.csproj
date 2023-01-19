@@ -18,8 +18,4 @@
     <PackageReference Include="runtime.win-x64.Microsoft.NETCore.ILAsm" Version="7.0.0" Condition="$([MSBuild]::IsOsPlatform('Windows'))" />
     <PackageReference Include="runtime.win-x64.Microsoft.NETCore.ILDAsm" Version="7.0.0" Condition="$([MSBuild]::IsOsPlatform('Windows'))" />
   </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Parser\Inoculator.Parser.csproj" />
-  </ItemGroup>
 </Project>

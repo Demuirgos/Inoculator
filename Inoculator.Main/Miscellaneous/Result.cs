@@ -24,4 +24,11 @@ public static class ResultExtensions {
             _ => throw new Exception("Invalid result type")
         };
     }
+
+    public static Result<T, V> PanicIfErr<T, V>(this Result<T, V> result) {
+        return result switch {
+            Success<T, V> success => Success<T, V>.From(success.Value),
+            Error<T, V> error => throw new Exception(error.Message.ToString()), 
+        };
+    }
 }

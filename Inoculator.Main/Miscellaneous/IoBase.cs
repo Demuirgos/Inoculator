@@ -18,7 +18,17 @@ public abstract class IntermediateIOBase<TOutput> {
     readonly static string coreRoot = Environment.GetEnvironmentVariable("CORE_ROOT") ?? defaultPath;
     internal virtual string ProcessName {get; set;} = string.Empty;
     protected Process process = null; 
-    public abstract Result<TOutput, Exception> Run();
+    public virtual Result<TOutput, Exception> Run() {
+        ArgumentNullException.ThrowIfNull(process);
+        process.Start();
+        process.WaitForExit();
+        if (process.ExitCode != 0)
+        {
+            string inner_error = process.StandardError.ReadToEnd();
+            return Error<TOutput, Exception>.From(new Exception($"ildasm failed with exit code: {process.ExitCode}\n{inner_error}"));
+        }
+        return Success<TOutput, Exception>.From(default);
+    }
 
     public static Result<T, Exception> Create<T>(string ilFilePath) 
         where T : IntermediateIOBase<TOutput>

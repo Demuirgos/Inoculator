@@ -14,6 +14,7 @@ using Dove.Core;
 namespace Inoculator.Core;
 
 public partial class Reader : IntermediateIOBase<IL_Unit> {
+    internal string TargetFile {get; set;}
     internal override string ProcessName => "ildasm";
     public static string TempFilePath = Path.Combine(Environment.CurrentDirectory, "part1.tmp");
     public static Result<T, Exception> Parse<T>(string code) where T : IDeclaration<T> {
@@ -26,15 +27,7 @@ public partial class Reader : IntermediateIOBase<IL_Unit> {
     }
     public override Result<IL_Unit, Exception> Run()
     {
-        ArgumentNullException.ThrowIfNull(process);
-        process.Start();
-        process.WaitForExit();
-        if (process.ExitCode != 0)
-        {
-            string inner_error = process.StandardError.ReadToEnd();
-            return Error<IL_Unit, Exception>.From(new Exception($"ildasm failed with exit code: {process.ExitCode}\n{inner_error}"));
-        }
-
+        base.Run();
         try {
             string disasmIl = File.ReadAllText(TempFilePath);
             File.Delete(TempFilePath);
@@ -45,6 +38,8 @@ public partial class Reader : IntermediateIOBase<IL_Unit> {
     }
 
     protected override ProcessStartInfo MakeProcess(string? ildasmPath, string targetFile) {
+        File.Create(TempFilePath).Dispose();
+        this.TargetFile = targetFile;
         var ildasmPsi = new ProcessStartInfo
         {
             UseShellExecute = false,
@@ -52,7 +47,6 @@ public partial class Reader : IntermediateIOBase<IL_Unit> {
             Arguments =  $"{targetFile} /OUT={TempFilePath}"
         };
         ildasmPsi.RedirectStandardError = true;
-        File.Create(TempFilePath).Dispose();
         return ildasmPsi;
     }
 

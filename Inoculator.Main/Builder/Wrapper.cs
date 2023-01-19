@@ -27,7 +27,7 @@ public static class Wrapper {
             {{{
                 String.Join("\n", AttributeClass.Select((attrClassName, i) => $"class {attrClassName} interceptor{i},"))
             }}}
-            class Metadata metadata,
+            class [Inoculator.Injector]Inoculator.Builder.Metadata metadata,
             {{{(
                 isVoidCall 
                     ? String.Empty 
@@ -62,7 +62,7 @@ public static class Wrapper {
                 (attrClassName, i) => $@"
                 {getNextLabel(ref labelIdx)}: ldloc.{i}
                 {getNextLabel(ref labelIdx)}: ldloc.{AttributeClass.Length}
-                {getNextLabel(ref labelIdx)}: callvirt instance void {attrClassName}::OnEntry(class Metadata)"
+                {getNextLabel(ref labelIdx)}: callvirt instance void {attrClassName}::OnEntry(class [Inoculator.Injector]Inoculator.Builder.Metadata)"
             ).Aggregate((a, b) => $"{a}\n{b}")
         }}}
         .try
@@ -93,7 +93,7 @@ public static class Wrapper {
                         (attrClassName, i) => $@"
                         {getNextLabel(ref labelIdx)}: ldloc.{i}
                         {getNextLabel(ref labelIdx)}: ldloc.{AttributeClass.Length}
-                        {getNextLabel(ref labelIdx)}: callvirt instance void {attrClassName}::OnSuccess(class Metadata)"
+                        {getNextLabel(ref labelIdx)}: callvirt instance void {attrClassName}::OnSuccess(class [Inoculator.Injector]Inoculator.Builder.Metadata)"
                     ).Aggregate((a, b) => $"{a}\n{b}")
                 }}}
                 {{{(
@@ -115,7 +115,7 @@ public static class Wrapper {
                         (attrClassName, i) => $@"
                         {getNextLabel(ref labelIdx)}: ldloc.{i}
                         {getNextLabel(ref labelIdx)}: ldloc.{AttributeClass.Length}
-                        {getNextLabel(ref labelIdx)}: callvirt instance void {attrClassName}::OnException(class Metadata)"
+                        {getNextLabel(ref labelIdx)}: callvirt instance void {attrClassName}::OnException(class [Inoculator.Injector]Inoculator.Builder.Metadata)"
                     ).Aggregate((a, b) => $"{a}\n{b}")
                 }}}
                 {{{getNextLabel(ref labelIdx)}}}: ldloc.s 4
@@ -129,7 +129,7 @@ public static class Wrapper {
                     (attrClassName, i) => $@"
                     {getNextLabel(ref labelIdx)}: ldloc.{i}
                     {getNextLabel(ref labelIdx)}: ldloc.{AttributeClass.Length}
-                    {getNextLabel(ref labelIdx)}: callvirt instance void {attrClassName}::OnExit(class Metadata)"
+                    {getNextLabel(ref labelIdx)}: callvirt instance void {attrClassName}::OnExit(class [Inoculator.Injector]Inoculator.Builder.Metadata)"
                 ).Aggregate((a, b) => $"{a}\n{b}")
             }}}
             {{{getNextLabel(ref labelIdx)}}}: endfinally
