@@ -11,7 +11,7 @@ public class LogEntrencyAttribute : InterceptorAttribute
 
     public override void OnExit(Metadata method)
     {
-        Console.WriteLine($"Finished Method {method.Name}");
+        Console.WriteLine($"Finished Method {method.Name} with {method.ReturnValue}");
     }
 }
 

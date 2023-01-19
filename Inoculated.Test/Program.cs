@@ -1,19 +1,21 @@
 ﻿namespace Program {
     class Program {
         async static Task Main(string[] args) {
-            Test();
+            Test(100, 23);
+            Test(10000, 69);
             await TestAsync();
         }
 
         [ElapsedTime, LogEntrency]
-        public static void Test() {
+        public static int Test(int k, int m) {
             int i = 0;
-            for (int j = 0; j < 100; j++) {
-                i++;
+            for (int j = 0; j < k; j++) {
+                i += m + j;
             }
-            Console.WriteLine(i);
+            return i;
         }
 
+        [ElapsedTime, LogEntrency]
         public static async Task TestAsync() {
             int i = 0;
             for (int j = 0; j < 100; j++) {

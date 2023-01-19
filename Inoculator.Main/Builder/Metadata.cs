@@ -27,6 +27,8 @@ public class Metadata : Printable<Metadata> {
             Code.Header.Type.ToString()
         );
 
+    public bool IsAsync => Code.Body.Items.Values.OfType<MethodDecl.CustomAttributeItem>().Any(a => a.Value.AttributeCtor.Spec.ToString() == "[System.Runtime] System.Runtime.CompilerServices.AsyncStateMachineAttribute");
+    public bool IsStatic => Code.Header.Convention is null || Code.Header.MethodAttributes.Attributes.Values.Any(a => a is AttributeDecl.MethodSimpleAttribute { Name: "static" });
     public string TypeSignature => $"({string.Join(", ", Signature.Input)} -> {Signature.Output})";
     public string[] TypeParameters => Code.Header?.TypeParameters?
         .Parameters.Values
@@ -39,13 +41,24 @@ public class Metadata : Printable<Metadata> {
     public MethodDecl.Method Code { get; set; }
 
     public Result<MethodDecl.Method[], Exception> ReplaceNameWith(String name, string[] attributeName) {
-        var newMethod = Wrapper.Handle(Code, ClassName, attributeName);
-        if(newMethod is not Success<MethodDecl.Method, Exception> n_method) 
-            return Error<MethodDecl.Method[], Exception>.From(new Exception("failed to wrap method"));
-        var odlMethod = Reader.Parse<MethodDecl.Method>(Code.ToString().Replace(Name, name));
-        if(odlMethod is not Success<MethodDecl.Method, Exception> o_method) 
-            return Error<MethodDecl.Method[], Exception>.From(new Exception("failed to parse modified old method"));
+        var newMethod = Wrapper.Handle(this, ClassName, attributeName);
+        switch(newMethod) {
+            case Error<MethodDecl.Method, Exception> e_method :
+                return Error<MethodDecl.Method[], Exception>.From(new Exception($"failed to parse new method\n{e_method.Message}"));
+        }
 
-        return Success<MethodDecl.Method[], Exception>.From(new[] { o_method.Value, n_method.Value });
+        var n_method = newMethod as Success<MethodDecl.Method, Exception>;
+
+        if(!IsAsync) {
+            var renamedMethod = Reader.Parse<MethodDecl.Method>(Code.ToString().Replace(Name, name));
+            switch(renamedMethod) {
+                case Error<MethodDecl.Method, Exception> e_method :
+                    return Error<MethodDecl.Method[], Exception>.From(new Exception($"failed to parse modified old method\n{e_method.Message}"));
+                case Success<MethodDecl.Method, Exception> o_method :
+                    return Success<MethodDecl.Method[], Exception>.From(new[] { o_method.Value, n_method.Value });
+            }
+
+        } 
+        return Success<MethodDecl.Method[], Exception>.From(new[] { n_method.Value });
     }
 }
