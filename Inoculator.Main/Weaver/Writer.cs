@@ -37,7 +37,7 @@ public class Writer : IntermediateIOBase<string> {
             WorkingDirectory = currentDirectory,
             CreateNoWindow = true,
             FileName = ilasmPath ?? ProcessName,
-            Arguments = $"/DLL /NOLOGO /QUIET /OPTIMIZE /OUTPUT={targetFile} {TempFilePath}",
+            Arguments = $"/DLL /NOLOGO /QUIET /OUTPUT={targetFile} {TempFilePath}",
             RedirectStandardError = true
         };
         return ilasmPsi;

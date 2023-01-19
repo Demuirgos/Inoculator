@@ -21,7 +21,8 @@ public static class Wrapper {
         bool isVoidCall = !ReturnTypeOf(method.Header, out var type);
         bool isPrimitive = _primitives.Contains(type);
         bool isStatic = method.Header.Convention is null || method.Header.MethodAttributes.Attributes.Values.Any(a => a is AttributeDecl.MethodSimpleAttribute { Name: "static" });
-
+        
+        (int metadataOffset, int? resultOffset, int? returnOffset, int exceptionOffset) = (AttributeClass.Length, isVoidCall ? null : (int?)AttributeClass.Length + 1, isVoidCall ? null : (int?)AttributeClass.Length + 2, AttributeClass.Length + (isVoidCall ? 1 : 3));
         builder.AppendLine($$$"""
         .locals init (
             {{{
@@ -46,11 +47,11 @@ public static class Wrapper {
                 {getNextLabel(ref labelIdx)}: stloc.{i}"
             ).Aggregate((a, b) => $"{a}\n{b}")
         }}}
-        {{{getNextLabel(ref labelIdx)}}}: ldstr "{{{new string(method.ToString().ToCharArray().Where(c => !Char.IsWhiteSpace(c)).ToArray())}}}"
+        {{{getNextLabel(ref labelIdx)}}}: ldstr "{{{new string(method.ToString().ToCharArray().Select(c => c != '\n' ? c : ' ').ToArray())}}}"
         {{{getNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Injector]Inoculator.Builder.Metadata::.ctor(string)
-        {{{getNextLabel(ref labelIdx)}}}: stloc.{{{AttributeClass.Length}}}
+        {{{getNextLabel(ref labelIdx)}}}: stloc.{{{metadataOffset}}}
 
-        {{{getNextLabel(ref labelIdx)}}}: ldloc.{{{AttributeClass.Length}}}
+        {{{getNextLabel(ref labelIdx)}}}: ldloc.{{{metadataOffset}}}
         {{{getNextLabel(ref labelIdx)}}}: ldc.i4.{{{method.Header.Parameters.Parameters.Values.Length}}}
         {{{getNextLabel(ref labelIdx)}}}: newarr [System.Runtime]System.Object
         
@@ -75,13 +76,13 @@ public static class Wrapper {
                 {{{(
                     isVoidCall 
                         ? String.Empty 
-                        : $@"{getNextLabel(ref labelIdx)}: stloc.2"
+                        : $@"{getNextLabel(ref labelIdx)}: stloc.{resultOffset}"
                 )}}}
-                {{{getNextLabel(ref labelIdx)}}}: ldloc.1
+                {{{getNextLabel(ref labelIdx)}}}: ldloc.{{{metadataOffset}}}
                 {{{(
                     isVoidCall 
                         ? $@"{getNextLabel(ref labelIdx)}: ldnull"
-                        : $@"{getNextLabel(ref labelIdx)}: ldloc.2
+                        : $@"{getNextLabel(ref labelIdx)}: ldloc.{resultOffset}
                             {(  isPrimitive 
                                     ? $@"{getNextLabel(ref labelIdx)}: box {ToProperNamedType(type)}"
                                     : String.Empty
@@ -99,16 +100,16 @@ public static class Wrapper {
                 {{{(
                     isVoidCall 
                         ? String.Empty 
-                        : $@"{getNextLabel(ref labelIdx)}: ldloc.2
-                             {getNextLabel(ref labelIdx)}: stloc.3"
+                        : $@"{getNextLabel(ref labelIdx)}: ldloc.{resultOffset}
+                             {getNextLabel(ref labelIdx)}: stloc.{returnOffset}"
                 )}}}
                 {{{getNextLabel(ref labelIdx)}}}: leave.s ***END***
             } 
             catch [System.Runtime]System.Exception
             {
-                {{{getNextLabel(ref labelIdx)}}}: stloc.s 4
-                {{{getNextLabel(ref labelIdx)}}}: ldloc.1
-                {{{getNextLabel(ref labelIdx)}}}: ldloc.s 4
+                {{{getNextLabel(ref labelIdx)}}}: stloc.s {{{exceptionOffset}}}
+                {{{getNextLabel(ref labelIdx)}}}: ldloc.{{{metadataOffset}}}
+                {{{getNextLabel(ref labelIdx)}}}: ldloc.s {{{exceptionOffset}}}
                 {{{getNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.Metadata::set_Exception(class [System.Runtime]System.Exception)
                 {{{
                     AttributeClass.Select(
@@ -118,7 +119,7 @@ public static class Wrapper {
                         {getNextLabel(ref labelIdx)}: callvirt instance void {attrClassName}::OnException(class [Inoculator.Injector]Inoculator.Builder.Metadata)"
                     ).Aggregate((a, b) => $"{a}\n{b}")
                 }}}
-                {{{getNextLabel(ref labelIdx)}}}: ldloc.s 4
+                {{{getNextLabel(ref labelIdx)}}}: ldloc.s {{{exceptionOffset}}}
                 {{{getNextLabel(ref labelIdx)}}}: throw
             } 
         } 
@@ -135,7 +136,7 @@ public static class Wrapper {
             {{{getNextLabel(ref labelIdx)}}}: endfinally
         } 
 
-        {{{( isVoidCall ? String.Empty : $@"{getNextLabel(ref labelIdx)}: ldloc.{AttributeClass.Length+2}" )}}}
+        {{{( isVoidCall ? String.Empty : $@"{getNextLabel(ref labelIdx)}: ldloc.{returnOffset}" )}}}
         {{{getNextLabel(ref labelIdx)}}}: ret
 
         """);
