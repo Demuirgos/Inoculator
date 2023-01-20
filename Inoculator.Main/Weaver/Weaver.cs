@@ -22,8 +22,6 @@ public class Weaver {
         var targetAttributes = Searcher.SearchForInterceptors(assembly);
         Declaration[] HandleDeclaration(Declaration declaration) {
             switch(declaration) {
-                case MethodDecl.Method method:
-                    return HandleMethod(method, null);
                 case ClassDecl.Class type:
                     return HandleClass(type);
                 default:
@@ -36,7 +34,7 @@ public class Weaver {
             ClassDecl.Member[] HandleMember(ClassDecl.Member member){
                 switch(member) {
                     case ClassDecl.MethodDefinition method:
-                        return HandleMethod(method.Value, @class.Header.Id).Select(x => new ClassDecl.MethodDefinition(x)).ToArray();
+                        return HandleMethod(method.Value, @class).Select(x => new ClassDecl.MethodDefinition(x)).ToArray();
                     case ClassDecl.NestedClass type:
                         return HandleClass(type.Value).Select(x => new ClassDecl.NestedClass(x)).ToArray();
                     default:
@@ -55,17 +53,26 @@ public class Weaver {
             }}}};
         }
 
-        MethodDecl.Method[] HandleMethod(MethodDecl.Method method, IdentifierDecl.Identifier parent) {
+        MethodDecl.Method[] HandleMethod(MethodDecl.Method method, ClassDecl.Class parent) {
             var metadata = new Metadata(method) {
-                ClassName = parent
+                ClassName = parent.Header.Id
             };
 
             if(!metadata.Code.IsConstructor && Searcher.IsMarked(metadata.Code, targetAttributes, out string[] marks)) {
-                var result = metadata.ReplaceNameWith($"{metadata.Name}__Inoculated", marks);
-                if(result is Success<MethodDecl.Method[], Exception> success) {
-                    return success.Value;
-                } else if(result is Error<MethodDecl.Method[], Exception> failure) {
-                    throw failure.Message;
+                if(metadata.MethodBehaviour is Metadata.MethodType.Sync) {
+                    var result = Wrapper.ReplaceNameWith(metadata, $"{metadata.Name}__Inoculated", marks);
+                    if(result is Success<MethodDecl.Method[], Exception> success) {
+                        return success.Value;
+                    } else if(result is Error<MethodDecl.Method[], Exception> failure) {
+                        throw failure.Message;
+                    }
+                } else {
+                    var generatedStateMachineClass = parent.Members.Members.Values
+                        .OfType<ClassDecl.NestedClass>()
+                        .Select(x => x.Value)
+                        .Where(x => x.Header.Id.ToString().StartsWith($"'<{metadata.Name}>"))
+                        .FirstOrDefault();
+                    var result = Wrapper.ReplaceNameWith(metadata, $"{metadata.Name}__Inoculated", marks, generatedStateMachineClass);
                 }
             }
             return new[] { method };

@@ -10,6 +10,66 @@ namespace Inoculator.Builder;
 
 public static class Wrapper {
     static string getNextLabel(ref int labelIdx) => $"IL_{labelIdx++:X4}";
+    public static Result<MethodDecl.Method[], Exception> ReplaceNameWith(Metadata metadata, String name, string[] attributeName, ClassDecl.Class classRef = null) {
+        switch (metadata.MethodBehaviour)
+        {
+            case Metadata.MethodType.Sync:
+                return RunSyncMethodManipulation(metadata, name, attributeName);
+            case Metadata.MethodType.Iter:
+                return RunIterMethodManipulation(classRef, metadata, name, attributeName);
+            default:
+                break;
+        }
+        return Success<MethodDecl.Method[], Exception>.From(new[] { metadata.Code });
+    }
+
+    private static Result<Method[], Exception> RunIterMethodManipulation(ClassDecl.Class classRef, Metadata metadata, string name, string[] attributeName)
+    {
+        Console.WriteLine(metadata.Name);
+        // add interceptor and metadata field to class 
+        classRef = classRef with {
+            Members = classRef.Members with {
+                Members = new ARRAY<ClassDecl.Member>(
+                    classRef.Members.Members.Values.Union(
+                        attributeName
+                            .Select((attr, i) => $".field private static class {attr} Interceptor{i}")
+                            .Append($".field private static class [Inoculator.Injector]Inoculator.Builder.Metadata Metadata")
+                            .Select(x => {
+                                _ = Dove.Core.Parser.TryParse<ClassDecl.Member>(x, out ClassDecl.Member res, out _);
+                                return res;
+                    })).ToArray()
+                ) {
+                    Options = new ARRAY<ClassDecl.Member>.ArrayOptions() {
+                        Delimiters = ('\0', '\n', '\0')
+                    }
+                }
+            }
+        };
+        Console.WriteLine(classRef);
+        throw new NotImplementedException();
+    }
+
+    private static Result<Method[], Exception> RunSyncMethodManipulation(Metadata metadata, string name, string[] attributeName)
+    {
+        var newMethod = Handle(metadata, metadata.ClassName, attributeName);
+        switch (newMethod)
+        {
+            case Error<MethodDecl.Method, Exception> e_method:
+                return Error<MethodDecl.Method[], Exception>.From(new Exception($"failed to parse new method\n{e_method.Message}"));
+        }
+
+        var n_method = newMethod as Success<MethodDecl.Method, Exception>;
+
+        var renamedMethod = Reader.Parse<MethodDecl.Method>(metadata.Code.ToString().Replace(metadata.Name, name));
+        return renamedMethod switch
+        {
+            Error<MethodDecl.Method, Exception> e_method
+                => Error<MethodDecl.Method[], Exception>.From(new Exception($"failed to parse modified old method\n{e_method.Message}")),
+            Success<MethodDecl.Method, Exception> o_method
+                => Success<MethodDecl.Method[], Exception>.From(new[] { o_method.Value, n_method.Value })
+        };
+    }
+
     public static Result<MethodDecl.Method, Exception> Handle(this Metadata method, Identifier container, string[] AttributeClass)
     {
         int labelIdx = 0;
@@ -158,7 +218,6 @@ public static class Wrapper {
 
     private static bool ReturnTypeOf(MethodDecl.Prefix header, out string type) {
         var typeComp = header.Type.Components.Types.Values.First().AsTypePrefix();
-        Console.WriteLine(header);
         type = typeComp?.ToString() switch {
             "void" => null,
             _ => header.Type.ToString(),
