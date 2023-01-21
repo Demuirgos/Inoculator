@@ -18,9 +18,9 @@ public static class Wrapper {
     public static Result<(ClassDecl.Class, MethodDecl.Method[]), Exception> ReplaceNameWith(Metadata metadata, String name, string[] attributeName, ClassDecl.Class classRef = null, IEnumerable<string> path = null) {
         switch (metadata.MethodBehaviour)
         {
-            case Metadata.MethodType.Normal:
+            case Metadata.MethodType.Sync:
                 return RunNMMethodManipulation(metadata, name, attributeName);
-            case Metadata.MethodType.StateMachine:
+            case Metadata.MethodType.Iter:
                 return RunSMMethodManipulation(classRef, metadata, name, attributeName, path);
         }
         return Success<(ClassDecl.Class, MethodDecl.Method[]), Exception>.From((classRef, new[] { metadata.Code }));
