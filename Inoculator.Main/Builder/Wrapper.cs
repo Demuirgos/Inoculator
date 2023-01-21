@@ -34,7 +34,9 @@ public static class Wrapper {
         Dictionary<string, string> marks = new();
         ClassDecl.MethodDefinition[] HandleMoveNext(ClassDecl.MethodDefinition methodDef) {
             if(methodDef.Value.Header.Name.ToString() != "MoveNext") return new [] { methodDef };
-            _ = !ReturnTypeOf(metadata.Code.Header, out var type);
+            Console.WriteLine(metadata.Code.Header.Type);
+            var typeContainer = metadata.Code.Header.Type.Components.Types.Values.First() as TypeDecl.CustomTypeReference;
+            var type = typeContainer.Reference.GenericTypes.Types.Values.First().ToString();
             bool isPrimitive = _primitives.Contains(type);
             var method = methodDef.Value;
             StringBuilder builder = new();
@@ -53,8 +55,8 @@ public static class Wrapper {
 
             
             builder.AppendLine($$$"""
-                .maxstack 4
-                .locals init ( bool)
+                .maxstack 8
+                .locals init (bool, class [System.Runtime]System.Exception e)
             """);            
 
             builder.Append($$$"""
@@ -66,9 +68,9 @@ public static class Wrapper {
                 {{{attributeNames.Select(
                     (attrClassName, i) => $@"
                     {GetNextLabel(ref labelIdx)}: ldarg.0
-                    {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Injector]Inoculator.Builder.Metadata {stateMachineFullName}::'<inoculated>__Metadata'
-                    {GetNextLabel(ref labelIdx)}: ldarg.0
                     {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::'<inoculated>__Interceptor{i}'
+                    {GetNextLabel(ref labelIdx)}: ldarg.0
+                    {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Injector]Inoculator.Builder.Metadata {stateMachineFullName}::'<inoculated>__Metadata'
                     {GetNextLabel(ref labelIdx)}: callvirt instance void {attrClassName}::OnEntry(class [Inoculator.Injector]Inoculator.Builder.Metadata)"
                 ).Aggregate((a, b) => $"{a}\n{b}")}}}
 
@@ -79,9 +81,9 @@ public static class Wrapper {
                         {{{GetNextLabel(ref labelIdx)}}}: call instance bool {{{stateMachineFullName}}}::MoveNext__inoculated()
                         {{{GetNextLabel(ref labelIdx)}}}: stloc.0
                         {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
-                        {{{GetNextLabel(ref labelIdx)}}}: ldfld {{{type}}} {{{stateMachineFullName}}}::'<>2__current'
-                        {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
                         {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Injector]Inoculator.Builder.Metadata {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                        {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                        {{{GetNextLabel(ref labelIdx)}}}: ldfld {{{type}}} {{{stateMachineFullName}}}::'<>2__current'
                         {{{(
                             isPrimitive
                                     ? $@"{GetNextLabel(ref labelIdx)}: box {ToProperNamedType(type)}"
@@ -92,23 +94,27 @@ public static class Wrapper {
                             (attrClassName, i) => $@"
                             {GetNextLabel(ref labelIdx)}: ldarg.0
                             {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::'<inoculated>__Interceptor{i}'
+                            {GetNextLabel(ref labelIdx)}: ldarg.0
+                            {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Injector]Inoculator.Builder.Metadata {stateMachineFullName}::'<inoculated>__Metadata'
                             {GetNextLabel(ref labelIdx)}: callvirt instance void {attrClassName}::OnSuccess(class [Inoculator.Injector]Inoculator.Builder.Metadata)"
                         ).Aggregate((a, b) => $"{a}\n{b}")}}}
                         {{{GetNextLabel(ref labelIdx)}}}: leave.s ***END***
                     } catch [System.Runtime]System.Exception
                     {
-                        {{{GetNextLabel(ref labelIdx)}}}: dup
+                        {{{GetNextLabel(ref labelIdx)}}}: stloc.s e
                         {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
                         {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Injector]Inoculator.Builder.Metadata {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                        {{{GetNextLabel(ref labelIdx)}}}: ldloc.s e
                         {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.Metadata::set_Exception(class [System.Runtime]System.Exception)
                         {{{attributeNames.Select(
                                 (attrClassName, i) => $@"
                                 {GetNextLabel(ref labelIdx)}: ldarg.0
-                                {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Injector]Inoculator.Builder.Metadata {stateMachineFullName}::'<inoculated>__Metadata'
-                                {GetNextLabel(ref labelIdx)}: ldarg.0
                                 {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::'<inoculated>__Interceptor{i}'
+                                {GetNextLabel(ref labelIdx)}: ldarg.0
+                                {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Injector]Inoculator.Builder.Metadata {stateMachineFullName}::'<inoculated>__Metadata'
                                 {GetNextLabel(ref labelIdx)}: callvirt instance void {attrClassName}::OnException(class [Inoculator.Injector]Inoculator.Builder.Metadata)"
                             ).Aggregate((a, b) => $"{a}\n{b}")}}}
+                        {{{GetNextLabel(ref labelIdx)}}}: ldloc.s e
                         {{{GetNextLabel(ref labelIdx)}}}: throw
                     } 
                 } finally
@@ -121,9 +127,9 @@ public static class Wrapper {
                     {{{attributeNames.Select(
                         (attrClassName, i) => $@"
                         {GetNextLabel(ref labelIdx)}: ldarg.0
-                        {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Injector]Inoculator.Builder.Metadata {stateMachineFullName}::'<inoculated>__Metadata'
-                        {GetNextLabel(ref labelIdx)}: ldarg.0
                         {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::'<inoculated>__Interceptor{i}'
+                        {GetNextLabel(ref labelIdx)}: ldarg.0
+                        {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Injector]Inoculator.Builder.Metadata {stateMachineFullName}::'<inoculated>__Metadata'
                         {GetNextLabel(ref labelIdx)}: callvirt instance void {attrClassName}::OnExit(class [Inoculator.Injector]Inoculator.Builder.Metadata)"
                     ).Aggregate((a, b) => $"{a}\n{b}")}}}
                     {{{GetNextLabel(ref labelIdx, marks, "JUMPDEST2")}}}: endfinally
@@ -203,7 +209,12 @@ public static class Wrapper {
                                         {{{GetNextLabel(ref labelIdx)}}}: dup
                                         {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{new string(metadata.Code.ToString().ToCharArray().Select(c => c != '\n' ? c : ' ').ToArray())}}}"
                                         {{{GetNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Injector]Inoculator.Builder.Metadata::.ctor(string)
+
+                                        {{{GetNextLabel(ref labelIdx)}}}: dup
+                                        {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.{{{metadata.Code.Header.Parameters.Parameters.Values.Length}}}
+                                        {{{GetNextLabel(ref labelIdx)}}}: newarr [System.Runtime]System.Object
                                         {{{ExtractArguments(metadata.Code.Header.Parameters, ref labelIdx, isStatic ? 0 : 1)}}}
+
                                         {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.Metadata::set_Parameters(object[])
                                         {{{GetNextLabel(ref labelIdx)}}}: stfld class [Inoculator.Injector]Inoculator.Builder.Metadata {{{stateMachineFullName}}}::'<inoculated>__Metadata'
                                         {{{attributeNames.Select(
