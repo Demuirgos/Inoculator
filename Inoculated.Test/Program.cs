@@ -1,9 +1,10 @@
 ﻿namespace Program {
     class Program {
         async static Task Main(string[] args) {
-            Test(100, 23);
-            Test(10000, 69);
-            await TestAsync();
+            foreach (var item in TestEnum())
+            {
+                Console.WriteLine(item);
+            }
         }
 
         [ElapsedTime, LogEntrency]

@@ -7,7 +7,7 @@ namespace Inoculator.Builder;
 
 public class Metadata : Printable<Metadata> {
     public enum MethodType {
-        Async, Sync, Iter
+        Normal, StateMachine
     }
 
     public enum CallType {
@@ -38,12 +38,10 @@ public class Metadata : Printable<Metadata> {
     public MethodType MethodBehaviour =>
         Code.Body.Items.Values.
             OfType<MethodDecl.CustomAttributeItem>()
-            .Any(a => a.Value.AttributeCtor.Spec.ToString() == "[System.Runtime] System.Runtime.CompilerServices.AsyncStateMachineAttribute")
-            ? MethodType.Async : 
-                Code.Body.Items.Values
-                    .OfType<MethodDecl.CustomAttributeItem>()
-                    .Any(a => a.Value.AttributeCtor.Spec.ToString() == "[System.Runtime] System.Runtime.CompilerServices.IteratorStateMachineAttribute")
-                ? MethodType.Iter  : MethodType.Sync;
+            .Select(x => x.Value.AttributeCtor.Spec.ToString())
+            .Any(a =>  a == "[System.Runtime] System.Runtime.CompilerServices.AsyncStateMachineAttribute" 
+                          ||  a == "[System.Runtime] System.Runtime.CompilerServices.IteratorStateMachineAttribute")
+            ? MethodType.StateMachine : MethodType.Normal;
     public CallType MethodCall => Code.Header.Convention is null || Code.Header.MethodAttributes.Attributes.Values.Any(a => a is AttributeDecl.MethodSimpleAttribute { Name: "static" }) ? CallType.Static : CallType.Instance;
     public string TypeSignature => $"({string.Join(", ", Signature.Input)} -> {Signature.Output})";
     public string[] TypeParameters => Code.Header?.TypeParameters?

@@ -6,53 +6,176 @@ using IdentifierDecl;
 using Inoculator.Core;
 using LabelDecl;
 using MethodDecl;
-
+using static Dove.Core.Parser;
 namespace Inoculator.Builder;
 
 public static class Wrapper {
-    static string GetNextLabel(ref int labelIdx) => $"IL_{labelIdx++:X4}";
-    public static Result<MethodDecl.Method[], Exception> ReplaceNameWith(Metadata metadata, String name, string[] attributeName, ClassDecl.Class classRef = null) {
+    static string GetNextLabel(ref int labelIdx, Dictionary<string, string> marks = null, string mark = null) {
+        string label = $"IL_{labelIdx++:X4}";
+        if (marks is not null && mark is not null) marks.Add(mark, label);
+        return label;
+    }
+    public static Result<(ClassDecl.Class, MethodDecl.Method[]), Exception> ReplaceNameWith(Metadata metadata, String name, string[] attributeName, ClassDecl.Class classRef = null, IEnumerable<string> path = null) {
         switch (metadata.MethodBehaviour)
         {
-            case Metadata.MethodType.Sync:
-                return RunSyncMethodManipulation(metadata, name, attributeName);
-            case Metadata.MethodType.Iter:
-                return RunIterMethodManipulation(classRef, metadata, name, attributeName);
-            default:
-                break;
+            case Metadata.MethodType.Normal:
+                return RunNMMethodManipulation(metadata, name, attributeName);
+            case Metadata.MethodType.StateMachine:
+                return RunSMMethodManipulation(classRef, metadata, name, attributeName, path);
         }
-        return Success<MethodDecl.Method[], Exception>.From(new[] { metadata.Code });
+        return Success<(ClassDecl.Class, MethodDecl.Method[]), Exception>.From((classRef, new[] { metadata.Code }));
     }
 
-    private static Result<Method[], Exception> RunIterMethodManipulation(ClassDecl.Class classRef, Metadata metadata, string name, string[] attributeNames)
+    private static Result<(ClassDecl.Class, MethodDecl.Method[]), Exception> RunSMMethodManipulation(ClassDecl.Class classRef, Metadata metadata, string name, string[] attributeNames, IEnumerable<string> path)
     {
-        Console.WriteLine(metadata.Name);
-        ClassDecl.MethodDefinition HandleMoveNext(ClassDecl.MethodDefinition method) {
-            if(method.Value.Header.Name.ToString() != "MoveNext") return method;
+        int labelIdx = 0;
+        var stateMachineFullName = $"{String.Join("/",  path)}/{classRef.Header.Id}";
+        Console.WriteLine(stateMachineFullName);
+        Dictionary<string, string> marks = new();
+        ClassDecl.MethodDefinition[] HandleMoveNext(ClassDecl.MethodDefinition methodDef) {
+            if(methodDef.Value.Header.Name.ToString() != "MoveNext") return new [] { methodDef };
+            _ = !ReturnTypeOf(metadata.Code.Header, out var type);
+            bool isPrimitive = _primitives.Contains(type);
+            var method = methodDef.Value;
+            StringBuilder builder = new();
+            builder.AppendLine($".method {method.Header} {{");
+            foreach (var member in method.Body.Items.Values)
+            {
+                if  (member is MethodDecl.LabelItem 
+                            or MethodDecl.InstructionItem 
+                            or MethodDecl.LocalsItem 
+                            or MethodDecl.MaxStackItem
+                            or MethodDecl.ExceptionHandlingItem
+                            or MethodDecl.ScopeBlock
+                    ) continue;
+                builder.AppendLine(member.ToString());
+            }
 
-            return method;
+            
+            builder.AppendLine($$$"""
+                .maxstack 4
+                .locals init ( bool)
+            """);            
+
+            builder.Append($$$"""
+                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                {{{GetNextLabel(ref labelIdx)}}}: ldfld int32 {{{stateMachineFullName}}}::'<>1__state'
+                {{{GetNextLabel(ref labelIdx)}}}: brtrue.s ***JUMPDEST1***
+
+
+                {{{attributeNames.Select(
+                    (attrClassName, i) => $@"
+                    {GetNextLabel(ref labelIdx)}: ldarg.0
+                    {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Injector]Inoculator.Builder.Metadata {stateMachineFullName}::'<inoculated>__Metadata'
+                    {GetNextLabel(ref labelIdx)}: ldarg.0
+                    {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::'<inoculated>__Interceptor{i}'
+                    {GetNextLabel(ref labelIdx)}: callvirt instance void {attrClassName}::OnEntry(class [Inoculator.Injector]Inoculator.Builder.Metadata)"
+                ).Aggregate((a, b) => $"{a}\n{b}")}}}
+
+                {{{GetNextLabel(ref labelIdx, marks, "JUMPDEST1")}}}: nop
+                .try {
+                    .try {
+                        {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                        {{{GetNextLabel(ref labelIdx)}}}: call instance bool {{{stateMachineFullName}}}::MoveNext__inoculated()
+                        {{{GetNextLabel(ref labelIdx)}}}: stloc.0
+                        {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                        {{{GetNextLabel(ref labelIdx)}}}: ldfld {{{type}}} {{{stateMachineFullName}}}::'<>2__current'
+                        {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                        {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Injector]Inoculator.Builder.Metadata {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                        {{{(
+                            isPrimitive
+                                    ? $@"{GetNextLabel(ref labelIdx)}: box {ToProperNamedType(type)}"
+                                    : String.Empty
+                        )}}}
+                        {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.Metadata::set_ReturnValue(object)
+                        {{{attributeNames.Select(
+                            (attrClassName, i) => $@"
+                            {GetNextLabel(ref labelIdx)}: ldarg.0
+                            {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::'<inoculated>__Interceptor{i}'
+                            {GetNextLabel(ref labelIdx)}: callvirt instance void {attrClassName}::OnSuccess(class [Inoculator.Injector]Inoculator.Builder.Metadata)"
+                        ).Aggregate((a, b) => $"{a}\n{b}")}}}
+                        {{{GetNextLabel(ref labelIdx)}}}: leave.s ***END***
+                    } catch [System.Runtime]System.Exception
+                    {
+                        {{{GetNextLabel(ref labelIdx)}}}: dup
+                        {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                        {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Injector]Inoculator.Builder.Metadata {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                        {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.Metadata::set_Exception(class [System.Runtime]System.Exception)
+                        {{{attributeNames.Select(
+                                (attrClassName, i) => $@"
+                                {GetNextLabel(ref labelIdx)}: ldarg.0
+                                {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Injector]Inoculator.Builder.Metadata {stateMachineFullName}::'<inoculated>__Metadata'
+                                {GetNextLabel(ref labelIdx)}: ldarg.0
+                                {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::'<inoculated>__Interceptor{i}'
+                                {GetNextLabel(ref labelIdx)}: callvirt instance void {attrClassName}::OnException(class [Inoculator.Injector]Inoculator.Builder.Metadata)"
+                            ).Aggregate((a, b) => $"{a}\n{b}")}}}
+                        {{{GetNextLabel(ref labelIdx)}}}: throw
+                    } 
+                } finally
+                {
+                    {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                    {{{GetNextLabel(ref labelIdx)}}}: ldfld int32 {{{stateMachineFullName}}}::'<>1__state'
+                    {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.m1
+                    {{{GetNextLabel(ref labelIdx)}}}: bne.un.s ***JUMPDEST2***
+
+                    {{{attributeNames.Select(
+                        (attrClassName, i) => $@"
+                        {GetNextLabel(ref labelIdx)}: ldarg.0
+                        {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Injector]Inoculator.Builder.Metadata {stateMachineFullName}::'<inoculated>__Metadata'
+                        {GetNextLabel(ref labelIdx)}: ldarg.0
+                        {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::'<inoculated>__Interceptor{i}'
+                        {GetNextLabel(ref labelIdx)}: callvirt instance void {attrClassName}::OnExit(class [Inoculator.Injector]Inoculator.Builder.Metadata)"
+                    ).Aggregate((a, b) => $"{a}\n{b}")}}}
+                    {{{GetNextLabel(ref labelIdx, marks, "JUMPDEST2")}}}: endfinally
+                }
+                {{{GetNextLabel(ref labelIdx, marks, "END")}}}: nop
+                {{{GetNextLabel(ref labelIdx)}}}: ldloc.0
+                {{{GetNextLabel(ref labelIdx)}}}: ret
+            }}
+            """);
+
+            foreach(var (label, idx) in marks)
+            {
+                builder.Replace($"***{label}***", idx.ToString());
+            }
+            var newFunction = new ClassDecl.MethodDefinition(Parse<MethodDecl.Method>(builder.ToString()));
+            
+            var oldFunction = methodDef with {
+                Value = methodDef.Value with {
+                    Header = methodDef.Value.Header with {
+                        Name = Parse<MethodName>("MoveNext__inoculated")
+                    },
+                    Body = methodDef.Value.Body with {
+                        Items = new ARRAY<MethodDecl.Member>(
+                            methodDef.Value.Body
+                                .Items.Values.Where(member => member is not MethodDecl.OverrideMethodItem)
+                                .ToArray()
+                        ) {
+                            Options = new ARRAY<MethodDecl.Member>.ArrayOptions() {
+                                Delimiters = ('\0', '\n', '\0')
+                            }
+                        }
+                    }
+                }
+            };
+
+
+            return new [] { newFunction, oldFunction };
         }
-        // add interceptor and metadata field to class 
-        /*
-        IL_001c: dup
-        IL_001d: ldarg.3
-        IL_001e: stfld object C/'<M>d__0'::'<>3__m'
-        */
+
         classRef = classRef with {
             Members = classRef.Members with {
                 Members = new ARRAY<ClassDecl.Member>(
                     classRef.Members.Members.Values
-                        .Select(member => member switch {
+                        .SelectMany(member => member switch {
                             ClassDecl.MethodDefinition method => HandleMoveNext(method),
-                            _ => member
+                            _ => new [] { member }
                         }).Union(
                         attributeNames
                             .Select((attr, i) => $".field public class {attr} '<inoculated>__Interceptor{i}'")
                             .Append($".field public class [Inoculator.Injector]Inoculator.Builder.Metadata '<inoculated>__Metadata'")
-                            .Select(x => {
-                                _ = Dove.Core.Parser.TryParse<ClassDecl.Member>(x, out ClassDecl.Member res, out _);
-                                return res;
-                    })).ToArray()
+                            .Select(Parse<ClassDecl.Member>)
+                        ).ToArray()
                 ) {
                     Options = new ARRAY<ClassDecl.Member>.ArrayOptions() {
                         Delimiters = ('\0', '\n', '\0')
@@ -61,7 +184,7 @@ public static class Wrapper {
             }
         };
 
-        int labelIdx = 0;
+        labelIdx = 0;
         bool isStatic = metadata.MethodCall is Metadata.CallType.Static;
         metadata.Code = metadata.Code with {
             Body = metadata.Code.Body with {
@@ -71,7 +194,7 @@ public static class Wrapper {
                             //Where(x => x is not MethodDecl.LabelItem or MethodDecl.InstructionItem)
                             if(item is MethodDecl.LabelItem label) {
                                 return new[] { label with {
-                                    Value = new CodeLabel(new SimpleName(GetNextLabel(ref labelIdx)))
+                                        Value = new CodeLabel(new SimpleName(GetNextLabel(ref labelIdx)))
                                     }
                                 };
                             } else if(item is MethodDecl.InstructionItem instruction) {
@@ -82,17 +205,16 @@ public static class Wrapper {
                                         {{{GetNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Injector]Inoculator.Builder.Metadata::.ctor(string)
                                         {{{ExtractArguments(metadata.Code.Header.Parameters, ref labelIdx, isStatic ? 0 : 1)}}}
                                         {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.Metadata::set_Parameters(object[])
-                                        {{{GetNextLabel(ref labelIdx)}}}: stfld class [Inoculator.Injector]Inoculator.Builder.Metadata {{{classRef.Header.Id}}}::'<inoculated>__Metadata'
+                                        {{{GetNextLabel(ref labelIdx)}}}: stfld class [Inoculator.Injector]Inoculator.Builder.Metadata {{{stateMachineFullName}}}::'<inoculated>__Metadata'
                                         {{{attributeNames.Select(
                                             (attrClassName, i) => $"""
                                         {GetNextLabel(ref labelIdx)}: dup
                                         {GetNextLabel(ref labelIdx)}: newobj instance void {attrClassName}::.ctor()
-                                        {GetNextLabel(ref labelIdx)}: stfld class {attrClassName} C/{classRef.Header.Id}::'<inoculated>__Interceptor{i}'
+                                        {GetNextLabel(ref labelIdx)}: stfld class {attrClassName} {stateMachineFullName}::'<inoculated>__Interceptor{i}'
                                         """).Aggregate((a, b) => $"{a}\n{b}")}}}
                                         {{{GetNextLabel(ref labelIdx)}}}: ret
                                         """;
-                                    Console.WriteLine(newcode);
-                                    var result = Dove.Core.Parser.TryParse<MethodDecl.Member.Collection>(newcode, out MethodDecl.Member.Collection res, out string err);
+                                    _ = TryParse<MethodDecl.Member.Collection>(newcode, out MethodDecl.Member.Collection res, out string err);
                                     return res.Items.Values;
                                 } 
                             }
@@ -106,17 +228,16 @@ public static class Wrapper {
             }
         };
 
-
-        throw new NotImplementedException();
+        return Success<(ClassDecl.Class, MethodDecl.Method[]), Exception>.From((classRef, new[] { metadata.Code }));
     }
 
-    private static Result<Method[], Exception> RunSyncMethodManipulation(Metadata metadata, string name, string[] attributeName)
+    private static Result<(ClassDecl.Class, MethodDecl.Method[]), Exception> RunNMMethodManipulation(Metadata metadata, string name, string[] attributeName)
     {
         var newMethod = Handle(metadata, metadata.ClassName, attributeName);
         switch (newMethod)
         {
             case Error<MethodDecl.Method, Exception> e_method:
-                return Error<MethodDecl.Method[], Exception>.From(new Exception($"failed to parse new method\n{e_method.Message}"));
+                return Error<(ClassDecl.Class, MethodDecl.Method[]), Exception>.From(new Exception($"failed to parse new method\n{e_method.Message}"));
         }
 
         var n_method = newMethod as Success<MethodDecl.Method, Exception>;
@@ -125,42 +246,28 @@ public static class Wrapper {
         return renamedMethod switch
         {
             Error<MethodDecl.Method, Exception> e_method
-                => Error<MethodDecl.Method[], Exception>.From(new Exception($"failed to parse modified old method\n{e_method.Message}")),
+                => Error<(ClassDecl.Class, MethodDecl.Method[]), Exception>.From(new Exception($"failed to parse modified old method\n{e_method.Message}")),
             Success<MethodDecl.Method, Exception> o_method
-                => Success<MethodDecl.Method[], Exception>.From(new[] { o_method.Value, n_method.Value })
+                => Success<(ClassDecl.Class, MethodDecl.Method[]), Exception>.From((null, new[] { o_method.Value, n_method.Value }))
         };
     }
 
-    public static Result<MethodDecl.Method, Exception> Handle(this Metadata method, Identifier container, string[] AttributeClass)
+    public static Result<MethodDecl.Method, Exception> Handle(Metadata metadata, Identifier container, string[] AttributeClass)
     {
         int labelIdx = 0;
         StringBuilder builder = new();
-        switch (method.MethodBehaviour)
-        {
-            case Metadata.MethodType.Sync:
-                bool isVoidCall = !ReturnTypeOf(method.Code.Header, out var type);
-                bool isPrimitive = _primitives.Contains(type);
-                bool hasArgs = method.Code.Header.Parameters.Parameters.Values.Length > 0;
-                labelIdx = HandleSyncMethod(method.Code, container, AttributeClass, labelIdx, builder, isVoidCall, type, isPrimitive, hasArgs, method.MethodCall == Metadata.CallType.Static);
-                break;
-            default:
-                builder.Append(method.Code.ToString());
-                break;
-        }
-        var result = builder.ToString();
-        return Reader.Parse<MethodDecl.Method>(result);
-    }
-
-    private static int HandleSyncMethod(Method method, Identifier container, string[] AttributeClass, int labelIdx, StringBuilder builder, bool isVoidCall, string type, bool isPrimitive, bool hasArgs, bool isStatic)
-    {
+        bool isVoidCall = !ReturnTypeOf(metadata.Code.Header, out var type);
+        bool isPrimitive = _primitives.Contains(type);
+        bool isStatic = metadata.MethodCall is Metadata.CallType.Static;
+        bool hasArgs = metadata.Code.Header.Parameters.Parameters.Values.Length > 0;
         (int metadataOffset, int? resultOffset, int? returnOffset, int exceptionOffset) = (AttributeClass.Length, isVoidCall ? null : (int?)AttributeClass.Length + 1, isVoidCall ? null : (int?)AttributeClass.Length + 2, AttributeClass.Length + (isVoidCall ? 1 : 3));
-        builder.AppendLine($".method {method.Header} {{");
-        foreach (var member in method.Body.Items.Values)
+        builder.AppendLine($".method {metadata.Code.Header} {{");
+        foreach (var member in metadata.Code.Body.Items.Values)
         {
             if (member is MethodDecl.LabelItem or MethodDecl.InstructionItem or MethodDecl.LocalsItem) continue;
             builder.AppendLine(member.ToString());
         }
-        builder.AppendLine($".maxstack {(hasArgs ? 4 : 2)}");
+        builder.AppendLine($".maxstack {(hasArgs ? 8 : 2)}");
         builder.AppendLine($$$"""
         .locals init (
             {{{String.Join("\n", AttributeClass.Select((attrClassName, i) => $"class {attrClassName} interceptor{i},"))}}}
@@ -181,15 +288,15 @@ public static class Wrapper {
                 {GetNextLabel(ref labelIdx)}: newobj instance void {attrClassName}::.ctor()
                 {GetNextLabel(ref labelIdx)}: stloc.s {i}"
             ).Aggregate((a, b) => $"{a}\n{b}")}}}
-        {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{new string(method.ToString().ToCharArray().Select(c => c != '\n' ? c : ' ').ToArray())}}}"
+        {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{new string(metadata.Code.ToString().ToCharArray().Select(c => c != '\n' ? c : ' ').ToArray())}}}"
         {{{GetNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Injector]Inoculator.Builder.Metadata::.ctor(string)
         {{{GetNextLabel(ref labelIdx)}}}: stloc.s {{{metadataOffset}}}
 
         {{{GetNextLabel(ref labelIdx)}}}: ldloc.s {{{metadataOffset}}}
-        {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.{{{method.Header.Parameters.Parameters.Values.Length}}}
+        {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.{{{metadata.Code.Header.Parameters.Parameters.Values.Length}}}
         {{{GetNextLabel(ref labelIdx)}}}: newarr [System.Runtime]System.Object
         
-        {{{ExtractArguments(method.Header.Parameters, ref labelIdx, isStatic ? 0 : 1)}}}
+        {{{ExtractArguments(metadata.Code.Header.Parameters, ref labelIdx, isStatic ? 0 : 1)}}}
         {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.Metadata::set_Parameters(object[])
 
         {{{AttributeClass.Select(
@@ -203,8 +310,8 @@ public static class Wrapper {
             .try
             {
                 {{{(isStatic ? String.Empty : $@"{GetNextLabel(ref labelIdx)}: ldarg.0")}}}
-                {{{LoadArguments(method.Header.Parameters, ref labelIdx, isStatic ? 0 : 1)}}}
-                {{{GetNextLabel(ref labelIdx)}}}: call {{{MkMethodReference(method.Header, container)}}}
+                {{{LoadArguments(metadata.Code.Header.Parameters, ref labelIdx, isStatic ? 0 : 1)}}}
+                {{{GetNextLabel(ref labelIdx)}}}: call {{{MkMethodReference(metadata.Code.Header, container)}}}
                 {{{(
                     isVoidCall
                         ? String.Empty
@@ -270,7 +377,8 @@ public static class Wrapper {
         string endLabel = $"IL_{labelIdx - (isVoidCall ? 1 : 2):X4}";
         builder.Replace("***END***", endLabel);
         builder.AppendLine("}");
-        return labelIdx;
+        var result = builder.ToString();
+        return Reader.Parse<MethodDecl.Method>(result);
     }
 
     private static string InvokeFunctionOnTypes(string[] types, string functionSpec, int labelIdx) {
