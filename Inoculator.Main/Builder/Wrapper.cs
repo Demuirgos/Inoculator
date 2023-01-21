@@ -39,7 +39,7 @@ public static class Wrapper {
             if (member is MethodDecl.LabelItem or MethodDecl.InstructionItem or MethodDecl.LocalsItem) continue;
             builder.AppendLine(member.ToString());
         }
-        builder.AppendLine($".maxstack {(hasArgs ? 4 : 2)}");
+        builder.AppendLine($".maxstack {(hasArgs ? 8 : 2)}");
         builder.AppendLine($$$"""
         .locals init (
             {{{String.Join("\n", AttributeClass.Select((attrClassName, i) => $"class {attrClassName} interceptor{i},"))}}}
@@ -68,6 +68,7 @@ public static class Wrapper {
         {{{getNextLabel(ref labelIdx)}}}: ldc.i4.{{{method.Header.Parameters.Parameters.Values.Length}}}
         {{{getNextLabel(ref labelIdx)}}}: newarr [System.Runtime]System.Object
         
+        {{{ExtractArguments(method.Header.Parameters, ref labelIdx, isStatic ? 0 : 1)}}}
         {{{getNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.Metadata::set_Parameters(object[])
 
         {{{AttributeClass.Select(
