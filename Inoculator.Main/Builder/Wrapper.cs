@@ -30,13 +30,11 @@ public static class Wrapper {
     {
         int labelIdx = 0;
         var stateMachineFullName = $"{String.Join("/",  path)}/{classRef.Header.Id}";
-        Console.WriteLine(stateMachineFullName);
         Dictionary<string, string> marks = new();
         ClassDecl.MethodDefinition[] HandleMoveNext(ClassDecl.MethodDefinition methodDef) {
             if(methodDef.Value.Header.Name.ToString() != "MoveNext") return new [] { methodDef };
-            Console.WriteLine(metadata.Code.Header.Type);
             var typeContainer = metadata.Code.Header.Type.Components.Types.Values.First() as TypeDecl.CustomTypeReference;
-            var type = typeContainer.Reference.GenericTypes.Types.Values.First().ToString();
+            var type = typeContainer.Reference.GenericTypes?.Types.Values.FirstOrDefault()?.ToString() ?? "object";
             bool isPrimitive = _primitives.Contains(type);
             var method = methodDef.Value;
             StringBuilder builder = new();
