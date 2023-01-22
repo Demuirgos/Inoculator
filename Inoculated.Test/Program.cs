@@ -1,11 +1,12 @@
 ﻿using System.Collections;
 namespace Program {
     class Program {
+        private string Name { get; set; } = "Test";
         async static Task Main(string[] args) {
             await TestAsyncI();
             await TestAsyncI();
-            await TestAsyncI();
-            await TestAsyncI();
+            var p = new Program();
+            await p.TestAsyncS(23);
         }
 
         [ElapsedTime, LogEntrency]
@@ -36,12 +37,12 @@ namespace Program {
         }
 
         [ElapsedTime, LogEntrency]
-        public static async Task TestAsyncS() {
+        public async Task TestAsyncS(int l) {
             int i = 0;
             for (int j = 0; j < 100; j++) {
                 i++;
             }
-            Console.WriteLine(i);
+            Console.WriteLine($"{Name}_{l}");
         }
 
         [ElapsedTime, LogEntrency]
