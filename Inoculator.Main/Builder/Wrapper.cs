@@ -211,9 +211,9 @@ public static class Wrapper {
                                         {{{GetNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Injector]Inoculator.Builder.Metadata::.ctor(string)
 
                                         {{{GetNextLabel(ref labelIdx)}}}: dup
-                                        {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.{{{metadata.Code.Header.Parameters.Parameters.Values.Length}}}
+                                        {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.s {{{metadata.Code.Header.Parameters.Parameters.Values.Length}}}
                                         {{{GetNextLabel(ref labelIdx)}}}: newarr [System.Runtime]System.Object
-                                        {{{ExtractArguments(metadata.Code.Header.Parameters, ref labelIdx, isStatic ? 0 : 1)}}}
+                                        {{{ExtractArguments(metadata.Code.Header.Parameters, ref labelIdx, 0)}}}
 
                                         {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.Metadata::set_Parameters(object[])
                                         {{{GetNextLabel(ref labelIdx)}}}: stfld class [Inoculator.Injector]Inoculator.Builder.Metadata {{{stateMachineFullName}}}::'<inoculated>__Metadata'
@@ -307,7 +307,7 @@ public static class Wrapper {
         {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.{{{metadata.Code.Header.Parameters.Parameters.Values.Length}}}
         {{{GetNextLabel(ref labelIdx)}}}: newarr [System.Runtime]System.Object
         
-        {{{ExtractArguments(metadata.Code.Header.Parameters, ref labelIdx, isStatic ? 0 : 1)}}}
+        {{{ExtractArguments(metadata.Code.Header.Parameters, ref labelIdx, 0)}}}
         {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.Metadata::set_Parameters(object[])
 
         {{{AttributeClass.Select(
@@ -322,7 +322,7 @@ public static class Wrapper {
             {
                 {{{(isStatic ? String.Empty : $@"{GetNextLabel(ref labelIdx)}: ldarg.0")}}}
                 {{{LoadArguments(metadata.Code.Header.Parameters, ref labelIdx, isStatic ? 0 : 1)}}}
-                {{{GetNextLabel(ref labelIdx)}}}: call {{{MkMethodReference(metadata.Code.Header, container)}}}
+                {{{GetNextLabel(ref labelIdx)}}}: call {{{MkMethodReference(metadata.Code.Header, container, isStatic)}}}
                 {{{(
                     isVoidCall
                         ? String.Empty
@@ -406,9 +406,11 @@ public static class Wrapper {
         return type != null;
     }
 
-    private static string MkMethodReference(MethodDecl.Prefix Name, Identifier container) {
+    private static string MkMethodReference(MethodDecl.Prefix Name, Identifier container, bool isStatic) {
         // int32 Test::method_old(int32, object, uint8, class [System.Runtime]System.Collections.Generic.IEnumerable`1<string>, valuetype testE, string)
         var builder = new StringBuilder();
+        if(!isStatic)
+            builder.Append("instance");
         builder.Append(Name.Type.ToString());
         if(container is not null) {
             builder.Append(" ");

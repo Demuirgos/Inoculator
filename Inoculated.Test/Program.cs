@@ -1,14 +1,32 @@
 ﻿namespace Program {
     class Program {
         async static Task Main(string[] args) {
-            foreach (var item in TestEnum())
+            var p = new Program();
+            foreach (var item in p.TestEnumI(100))
             {
                 Console.WriteLine(item);
             }
+
+            foreach (var item in TestEnumS(100))
+            {
+                Console.WriteLine(item);
+            }
+
+            p.TestI(100, 10);
+            TestS(100, 10);
         }
 
         [ElapsedTime, LogEntrency]
-        public static int Test(int k, int m) {
+        public static int TestS(int k, int m) {
+            int i = 0;
+            for (int j = 0; j < k; j++) {
+                i += m + j;
+            }
+            return i;
+        }
+
+        [ElapsedTime, LogEntrency]
+        public int TestI(int k, int m) {
             int i = 0;
             for (int j = 0; j < k; j++) {
                 i += m + j;
@@ -26,9 +44,16 @@
         }
 
         [ElapsedTime, LogEntrency]
-        public static IEnumerable<int> TestEnum() {
-            for (int j = 0; j < 100; j++) {
-                yield return j;
+        public IEnumerable<string> TestEnumI(int k) {
+            for (int j = 0; j < k; j++) {
+                yield return $"Iteration {j}";
+            }
+        }
+        
+        [ElapsedTime, LogEntrency]
+        public static IEnumerable<string> TestEnumS(int k) {
+            for (int j = 0; j < k; j++) {
+                yield return $"Iteration {j}";
             }
         }
     }
