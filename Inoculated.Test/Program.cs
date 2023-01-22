@@ -1,19 +1,11 @@
-﻿namespace Program {
+﻿using System.Collections;
+namespace Program {
     class Program {
         async static Task Main(string[] args) {
-            var p = new Program();
-            foreach (var item in p.TestEnumI(100))
-            {
-                Console.WriteLine(item);
-            }
-
-            foreach (var item in TestEnumS(100))
-            {
-                Console.WriteLine(item);
-            }
-
-            p.TestI(100, 10);
-            TestS(100, 10);
+            await TestAsyncI();
+            await TestAsyncI();
+            await TestAsyncI();
+            await TestAsyncI();
         }
 
         [ElapsedTime, LogEntrency]
@@ -35,7 +27,16 @@
         }
 
         [ElapsedTime, LogEntrency]
-        public static async Task TestAsync() {
+        public static async Task TestAsyncI() {
+            int i = 0;
+            for (int j = 0; j < 100; j++) {
+                i++;
+            }
+            Console.WriteLine(i);
+        }
+
+        [ElapsedTime, LogEntrency]
+        public static async Task TestAsyncS() {
             int i = 0;
             for (int j = 0; j < 100; j++) {
                 i++;
@@ -52,6 +53,13 @@
         
         [ElapsedTime, LogEntrency]
         public static IEnumerable<string> TestEnumS(int k) {
+            for (int j = 0; j < k; j++) {
+                yield return $"Iteration {j}";
+            }
+        }
+
+        [ElapsedTime, LogEntrency]
+        public static IEnumerable TestEnumSU(int k) {
             for (int j = 0; j < k; j++) {
                 yield return $"Iteration {j}";
             }

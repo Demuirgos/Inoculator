@@ -23,7 +23,7 @@ public static class Wrapper {
             case Metadata.MethodType.Iter:
                 return RunEnumRewrite(classRef, metadata, name, attributeName, path);
             case Metadata.MethodType.Async:
-                //return RunAsyncRewrite(classRef, metadata, name, attributeName, path);
+                return RunAsyncRewrite(classRef, metadata, name, attributeName, path);
                 break;
         }
         return Success<(ClassDecl.Class, MethodDecl.Method[]), Exception>.From((classRef, new[] { metadata.Code }));
@@ -37,7 +37,8 @@ public static class Wrapper {
         ClassDecl.MethodDefinition[] HandleMoveNext(ClassDecl.MethodDefinition methodDef) {
             if(methodDef.Value.Header.Name.ToString() != "MoveNext") return new [] { methodDef };
             var typeContainer = metadata.Code.Header.Type.Components.Types.Values.First() as TypeDecl.CustomTypeReference;
-            var type = typeContainer.Reference.GenericTypes.Types.Values.FirstOrDefault()?.ToString() ?? "object";
+            var type = typeContainer.Reference.GenericTypes?.Types.Values.FirstOrDefault()?.ToString() ?? "void";
+            var typeP = type == "void" ? String.Empty : $"<{type}>";//$"<{ToProperNamedType(type)}>";
             bool isPrimitive = _primitives.Contains(type);
             var method = methodDef.Value;
             StringBuilder builder = new();
@@ -61,65 +62,75 @@ public static class Wrapper {
             """);            
 
             builder.Append($$$"""
-                // if state == -2 call OnEntry
-                    {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
-                    {{{GetNextLabel(ref labelIdx)}}}: ldfld int32 {{{stateMachineFullName}}}::'<>1__state'
-                    {{{GetNextLabel(ref labelIdx)}}}: brtrue.s ***JUMPDEST1***
+                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                {{{GetNextLabel(ref labelIdx)}}}: ldfld int32 {{{stateMachineFullName}}}::'<>1__state'
+                {{{GetNextLabel(ref labelIdx)}}}: brfalse.s ***JUMPDEST1***
 
 
-                    {{{attributeNames.Select(
-                        (attrClassName, i) => $@"
-                        {GetNextLabel(ref labelIdx)}: ldarg.0
-                        {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::'<inoculated>__Interceptor{i}'
-                        {GetNextLabel(ref labelIdx)}: ldarg.0
-                        {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Injector]Inoculator.Builder.Metadata {stateMachineFullName}::'<inoculated>__Metadata'
-                        {GetNextLabel(ref labelIdx)}: callvirt instance void {attrClassName}::OnEntry(class [Inoculator.Injector]Inoculator.Builder.Metadata)"
-                    ).Aggregate((a, b) => $"{a}\n{b}")}}}
+                {{{attributeNames.Select(
+                    (attrClassName, i) => $@"
+                    {GetNextLabel(ref labelIdx)}: ldarg.0
+                    {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::'<inoculated>__Interceptor{i}'
+                    {GetNextLabel(ref labelIdx)}: ldarg.0
+                    {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Injector]Inoculator.Builder.Metadata {stateMachineFullName}::'<inoculated>__Metadata'
+                    {GetNextLabel(ref labelIdx)}: callvirt instance void {attrClassName}::OnEntry(class [Inoculator.Injector]Inoculator.Builder.Metadata)"
+                ).Aggregate((a, b) => $"{a}\n{b}")}}}
 
-                    {{{GetNextLabel(ref labelIdx, marks, "JUMPDEST1")}}}: nop
-                // 
+                {{{GetNextLabel(ref labelIdx, marks, "JUMPDEST1")}}}: nop
 
-                // call MoveNext__inoculated
-                    {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
-                    {{{GetNextLabel(ref labelIdx)}}}: call instance void {{{stateMachineFullName}}}::MoveNext__inoculated()
-                //
+                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                {{{GetNextLabel(ref labelIdx)}}}: call instance void {{{stateMachineFullName}}}::MoveNext__inoculated()
 
-                // get builder 
-                    {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
-                    {{{GetNextLabel(ref labelIdx)}}}: ldfld class [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{{{type}}} {{{stateMachineFullName}}}::'<>t__builder'
-                //
+                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                {{{GetNextLabel(ref labelIdx)}}}: ldfld int32 {{{stateMachineFullName}}}::'<>1__state'
+                {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.s -2
+                {{{GetNextLabel(ref labelIdx)}}}: bne.un.s ***JUMPDEST2***
 
-                // get task from builder
-                    {{{GetNextLabel(ref labelIdx)}}}: dup
-                    {{{GetNextLabel(ref labelIdx)}}}: ldfld class [System.Runtime]System.Threading.Tasks.Task{{{type}}} [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{{{type}}}::'<>t__builder'
-                // 
-                
+                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Injector]Inoculator.Builder.Metadata {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                        
                 {{{(
-                    type is null 
+                    type is "void" 
                     ? $@"
                         {GetNextLabel(ref labelIdx)}: ldnull
                         {GetNextLabel(ref labelIdx)}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.Metadata::set_ReturnValue(object)"
                     : $@"
-                        {GetNextLabel(ref labelIdx)}: ldfld {type} [System.Runtime]System.Threading.Tasks.Task{type}::Result
+                        {GetNextLabel(ref labelIdx)}: ldarg.0
+                        {GetNextLabel(ref labelIdx)}: ldflda valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{typeP} {stateMachineFullName}::'<>t__builder'
+                        {GetNextLabel(ref labelIdx)}: call instance class [System.Runtime]System.Threading.Tasks.Task{typeP} [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{typeP}::get_Task()
+                        {GetNextLabel(ref labelIdx)}: call instance {type} [System.Runtime]System.Threading.Tasks.Task{typeP}::get_Result()
                         {(
                             isPrimitive 
-                            ? $@"
-                                {GetNextLabel(ref labelIdx)}: box {type}
-                                {GetNextLabel(ref labelIdx)}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.Metadata::set_ReturnValue(object)"
-                            : $@"
-                                {GetNextLabel(ref labelIdx)}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.Metadata::set_ReturnValue({type})"
+                                ? $"{GetNextLabel(ref labelIdx)}: box {type}"
+                                : string.Empty
                         )}
                         {GetNextLabel(ref labelIdx)}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.Metadata::set_ReturnValue(object)"
                 )}}}
 
-                {{{GetNextLabel(ref labelIdx)}}}: ldfld [System.Runtime]System.AggregateException [System.Runtime]System.Threading.Tasks.Task{type}::Exception 
-                {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.Metadata::set_Exception(Exception)"
-
                 {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
-                {{{GetNextLabel(ref labelIdx)}}}: ldfld int32 {{{stateMachineFullName}}}::'<>1__state'
-                {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.m1
-                {{{GetNextLabel(ref labelIdx)}}}: bne.un.s ***JUMPDEST2***
+                {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Injector]Inoculator.Builder.Metadata {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                {{{GetNextLabel(ref labelIdx)}}}: ldflda valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{{{typeP}}} {{{stateMachineFullName}}}::'<>t__builder'
+                {{{GetNextLabel(ref labelIdx)}}}: call instance class [System.Runtime]System.Threading.Tasks.Task{{{typeP}}} [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{{{typeP}}}::get_Task()
+                {{{GetNextLabel(ref labelIdx)}}}: call instance class [System.Runtime]System.AggregateException [System.Runtime]System.Threading.Tasks.Task{{{typeP}}}::get_Exception()
+                {{{GetNextLabel(ref labelIdx)}}}: dup
+                {{{GetNextLabel(ref labelIdx)}}}: stloc.0
+                {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.Metadata::set_Exception(class [System.Runtime]System.Exception)
 
+                {{{GetNextLabel(ref labelIdx)}}}: ldloc.0
+                {{{GetNextLabel(ref labelIdx)}}}: brfalse.s ***SUCCESS***
+
+                {{{attributeNames.Select(
+                    (attrClassName, i) => $@"
+                    {GetNextLabel(ref labelIdx)}: ldarg.0
+                    {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::'<inoculated>__Interceptor{i}'
+                    {GetNextLabel(ref labelIdx)}: ldarg.0
+                    {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Injector]Inoculator.Builder.Metadata {stateMachineFullName}::'<inoculated>__Metadata'
+                    {GetNextLabel(ref labelIdx)}: callvirt instance void {attrClassName}::OnException(class [Inoculator.Injector]Inoculator.Builder.Metadata)"
+                ).Aggregate((a, b) => $"{a}\n{b}")}}}
+                {{{GetNextLabel(ref labelIdx)}}}: br.s ***JUMPDEST2***
+
+                {{{GetNextLabel(ref labelIdx, marks, "SUCCESS")}}}: nop
                 {{{attributeNames.Select(
                     (attrClassName, i) => $@"
                     {GetNextLabel(ref labelIdx)}: ldarg.0
@@ -130,7 +141,6 @@ public static class Wrapper {
                 ).Aggregate((a, b) => $"{a}\n{b}")}}}
 
                 {{{GetNextLabel(ref labelIdx, marks, "JUMPDEST2")}}}: nop
-                {{{GetNextLabel(ref labelIdx)}}}: ldloc.0
                 {{{GetNextLabel(ref labelIdx)}}}: ret
             }}
             """);
@@ -194,35 +204,55 @@ public static class Wrapper {
                         .SelectMany(item => {
                             //Where(x => x is not MethodDecl.LabelItem or MethodDecl.InstructionItem)
                             if(item is MethodDecl.LabelItem label) {
-                                return new[] { label with {
-                                        Value = new CodeLabel(new SimpleName(GetNextLabel(ref labelIdx)))
+                                return Array.Empty<MethodDecl.Member>();
+                            }
+                            else if(item is MethodDecl.MaxStackItem maxs) {
+                                return new[] { maxs with {
+                                        Value = new INT(8, 32, false)
                                     }
                                 };
                             } else if(item is MethodDecl.InstructionItem instruction) {
-                                if(instruction.Value.Opcode == "ret") {
-                                    var newcode = $$$"""
-                                        {{{GetNextLabel(ref labelIdx)}}}: dup
-                                        {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{new string(metadata.Code.ToString().ToCharArray().Select(c => c != '\n' ? c : ' ').ToArray())}}}"
-                                        {{{GetNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Injector]Inoculator.Builder.Metadata::.ctor(string)
+                                var newcode = $$$"""
+                                    .locals init (class {{{stateMachineFullName}}} V_0)
+                                    {{{GetNextLabel(ref labelIdx)}}}:  newobj     instance void {{{stateMachineFullName}}}::.ctor()
+                                    {{{GetNextLabel(ref labelIdx)}}}:  stloc.0
+                                    {{{GetNextLabel(ref labelIdx)}}}:  ldloc.0
+                                    {{{GetNextLabel(ref labelIdx)}}}:  call       valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder::Create()
+                                    {{{GetNextLabel(ref labelIdx)}}}:  stfld      valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder {{{stateMachineFullName}}}::'<>t__builder'
+                                    {{{GetNextLabel(ref labelIdx)}}}:  ldloc.0
+                                    {{{GetNextLabel(ref labelIdx)}}}:  ldc.i4.m1
+                                    {{{GetNextLabel(ref labelIdx)}}}:  stfld      int32 {{{stateMachineFullName}}}::'<>1__state'
+                                    
+                                    {{{GetNextLabel(ref labelIdx)}}}: ldloc.0
+                                    {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{new string(metadata.Code.ToString().ToCharArray().Select(c => c != '\n' ? c : ' ').ToArray())}}}"
+                                    {{{GetNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Injector]Inoculator.Builder.Metadata::.ctor(string)
 
-                                        {{{GetNextLabel(ref labelIdx)}}}: dup
-                                        {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.s {{{metadata.Code.Header.Parameters.Parameters.Values.Length}}}
-                                        {{{GetNextLabel(ref labelIdx)}}}: newarr [System.Runtime]System.Object
-                                        {{{ExtractArguments(metadata.Code.Header.Parameters, ref labelIdx, 0)}}}
+                                    {{{GetNextLabel(ref labelIdx)}}}: dup
+                                    {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.s {{{metadata.Code.Header.Parameters.Parameters.Values.Length}}}
+                                    {{{GetNextLabel(ref labelIdx)}}}: newarr [System.Runtime]System.Object
+                                    {{{ExtractArguments(metadata.Code.Header.Parameters, ref labelIdx, 0)}}}
 
-                                        {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.Metadata::set_Parameters(object[])
-                                        {{{GetNextLabel(ref labelIdx)}}}: stfld class [Inoculator.Injector]Inoculator.Builder.Metadata {{{stateMachineFullName}}}::'<inoculated>__Metadata'
-                                        {{{attributeNames.Select(
-                                            (attrClassName, i) => $"""
-                                        {GetNextLabel(ref labelIdx)}: dup
-                                        {GetNextLabel(ref labelIdx)}: newobj instance void {attrClassName}::.ctor()
-                                        {GetNextLabel(ref labelIdx)}: stfld class {attrClassName} {stateMachineFullName}::'<inoculated>__Interceptor{i}'
-                                        """).Aggregate((a, b) => $"{a}\n{b}")}}}
-                                        {{{GetNextLabel(ref labelIdx)}}}: ret
-                                        """;
-                                    _ = TryParse<MethodDecl.Member.Collection>(newcode, out MethodDecl.Member.Collection res, out string err);
-                                    return res.Items.Values;
-                                } 
+                                    {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.Metadata::set_Parameters(object[])
+                                    {{{GetNextLabel(ref labelIdx)}}}: stfld class [Inoculator.Injector]Inoculator.Builder.Metadata {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                                    {{{
+                                        attributeNames.Select(
+                                            (attrClassName, i) => $@"
+                                                {GetNextLabel(ref labelIdx)}: ldloc.0
+                                                {GetNextLabel(ref labelIdx)}: newobj instance void {attrClassName}::.ctor()
+                                                {GetNextLabel(ref labelIdx)}: stfld class {attrClassName} {stateMachineFullName}::'<inoculated>__Interceptor{i}'
+                                    ").Aggregate((a, b) => $"{a}\n{b}")}}}
+
+                                    {{{GetNextLabel(ref labelIdx)}}}:  ldloc.0
+                                    {{{GetNextLabel(ref labelIdx)}}}:  ldflda     valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder {{{stateMachineFullName}}}::'<>t__builder'
+                                    {{{GetNextLabel(ref labelIdx)}}}:  ldloca.s   V_0
+                                    {{{GetNextLabel(ref labelIdx)}}}:  call       instance void [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder::Start<class {{{stateMachineFullName}}}>(!!0&)
+                                    {{{GetNextLabel(ref labelIdx)}}}:  ldloc.0
+                                    {{{GetNextLabel(ref labelIdx)}}}:  ldflda     valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder {{{stateMachineFullName}}}::'<>t__builder'
+                                    {{{GetNextLabel(ref labelIdx)}}}:  call       instance class [System.Runtime]System.Threading.Tasks.Task [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder::get_Task()
+                                    {{{GetNextLabel(ref labelIdx)}}}: ret
+                                    """;
+                                _ = TryParse<MethodDecl.Member.Collection>(newcode, out MethodDecl.Member.Collection res, out string err);
+                                return res.Items.Values;
                             }
                             return new[] { item };
                         }).ToArray()
