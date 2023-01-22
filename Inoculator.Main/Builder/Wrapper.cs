@@ -19,24 +19,233 @@ public static class Wrapper {
         switch (metadata.MethodBehaviour)
         {
             case Metadata.MethodType.Sync:
-                return RunNMMethodManipulation(metadata, name, attributeName);
+                return RunNormalRewrite(metadata, name, attributeName);
             case Metadata.MethodType.Iter:
-                return RunSMMethodManipulation(classRef, metadata, name, attributeName, path);
+                return RunEnumRewrite(classRef, metadata, name, attributeName, path);
+            case Metadata.MethodType.Async:
+                //return RunAsyncRewrite(classRef, metadata, name, attributeName, path);
+                break;
         }
         return Success<(ClassDecl.Class, MethodDecl.Method[]), Exception>.From((classRef, new[] { metadata.Code }));
     }
 
-    private static Result<(ClassDecl.Class, MethodDecl.Method[]), Exception> RunSMMethodManipulation(ClassDecl.Class classRef, Metadata metadata, string name, string[] attributeNames, IEnumerable<string> path)
+    private static Result<(ClassDecl.Class, MethodDecl.Method[]), Exception> RunAsyncRewrite(ClassDecl.Class classRef, Metadata metadata, string name, string[] attributeNames, IEnumerable<string> path)
     {
         int labelIdx = 0;
         var stateMachineFullName = $"{String.Join("/",  path)}/{classRef.Header.Id}";
-        Console.WriteLine(stateMachineFullName);
         Dictionary<string, string> marks = new();
         ClassDecl.MethodDefinition[] HandleMoveNext(ClassDecl.MethodDefinition methodDef) {
             if(methodDef.Value.Header.Name.ToString() != "MoveNext") return new [] { methodDef };
-            Console.WriteLine(metadata.Code.Header.Type);
             var typeContainer = metadata.Code.Header.Type.Components.Types.Values.First() as TypeDecl.CustomTypeReference;
-            var type = typeContainer.Reference.GenericTypes.Types.Values.First().ToString();
+            var type = typeContainer.Reference.GenericTypes.Types.Values.FirstOrDefault()?.ToString() ?? "object";
+            bool isPrimitive = _primitives.Contains(type);
+            var method = methodDef.Value;
+            StringBuilder builder = new();
+            builder.AppendLine($".method {method.Header} {{");
+            foreach (var member in method.Body.Items.Values)
+            {
+                if  (member is MethodDecl.LabelItem 
+                            or MethodDecl.InstructionItem 
+                            or MethodDecl.LocalsItem 
+                            or MethodDecl.MaxStackItem
+                            or MethodDecl.ExceptionHandlingItem
+                            or MethodDecl.ScopeBlock
+                    ) continue;
+                builder.AppendLine(member.ToString());
+            }
+
+            
+            builder.AppendLine($$$"""
+                .maxstack 8
+                .locals init (class [System.Runtime]System.Exception e)
+            """);            
+
+            builder.Append($$$"""
+                // if state == -2 call OnEntry
+                    {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                    {{{GetNextLabel(ref labelIdx)}}}: ldfld int32 {{{stateMachineFullName}}}::'<>1__state'
+                    {{{GetNextLabel(ref labelIdx)}}}: brtrue.s ***JUMPDEST1***
+
+
+                    {{{attributeNames.Select(
+                        (attrClassName, i) => $@"
+                        {GetNextLabel(ref labelIdx)}: ldarg.0
+                        {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::'<inoculated>__Interceptor{i}'
+                        {GetNextLabel(ref labelIdx)}: ldarg.0
+                        {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Injector]Inoculator.Builder.Metadata {stateMachineFullName}::'<inoculated>__Metadata'
+                        {GetNextLabel(ref labelIdx)}: callvirt instance void {attrClassName}::OnEntry(class [Inoculator.Injector]Inoculator.Builder.Metadata)"
+                    ).Aggregate((a, b) => $"{a}\n{b}")}}}
+
+                    {{{GetNextLabel(ref labelIdx, marks, "JUMPDEST1")}}}: nop
+                // 
+
+                // call MoveNext__inoculated
+                    {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                    {{{GetNextLabel(ref labelIdx)}}}: call instance void {{{stateMachineFullName}}}::MoveNext__inoculated()
+                //
+
+                // get builder 
+                    {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                    {{{GetNextLabel(ref labelIdx)}}}: ldfld class [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{{{type}}} {{{stateMachineFullName}}}::'<>t__builder'
+                //
+
+                // get task from builder
+                    {{{GetNextLabel(ref labelIdx)}}}: dup
+                    {{{GetNextLabel(ref labelIdx)}}}: ldfld class [System.Runtime]System.Threading.Tasks.Task{{{type}}} [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{{{type}}}::'<>t__builder'
+                // 
+                
+                {{{(
+                    type is null 
+                    ? $@"
+                        {GetNextLabel(ref labelIdx)}: ldnull
+                        {GetNextLabel(ref labelIdx)}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.Metadata::set_ReturnValue(object)"
+                    : $@"
+                        {GetNextLabel(ref labelIdx)}: ldfld {type} [System.Runtime]System.Threading.Tasks.Task{type}::Result
+                        {(
+                            isPrimitive 
+                            ? $@"
+                                {GetNextLabel(ref labelIdx)}: box {type}
+                                {GetNextLabel(ref labelIdx)}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.Metadata::set_ReturnValue(object)"
+                            : $@"
+                                {GetNextLabel(ref labelIdx)}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.Metadata::set_ReturnValue({type})"
+                        )}
+                        {GetNextLabel(ref labelIdx)}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.Metadata::set_ReturnValue(object)"
+                )}}}
+
+                {{{GetNextLabel(ref labelIdx)}}}: ldfld [System.Runtime]System.AggregateException [System.Runtime]System.Threading.Tasks.Task{type}::Exception 
+                {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.Metadata::set_Exception(Exception)"
+
+                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                {{{GetNextLabel(ref labelIdx)}}}: ldfld int32 {{{stateMachineFullName}}}::'<>1__state'
+                {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.m1
+                {{{GetNextLabel(ref labelIdx)}}}: bne.un.s ***JUMPDEST2***
+
+                {{{attributeNames.Select(
+                    (attrClassName, i) => $@"
+                    {GetNextLabel(ref labelIdx)}: ldarg.0
+                    {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::'<inoculated>__Interceptor{i}'
+                    {GetNextLabel(ref labelIdx)}: ldarg.0
+                    {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Injector]Inoculator.Builder.Metadata {stateMachineFullName}::'<inoculated>__Metadata'
+                    {GetNextLabel(ref labelIdx)}: callvirt instance void {attrClassName}::OnExit(class [Inoculator.Injector]Inoculator.Builder.Metadata)"
+                ).Aggregate((a, b) => $"{a}\n{b}")}}}
+
+                {{{GetNextLabel(ref labelIdx, marks, "JUMPDEST2")}}}: nop
+                {{{GetNextLabel(ref labelIdx)}}}: ldloc.0
+                {{{GetNextLabel(ref labelIdx)}}}: ret
+            }}
+            """);
+
+            foreach(var (label, idx) in marks)
+            {
+                builder.Replace($"***{label}***", idx.ToString());
+            }
+            var newFunction = new ClassDecl.MethodDefinition(Parse<MethodDecl.Method>(builder.ToString()));
+            
+            var oldFunction = methodDef with {
+                Value = methodDef.Value with {
+                    Header = methodDef.Value.Header with {
+                        Name = Parse<MethodName>("MoveNext__inoculated")
+                    },
+                    Body = methodDef.Value.Body with {
+                        Items = new ARRAY<MethodDecl.Member>(
+                            methodDef.Value.Body
+                                .Items.Values.Where(member => member is not MethodDecl.OverrideMethodItem)
+                                .ToArray()
+                        ) {
+                            Options = new ARRAY<MethodDecl.Member>.ArrayOptions() {
+                                Delimiters = ('\0', '\n', '\0')
+                            }
+                        }
+                    }
+                }
+            };
+
+
+            return new [] { newFunction, oldFunction };
+        }
+
+        classRef = classRef with {
+            Members = classRef.Members with {
+                Members = new ARRAY<ClassDecl.Member>(
+                    classRef.Members.Members.Values
+                        .SelectMany(member => member switch {
+                            ClassDecl.MethodDefinition method => HandleMoveNext(method),
+                            _ => new [] { member }
+                        }).Union(
+                        attributeNames
+                            .Select((attr, i) => $".field public class {attr} '<inoculated>__Interceptor{i}'")
+                            .Append($".field public class [Inoculator.Injector]Inoculator.Builder.Metadata '<inoculated>__Metadata'")
+                            .Select(Parse<ClassDecl.Member>)
+                        ).ToArray()
+                ) {
+                    Options = new ARRAY<ClassDecl.Member>.ArrayOptions() {
+                        Delimiters = ('\0', '\n', '\0')
+                    }
+                }
+            }
+        };
+
+        labelIdx = 0;
+        bool isStatic = metadata.MethodCall is Metadata.CallType.Static;
+        metadata.Code = metadata.Code with {
+            Body = metadata.Code.Body with {
+                Items = new ARRAY<MethodDecl.Member>(
+                    metadata.Code.Body.Items.Values
+                        .SelectMany(item => {
+                            //Where(x => x is not MethodDecl.LabelItem or MethodDecl.InstructionItem)
+                            if(item is MethodDecl.LabelItem label) {
+                                return new[] { label with {
+                                        Value = new CodeLabel(new SimpleName(GetNextLabel(ref labelIdx)))
+                                    }
+                                };
+                            } else if(item is MethodDecl.InstructionItem instruction) {
+                                if(instruction.Value.Opcode == "ret") {
+                                    var newcode = $$$"""
+                                        {{{GetNextLabel(ref labelIdx)}}}: dup
+                                        {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{new string(metadata.Code.ToString().ToCharArray().Select(c => c != '\n' ? c : ' ').ToArray())}}}"
+                                        {{{GetNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Injector]Inoculator.Builder.Metadata::.ctor(string)
+
+                                        {{{GetNextLabel(ref labelIdx)}}}: dup
+                                        {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.s {{{metadata.Code.Header.Parameters.Parameters.Values.Length}}}
+                                        {{{GetNextLabel(ref labelIdx)}}}: newarr [System.Runtime]System.Object
+                                        {{{ExtractArguments(metadata.Code.Header.Parameters, ref labelIdx, 0)}}}
+
+                                        {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.Metadata::set_Parameters(object[])
+                                        {{{GetNextLabel(ref labelIdx)}}}: stfld class [Inoculator.Injector]Inoculator.Builder.Metadata {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                                        {{{attributeNames.Select(
+                                            (attrClassName, i) => $"""
+                                        {GetNextLabel(ref labelIdx)}: dup
+                                        {GetNextLabel(ref labelIdx)}: newobj instance void {attrClassName}::.ctor()
+                                        {GetNextLabel(ref labelIdx)}: stfld class {attrClassName} {stateMachineFullName}::'<inoculated>__Interceptor{i}'
+                                        """).Aggregate((a, b) => $"{a}\n{b}")}}}
+                                        {{{GetNextLabel(ref labelIdx)}}}: ret
+                                        """;
+                                    _ = TryParse<MethodDecl.Member.Collection>(newcode, out MethodDecl.Member.Collection res, out string err);
+                                    return res.Items.Values;
+                                } 
+                            }
+                            return new[] { item };
+                        }).ToArray()
+                ) {
+                    Options = new ARRAY<MethodDecl.Member>.ArrayOptions() {
+                        Delimiters = ('\0', '\n', '\0')
+                    }
+                }
+            }
+        };
+
+        return Success<(ClassDecl.Class, MethodDecl.Method[]), Exception>.From((classRef, new[] { metadata.Code }));
+    }
+
+    private static Result<(ClassDecl.Class, MethodDecl.Method[]), Exception> RunEnumRewrite(ClassDecl.Class classRef, Metadata metadata, string name, string[] attributeNames, IEnumerable<string> path)
+    {
+        int labelIdx = 0;
+        var stateMachineFullName = $"{String.Join("/",  path)}/{classRef.Header.Id}";
+        Dictionary<string, string> marks = new();
+        ClassDecl.MethodDefinition[] HandleMoveNext(ClassDecl.MethodDefinition methodDef) {
+            if(methodDef.Value.Header.Name.ToString() != "MoveNext") return new [] { methodDef };
+            var typeContainer = metadata.Code.Header.Type.Components.Types.Values.First() as TypeDecl.CustomTypeReference;
+            var type = typeContainer.Reference.GenericTypes?.Types?.Values?.FirstOrDefault().ToString() ?? "object";
             bool isPrimitive = _primitives.Contains(type);
             var method = methodDef.Value;
             StringBuilder builder = new();
@@ -242,7 +451,7 @@ public static class Wrapper {
         return Success<(ClassDecl.Class, MethodDecl.Method[]), Exception>.From((classRef, new[] { metadata.Code }));
     }
 
-    private static Result<(ClassDecl.Class, MethodDecl.Method[]), Exception> RunNMMethodManipulation(Metadata metadata, string name, string[] attributeName)
+    private static Result<(ClassDecl.Class, MethodDecl.Method[]), Exception> RunNormalRewrite(Metadata metadata, string name, string[] attributeName)
     {
         var newMethod = Handle(metadata, metadata.ClassName, attributeName);
         switch (newMethod)
