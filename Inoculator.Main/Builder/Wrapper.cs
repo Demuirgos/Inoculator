@@ -34,10 +34,16 @@ public static class Wrapper {
         int labelIdx = 0;
         var stateMachineFullName = $"{String.Join("/",  path)}/{classRef.Header.Id}";
         Dictionary<string, string> marks = new();
+        
+        bool HasField(string fieldName) => classRef.Members.Members.Values.Any(x => x is ClassDecl.FieldDefinition field && field.Value.Id.ToString() == fieldName);
+        bool isInReleaseMode = classRef.Header.Extends.Type.ToString() == "[System.Runtime] System.ValueType";
+        
         var typeContainer = metadata.Code.Header.Type.Components.Types.Values.First() as TypeDecl.CustomTypeReference;
         var type = typeContainer.Reference.GenericTypes?.Types.Values.FirstOrDefault()?.ToString() ?? "void";
-        var typeP = type == "void" ? String.Empty : $"<{type}>";//$"<{ToProperNamedType(type)}>";
-        bool isPrimitive = _primitives.Contains(type);
+        var typeP = type == "void" ? String.Empty : $"`1<{type}>";//$"<{ToProperNamedType(type)}>";
+        //var builderType = type == "void" ? "System.Runtime.CompilerServices.AsyncTaskMethodBuilder" : $"System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1{typeP}";
+        bool isPrimitive = isValueType(type);
+        
         ClassDecl.MethodDefinition[] HandleMoveNext(ClassDecl.MethodDefinition methodDef) {
             if(methodDef.Value.Header.Name.ToString() != "MoveNext") return new [] { methodDef };
             var method = methodDef.Value;
@@ -84,7 +90,7 @@ public static class Wrapper {
                 {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
                 {{{GetNextLabel(ref labelIdx)}}}: ldfld int32 {{{stateMachineFullName}}}::'<>1__state'
                 {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.s -2
-                {{{GetNextLabel(ref labelIdx)}}}: bne.un.s ***JUMPDEST2***
+                {{{GetNextLabel(ref labelIdx)}}}: bne.un.s ***JUMPDEST1.5***
 
                 {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
                 {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Injector]Inoculator.Builder.Metadata {{{stateMachineFullName}}}::'<inoculated>__Metadata'
@@ -97,8 +103,8 @@ public static class Wrapper {
                     : $@"
                         {GetNextLabel(ref labelIdx)}: ldarg.0
                         {GetNextLabel(ref labelIdx)}: ldflda valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{typeP} {stateMachineFullName}::'<>t__builder'
-                        {GetNextLabel(ref labelIdx)}: call instance class [System.Runtime]System.Threading.Tasks.Task{typeP} [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{typeP}::get_Task()
-                        {GetNextLabel(ref labelIdx)}: call instance {type} [System.Runtime]System.Threading.Tasks.Task{typeP}::get_Result()
+                        {GetNextLabel(ref labelIdx)}: call instance class [System.Runtime]System.Threading.Tasks.Task`1<!0> valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{typeP}::get_Task()
+                        {GetNextLabel(ref labelIdx)}: callvirt instance !0 class [System.Runtime]System.Threading.Tasks.Task{typeP}::get_Result()
                         {(
                             isPrimitive 
                                 ? $"{GetNextLabel(ref labelIdx)}: box {type}"
@@ -111,13 +117,13 @@ public static class Wrapper {
                 {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Injector]Inoculator.Builder.Metadata {{{stateMachineFullName}}}::'<inoculated>__Metadata'
                 {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
                 {{{GetNextLabel(ref labelIdx)}}}: ldflda valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{{{typeP}}} {{{stateMachineFullName}}}::'<>t__builder'
-                {{{GetNextLabel(ref labelIdx)}}}: call instance class [System.Runtime]System.Threading.Tasks.Task{{{typeP}}} [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{{{typeP}}}::get_Task()
-                {{{GetNextLabel(ref labelIdx)}}}: call instance class [System.Runtime]System.AggregateException [System.Runtime]System.Threading.Tasks.Task{{{typeP}}}::get_Exception()
+                {{{GetNextLabel(ref labelIdx)}}}: call instance class [System.Runtime]System.Threading.Tasks.Task{{{(String.IsNullOrEmpty(typeP) ? typeP : "`1<!0> valuetype")}}} [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{{{typeP}}}::get_Task()
+                {{{GetNextLabel(ref labelIdx)}}}: call instance class [System.Runtime]System.AggregateException [System.Runtime]System.Threading.Tasks.Task::get_Exception()
                 {{{GetNextLabel(ref labelIdx)}}}: dup
                 {{{GetNextLabel(ref labelIdx)}}}: stloc.0
                 {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.Metadata::set_Exception(class [System.Runtime]System.Exception)
 
-                {{{GetNextLabel(ref labelIdx)}}}: ldloc.0
+                {{{GetNextLabel(ref labelIdx, marks, "JUMPDEST1.5")}}}: ldloc.0
                 {{{GetNextLabel(ref labelIdx)}}}: brfalse.s ***SUCCESS***
 
                 {{{attributeNames.Select(
@@ -205,13 +211,13 @@ public static class Wrapper {
             {{{GetNextLabel(ref labelIdx)}}}:  stloc.0
             {{{GetNextLabel(ref labelIdx)}}}:  ldloc.0
             {{{GetNextLabel(ref labelIdx)}}}:  dup
-            {{{GetNextLabel(ref labelIdx)}}}:  call       valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder::Create()
-            {{{GetNextLabel(ref labelIdx)}}}:  stfld      valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder {{{stateMachineFullName}}}::'<>t__builder'
+            {{{GetNextLabel(ref labelIdx)}}}:  call       valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{{{(String.IsNullOrEmpty(typeP) ? typeP : "`1<!0> valuetype")}}} [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{{{typeP}}}::Create()
+            {{{GetNextLabel(ref labelIdx)}}}:  stfld      valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{{{typeP}}} {{{stateMachineFullName}}}::'<>t__builder'
             {{{GetNextLabel(ref labelIdx)}}}:  ldc.i4.m1
             {{{GetNextLabel(ref labelIdx)}}}:  stfld      int32 {{{stateMachineFullName}}}::'<>1__state'
             
             {{{(
-                isStatic ? String.Empty : $@"
+                isStatic || !HasField("'<>4__this'") ? String.Empty : $@"
                     {GetNextLabel(ref labelIdx)}:  ldloc.s 0
                     {GetNextLabel(ref labelIdx)}:  ldarg.0
                     {GetNextLabel(ref labelIdx)}:  stfld class {String.Join("/", path)} {stateMachineFullName}::'<>4__this'
@@ -220,7 +226,7 @@ public static class Wrapper {
 
             {{{(
                 String.Join("\n", metadata.Code.Header.Parameters.Parameters.Values.Select(
-                    (param, i) => $@"
+                    (param, i) => !HasField(param.AsDefaultParameter()?.Id.ToString()) ? String.Empty : $@"
                         {GetNextLabel(ref labelIdx)}: ldloc.s 0
                         {GetNextLabel(ref labelIdx)}: ldarg.s {param.AsDefaultParameter()?.Id}
                         {GetNextLabel(ref labelIdx)}: stfld {param.AsDefaultParameter().TypeDeclaration} {stateMachineFullName}::{param.AsDefaultParameter()?.Id}
@@ -247,12 +253,12 @@ public static class Wrapper {
             ").Aggregate((a, b) => $"{a}\n{b}")}}}
 
             {{{GetNextLabel(ref labelIdx)}}}:  ldloc.0
-            {{{GetNextLabel(ref labelIdx)}}}:  ldflda     valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder {{{stateMachineFullName}}}::'<>t__builder'
+            {{{GetNextLabel(ref labelIdx)}}}:  ldflda     valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{{{typeP}}} {{{stateMachineFullName}}}::'<>t__builder'
             {{{GetNextLabel(ref labelIdx)}}}:  ldloca.s   V_0
-            {{{GetNextLabel(ref labelIdx)}}}:  call       instance void [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder::Start<class {{{stateMachineFullName}}}>(!!0&)
+            {{{GetNextLabel(ref labelIdx)}}}:  call       instance void {{{(typeP == string.Empty ? typeP : "valuetype")}}} [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{{{typeP}}}::Start<class {{{stateMachineFullName}}}>(!!0&)
             {{{GetNextLabel(ref labelIdx)}}}:  ldloc.0
-            {{{GetNextLabel(ref labelIdx)}}}:  ldflda     valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder {{{stateMachineFullName}}}::'<>t__builder'
-            {{{GetNextLabel(ref labelIdx)}}}:  call       instance class [System.Runtime]System.Threading.Tasks.Task [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder::get_Task()
+            {{{GetNextLabel(ref labelIdx)}}}:  ldflda     valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{{{typeP}}} {{{stateMachineFullName}}}::'<>t__builder'
+            {{{GetNextLabel(ref labelIdx)}}}:  call       instance class [System.Runtime]System.Threading.Tasks.Task{{{(String.IsNullOrEmpty(typeP) ? typeP : "`1<!0> valuetype")}}} [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{{{typeP}}}::get_Task()
             {{{GetNextLabel(ref labelIdx)}}}:  ret
             """;
         _ = TryParse<MethodDecl.Member.Collection>(newBody, out MethodDecl.Member.Collection body, out string err);
@@ -272,8 +278,8 @@ public static class Wrapper {
         ClassDecl.MethodDefinition[] HandleMoveNext(ClassDecl.MethodDefinition methodDef) {
             if(methodDef.Value.Header.Name.ToString() != "MoveNext") return new [] { methodDef };
             var typeContainer = metadata.Code.Header.Type.Components.Types.Values.First() as TypeDecl.CustomTypeReference;
-            var type = typeContainer.Reference.GenericTypes?.Types?.Values?.FirstOrDefault().ToString() ?? "object";
-            bool isPrimitive = _primitives.Contains(type);
+            var type = typeContainer.Reference.GenericTypes?.Types.Values.FirstOrDefault().ToString() ?? "object";
+            bool isPrimitive = isValueType(type);
             var method = methodDef.Value;
             StringBuilder builder = new();
             builder.AppendLine($".method {method.Header} {{");
@@ -504,7 +510,7 @@ public static class Wrapper {
         int labelIdx = 0;
         StringBuilder builder = new();
         bool isVoidCall = !ReturnTypeOf(metadata.Code.Header, out var type);
-        bool isPrimitive = _primitives.Contains(type);
+        bool isPrimitive = isValueType(type);
         bool isStatic = metadata.MethodCall is Metadata.CallType.Static;
         bool hasArgs = metadata.Code.Header.Parameters.Parameters.Values.Length > 0;
         (int metadataOffset, int? resultOffset, int? returnOffset, int exceptionOffset) = (AttributeClass.Length, isVoidCall ? null : (int?)AttributeClass.Length + 1, isVoidCall ? null : (int?)AttributeClass.Length + 2, AttributeClass.Length + (isVoidCall ? 1 : 3));
@@ -676,7 +682,10 @@ public static class Wrapper {
         return builder.ToString();
     }
 
-    static String[] _primitives = new String[] { "bool", "char", "float32", "float64", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "native" };
+    static bool isValueType (string type) {
+        String[] _primitives = new String[] { "bool", "char", "float32", "float64", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "native" };
+        return _primitives.Contains(type) || type.StartsWith("valuetype");
+    }
     public static string ExtractArgument(ParameterDecl.Parameter parameter, ref int labelIdx, int paramIdx = 0) {
         StringBuilder builder = new StringBuilder();
         if(parameter is not ParameterDecl.DefaultParameter param) {
@@ -687,7 +696,7 @@ public static class Wrapper {
             {{{GetNextLabel(ref labelIdx)}}}: dup
             {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.s {{{paramIdx}}}
             {{{LoadArgument(param, ref labelIdx, paramIdx)}}}
-            {{{( !_primitives.Contains(typeComp.TypeName) ? String.Empty :
+            {{{( !isValueType(typeComp.TypeName) ? String.Empty :
                     $"{GetNextLabel(ref labelIdx)}: box {ToProperNamedType(typeComp.TypeName)}"
             )}}}
             {{{GetNextLabel(ref labelIdx)}}}: stelem.ref
@@ -698,7 +707,6 @@ public static class Wrapper {
     }
 
     public static string LoadArgument(ParameterDecl.Parameter parameter, ref int labelIdx, int paramIdx = 0) {
-        String[] _primitives = new String[] { "bool", "char", "float32", "float64", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "unsigned int8", "unsigned int16", "unsigned int32" , "native" };
         StringBuilder builder = new StringBuilder();
         if(parameter is not ParameterDecl.DefaultParameter param) {
             throw new Exception("Unknown parameter type");

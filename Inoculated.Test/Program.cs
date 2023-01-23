@@ -1,12 +1,21 @@
 ﻿using System.Collections;
 namespace Program {
+    struct  Student {
+        public Student(string name, int age) {
+            Name = name;
+            Age = age;
+        }
+        public string Name;
+        public int Age;
+    }
     class Program {
         private string Name { get; set; } = "Test";
         async static Task Main(string[] args) {
             await TestAsyncI();
             await TestAsyncI();
             var p = new Program();
-            await p.TestAsyncS(23);
+            var result = await p.TestAsyncS(23);
+            Console.WriteLine(result);
         }
 
         [ElapsedTime, LogEntrency]
@@ -37,12 +46,12 @@ namespace Program {
         }
 
         [ElapsedTime, LogEntrency]
-        public async Task TestAsyncS(int l) {
+        public async Task<Student> TestAsyncS(int l) {
             int i = 0;
             for (int j = 0; j < 100; j++) {
                 i++;
             }
-            Console.WriteLine($"{Name}_{l}");
+            return new Student(Name, l);
         }
 
         [ElapsedTime, LogEntrency]
