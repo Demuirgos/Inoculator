@@ -35,7 +35,7 @@ public static class Wrapper {
             if(methodDef.Value.Header.Name.ToString() != "MoveNext") return new [] { methodDef };
             var typeContainer = metadata.Code.Header.Type.Components.Types.Values.First() as TypeDecl.CustomTypeReference;
             var type = typeContainer.Reference.GenericTypes?.Types.Values.FirstOrDefault()?.ToString() ?? "object";
-            bool isPrimitive = _primitives.Contains(type);
+            bool isPrimitive = isValueType(type);
             var method = methodDef.Value;
             StringBuilder builder = new();
             builder.AppendLine($".method {method.Header} {{");
@@ -266,7 +266,7 @@ public static class Wrapper {
         int labelIdx = 0;
         StringBuilder builder = new();
         bool isVoidCall = !ReturnTypeOf(metadata.Code.Header, out var type);
-        bool isPrimitive = _primitives.Contains(type);
+        bool isPrimitive = isValueType(type);
         bool isStatic = metadata.MethodCall is Metadata.CallType.Static;
         bool hasArgs = metadata.Code.Header.Parameters.Parameters.Values.Length > 0;
         (int metadataOffset, int? resultOffset, int? returnOffset, int exceptionOffset) = (AttributeClass.Length, isVoidCall ? null : (int?)AttributeClass.Length + 1, isVoidCall ? null : (int?)AttributeClass.Length + 2, AttributeClass.Length + (isVoidCall ? 1 : 3));
@@ -438,7 +438,11 @@ public static class Wrapper {
         return builder.ToString();
     }
 
-    static String[] _primitives = new String[] { "bool", "char", "float32", "float64", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "native" };
+    static bool isValueType (string type) {
+        String[] _primitives = new String[] { "bool", "char", "float32", "float64", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "native" };
+        return _primitives.Contains(type) || type.StartsWith("valuetype");
+    }
+    
     public static string ExtractArgument(ParameterDecl.Parameter parameter, ref int labelIdx, int paramIdx = 0) {
         StringBuilder builder = new StringBuilder();
         if(parameter is not ParameterDecl.DefaultParameter param) {
@@ -449,7 +453,7 @@ public static class Wrapper {
             {{{GetNextLabel(ref labelIdx)}}}: dup
             {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.s {{{paramIdx}}}
             {{{LoadArgument(param, ref labelIdx, paramIdx)}}}
-            {{{( !_primitives.Contains(typeComp.TypeName) ? String.Empty :
+            {{{( !isValueType(typeComp.TypeName) ? String.Empty :
                     $"{GetNextLabel(ref labelIdx)}: box {ToProperNamedType(typeComp.TypeName)}"
             )}}}
             {{{GetNextLabel(ref labelIdx)}}}: stelem.ref
@@ -460,7 +464,6 @@ public static class Wrapper {
     }
 
     public static string LoadArgument(ParameterDecl.Parameter parameter, ref int labelIdx, int paramIdx = 0) {
-        String[] _primitives = new String[] { "bool", "char", "float32", "float64", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "unsigned int8", "unsigned int16", "unsigned int32" , "native" };
         StringBuilder builder = new StringBuilder();
         if(parameter is not ParameterDecl.DefaultParameter param) {
             throw new Exception("Unknown parameter type");
