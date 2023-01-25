@@ -18,7 +18,7 @@ public static class Wrapper {
         {
             case Metadata.MethodType.Sync:
                 bool isVoidCall = !ReturnTypeOf(method.Code.Header, out var type);
-                bool isPrimitive = _primitives.Contains(type);
+                bool isPrimitive = isValueType(type);
                 bool hasArgs = method.Code.Header.Parameters.Parameters.Values.Length > 0;
                 labelIdx = HandleSyncMethod(method.Code, container, AttributeClass, labelIdx, builder, isVoidCall, type, isPrimitive, hasArgs, method.MethodCall == Metadata.CallType.Static);
                 break;
@@ -199,7 +199,10 @@ public static class Wrapper {
         return builder.ToString();
     }
 
-    static String[] _primitives = new String[] { "bool", "char", "float32", "float64", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "native" };
+    static bool isValueType (string type) {
+        String[] _primitives = new String[] { "bool", "char", "float32", "float64", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "native" };
+        return _primitives.Contains(type) || type.StartsWith("valuetype");
+    }    
     public static string ExtractArgument(ParameterDecl.Parameter parameter, ref int labelIdx, int paramIdx = 0) {
         StringBuilder builder = new StringBuilder();
         if(parameter is not ParameterDecl.DefaultParameter param) {
@@ -210,7 +213,7 @@ public static class Wrapper {
             {{{getNextLabel(ref labelIdx)}}}: dup
             {{{getNextLabel(ref labelIdx)}}}: ldc.i4.s {{{paramIdx}}}
             {{{LoadArgument(param, ref labelIdx, paramIdx)}}}
-            {{{( !_primitives.Contains(typeComp.TypeName) ? String.Empty :
+            {{{( !isValueType(typeComp.TypeName) ? String.Empty :
                     $"{getNextLabel(ref labelIdx)}: box {ToProperNamedType(typeComp.TypeName)}"
             )}}}
             {{{getNextLabel(ref labelIdx)}}}: stelem.ref
@@ -221,7 +224,6 @@ public static class Wrapper {
     }
 
     public static string LoadArgument(ParameterDecl.Parameter parameter, ref int labelIdx, int paramIdx = 0) {
-        String[] _primitives = new String[] { "bool", "char", "float32", "float64", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "unsigned int8", "unsigned int16", "unsigned int32" , "native" };
         StringBuilder builder = new StringBuilder();
         if(parameter is not ParameterDecl.DefaultParameter param) {
             throw new Exception("Unknown parameter type");
