@@ -10,15 +10,15 @@ using RootDecl;
 namespace Inoculator.Builder;
 
 public static class Searcher {
-    public static List<Metadata> SearchForMethods(Declaration.Collection ilfile, Predicate<Metadata> predicate = null)
+    public static List<MethodData> SearchForMethods(Declaration.Collection ilfile, Predicate<MethodData> predicate = null)
     {
-        static IEnumerable<Metadata> SearchForMethods(ClassDecl.Class type)
+        static IEnumerable<MethodData> SearchForMethods(ClassDecl.Class type)
         {
             var nestedTypes = type.Members.Members.Values.OfType<ClassDecl.NestedClass>();
             var result = nestedTypes.SelectMany(c => SearchForMethods(c.Value)).ToList();
 
             var methods = type.Members.Members.Values.OfType<ClassDecl.MethodDefinition>();
-            var metadata = methods.Select(x => new Metadata(x.Value)
+            var metadata = methods.Select(x => new MethodData(x.Value)
             {
                 ClassName = type.Header.Id
             });

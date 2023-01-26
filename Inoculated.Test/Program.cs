@@ -12,10 +12,6 @@ namespace Program {
         private string Name { get; set; } = "Test";
         async static Task Main(string[] args) {
             await TestAsyncI();
-            await TestAsyncI();
-            var p = new Program();
-            var result = await p.TestAsyncS(23);
-            Console.WriteLine(result);
         }
 
         [ElapsedTime, LogEntrency]
@@ -55,9 +51,9 @@ namespace Program {
         }
 
         [ElapsedTime, LogEntrency]
-        public IEnumerable<string> TestEnumI(int k) {
+        public IEnumerable<(string, int)> TestEnumI(int k) {
             for (int j = 0; j < k; j++) {
-                yield return $"Iteration {j}";
+                yield return ($"Iteration {j}", 23);
             }
         }
         
