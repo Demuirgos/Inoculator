@@ -22,31 +22,54 @@ public class Weaver {
         var targetAttributes = Searcher.SearchForInterceptors(assembly);
         Declaration[] HandleDeclaration(Declaration declaration) {
             switch(declaration) {
-                case MethodDecl.Method method:
-                    return HandleMethod(method, null);
                 case ClassDecl.Class type:
-                    return HandleClass(type);
+                    return HandleClass(type, new List<string>());
                 default:
                     return new[] { declaration };
             }
         }
 
-        ClassDecl.Class[] HandleClass(ClassDecl.Class @class) {
+        ClassDecl.Class[] HandleClass(ClassDecl.Class @class, List<string> parentNamespaces = null) {
             // TODO: Handle nested classes name collisions
+            List<string> flaggedNestedClasses = new();
+            parentNamespaces.Add(@class.Header.Id.ToString());
             ClassDecl.Member[] HandleMember(ClassDecl.Member member){
                 switch(member) {
                     case ClassDecl.MethodDefinition method:
-                        return HandleMethod(method.Value, @class.Header.Id).Select(x => new ClassDecl.MethodDefinition(x)).ToArray();
+                        var result = HandleMethod(method.Value, @class, parentNamespaces);
+                        var CastedResult = result.Item2.Select(x => new ClassDecl.MethodDefinition(x) as ClassDecl.Member);
+                        if(result.Item1 is not null) {
+                            flaggedNestedClasses.Add(result.Item1.Header.Id.ToString());
+                            CastedResult = CastedResult.Append(new ClassDecl.NestedClass(result.Item1));
+                        }
+                        return CastedResult.ToArray();
                     case ClassDecl.NestedClass type:
-                        return HandleClass(type.Value).Select(x => new ClassDecl.NestedClass(x)).ToArray();
+                        return HandleClass(type.Value, parentNamespaces).Select(x => new ClassDecl.NestedClass(x)).ToArray();
                     default:
                         return new[] { member };
                 }
             } 
 
-            var newMembers = @class.Members.Members.Values
-                .SelectMany(x => HandleMember(x))
-                .ToArray();
+            var classMethodSegregation = @class.Members.Members.Values
+                .GroupBy(x => x is ClassDecl.NestedClass);
+            
+            var methodMembers = classMethodSegregation
+                .Where(x => !x.Key)
+                .SelectMany(x => x.SelectMany(y => HandleMember(y)));
+
+            foreach (var flagged in flaggedNestedClasses)
+            {
+                Console.WriteLine("flagged : " + flagged);
+            }
+
+            var nestedClasses = classMethodSegregation
+                .Where(x => x.Key)
+                .SelectMany(members =>  
+                    members.Cast<ClassDecl.NestedClass>()
+                        .Where(c => !flaggedNestedClasses.Contains(c.Value.Header.Id.ToString()))
+                        .SelectMany(y => HandleMember(y))
+                );
+            var newMembers = methodMembers.Cast<ClassDecl.Member>().Union(nestedClasses).ToArray();
 
             return new[] { @class with { Members = @class.Members with { Members = new ARRAY<ClassDecl.Member>(newMembers) {
                 Options = new ARRAY<ClassDecl.Member>.ArrayOptions() {
@@ -55,20 +78,34 @@ public class Weaver {
             }}}};
         }
 
-        MethodDecl.Method[] HandleMethod(MethodDecl.Method method, IdentifierDecl.Identifier parent) {
-            var metadata = new Metadata(method) {
-                ClassName = parent
+        (ClassDecl.Class, MethodDecl.Method[]) HandleMethod(MethodDecl.Method method, ClassDecl.Class parent, IEnumerable<string> path) {
+            var metadata = new MethodData(method) {
+                ClassReference = parent.Header
             };
 
             if(!metadata.Code.IsConstructor && Searcher.IsMarked(metadata.Code, targetAttributes, out string[] marks)) {
-                var result = metadata.ReplaceNameWith($"{metadata.Name}__Inoculated", marks);
-                if(result is Success<MethodDecl.Method[], Exception> success) {
-                    return success.Value;
-                } else if(result is Error<MethodDecl.Method[], Exception> failure) {
-                    throw failure.Message;
+                if(metadata.MethodBehaviour is MethodData.MethodType.Sync) {
+                    var result = Wrapper.ReplaceNameWith(metadata, marks);
+                    if(result is Success<(ClassDecl.Class, MethodDecl.Method[]), Exception> success) {
+                        return success.Value;
+                    } else if(result is Error<(ClassDecl.Class, MethodDecl.Method[]), Exception> failure) {
+                        throw failure.Message;
+                    }
+                } else {
+                    var generatedStateMachineClass = parent.Members.Members.Values
+                        .OfType<ClassDecl.NestedClass>()
+                        .Select(x => x.Value)
+                        .Where(x => x.Header.Id.ToString().StartsWith($"'<{metadata.Name}>"))
+                        .FirstOrDefault();
+                    var result = Wrapper.ReplaceNameWith(metadata, marks, generatedStateMachineClass, path);
+                    if(result is Success<(ClassDecl.Class, MethodDecl.Method[]), Exception> success) {
+                        return success.Value;
+                    } else if(result is Error<(ClassDecl.Class, MethodDecl.Method[]), Exception> failure) {
+                        throw failure.Message;
+                    }
                 }
             }
-            return new[] { method };
+            return (null, new[] { method });
         }
 
 

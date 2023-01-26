@@ -9,7 +9,11 @@
   <ItemGroup>
       <ProjectReference Include="..\Inoculator.Main\Inoculator.Injector.csproj"/>
   </ItemGroup>
+  
   <Target Name="InjectionStep" BeforeTargets="AfterBuild">
-    <Exec Command="$(MSbuildProjectDirectory)\$(BaseOutputPath)$(Configuration)\$(TargetFramework)\Inoculator.Injector.exe $(MSbuildProjectDirectory)\$(BaseOutputPath)$(Configuration)\$(TargetFramework)\$(AssemblyName).dll" />
+    <Exec WorkingDirectory="$(MSbuildProjectDirectory)\$(BaseOutputPath)$(Configuration)\$(TargetFramework)" Command="Inoculator.Injector.exe $(AssemblyName).dll" />
+    <Exec WorkingDirectory="$(MSbuildProjectDirectory)\$(BaseOutputPath)$(Configuration)\$(TargetFramework)" Command='ilverify Inoculated.Test.dll -r "C:\Program Files (x86)\dotnet\shared\Microsoft.NETCore.App\7.0.0\*.dll" ".\Inoculator.Injector.dll" ".\Dove.Shared.dll" ".\Dove.Parser.dll"' >
+      <Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
+    </Exec>
   </Target>
 </Project>
