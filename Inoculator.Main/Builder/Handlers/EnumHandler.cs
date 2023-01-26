@@ -19,7 +19,7 @@ public static class EnumRewriter {
         ClassDecl.MethodDefinition[] HandleMoveNext(ClassDecl.MethodDefinition methodDef) {
             if(methodDef.Value.Header.Name.ToString() != "MoveNext") return new [] { methodDef };
             var typeContainer = metadata.Code.Header.Type.Components.Types.Values.First() as TypeDecl.CustomTypeReference;
-            var type = typeContainer.Reference.GenericTypes?.Types.Values.FirstOrDefault()?.ToString() ?? "object";
+            var itemType = new TypeData(typeContainer.Reference.GenericTypes?.Types.Values.FirstOrDefault()?.ToString() ?? "object");
             var method = methodDef.Value;
             StringBuilder builder = new();
             builder.AppendLine($".method {method.Header} {{");
@@ -64,10 +64,10 @@ public static class EnumRewriter {
                         {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
                         {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Injector]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
                         {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
-                        {{{GetNextLabel(ref labelIdx)}}}: ldfld {{{type}}} {{{stateMachineFullName}}}::'<>2__current'
+                        {{{GetNextLabel(ref labelIdx)}}}: ldfld {{{itemType.Name}}} {{{stateMachineFullName}}}::'<>2__current'
                         {{{(
-                            metadata.Signature.Output.IsReferenceType ? String.Empty
-                            : $@"{GetNextLabel(ref labelIdx)}: box {metadata.Signature.Output.ToProperName}"
+                            itemType.IsReferenceType ? String.Empty
+                            : $@"{GetNextLabel(ref labelIdx)}: box {itemType.Name}"
                         )}}}
                         {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.MethodData::set_ReturnValue(object)
                         {{{attributeNames.Select(

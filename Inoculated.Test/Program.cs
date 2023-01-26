@@ -44,9 +44,9 @@
         }
 
         [ElapsedTime, LogEntrency]
-        public IEnumerable<string> TestEnumI(int k) {
+        public IEnumerable<(string, int)> TestEnumI(int k) {
             for (int j = 0; j < k; j++) {
-                yield return $"Iteration {j}";
+                yield return ($"Iteration {j}", 23);
             }
         }
         

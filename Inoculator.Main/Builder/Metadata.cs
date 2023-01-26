@@ -36,11 +36,11 @@ public class TypeData : Printable<TypeData> {
         };
     }
 
-    public String Name => Code.ToString();
-    public TypeBehaviour Behaviour => IsValueType(Code.ToString()) ? TypeBehaviour.ValueType : TypeBehaviour.ReferenceType;
+    public String Name => Code.ToString().Trim();
+    public TypeBehaviour Behaviour => IsValueType(Name) ? TypeBehaviour.ValueType : TypeBehaviour.ReferenceType;
     public bool IsReferenceType => Behaviour is TypeBehaviour.ReferenceType;
-    public string ToProperName => ToProperNamedType(Code.ToString());
-    public TypeValue ValueKind => Code.ToString() == "void" ? TypeValue.Void : TypeValue.Typed;
+    public string ToProperName => ToProperNamedType(Name);
+    public TypeValue ValueKind => Name == "void" ? TypeValue.Void : TypeValue.Typed;
     public bool IsVoid => ValueKind is TypeValue.Void;
     private static bool IsValueType (string type) {
         String[] _primitives = new String[] { "bool", "char", "float32", "float64", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "native" };
@@ -165,7 +165,7 @@ public class MethodData : Printable<MethodData> {
                 ? MethodType.Iter  : MethodType.Sync;
     public CallType MethodCall => Code.Header.Convention is null || Code.Header.MethodAttributes.Attributes.Values.Any(a => a is AttributeDecl.MethodSimpleAttribute { Name: "static" }) ? CallType.Static : CallType.Instance;
     public bool IsStatic => MethodCall is CallType.Static;
-    public string TypeSignature => $"({string.Join(", ", Signature.Input.Select(item => item.Code.ToString()))} -> {Signature.Output.Code})";
+    public string TypeSignature => $"({string.Join(", ", Signature.Input.Select(item => item.Name))} -> {Signature.Output.Code})";
     public string[] TypeParameters => Code.Header?.TypeParameters?
         .Parameters.Values
         .Select(x => x.Id.ToString())
