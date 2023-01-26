@@ -2,10 +2,8 @@
 An IL code Injector using Ilasm and Ildasm (WIP)
 # Limitations
     * Needs Excessive Testing
-    * Doesn't work with ref types
     * Targeting release Build is not predictable (yet)
 # Plan 
-    * Handle (ref, in, out, scoped) arguments 
     * Automatically Add MSbuild PostBuild event handler
 # Usage
 * Reference Inoculator.Injecter
