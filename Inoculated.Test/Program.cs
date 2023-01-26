@@ -8,10 +8,15 @@ namespace Program {
         public string Name;
         public int Age;
     }
-    class Program {
-        private string Name { get; set; } = "Test";
+    struct Program {
+        public string Name { get; set; }
         async static Task Main(string[] args) {
-            await TestAsyncI();
+            var p = new Program();
+            p.Name = "Hello";
+            foreach (var item in p.TestEnumI(100))
+            {
+                Console.WriteLine(item);
+            }
         }
 
         [ElapsedTime, LogEntrency]
@@ -53,7 +58,7 @@ namespace Program {
         [ElapsedTime, LogEntrency]
         public IEnumerable<(string, int)> TestEnumI(int k) {
             for (int j = 0; j < k; j++) {
-                yield return ($"Iteration {j}", 23);
+                yield return ($"Iteration {Name}", 23);
             }
         }
         

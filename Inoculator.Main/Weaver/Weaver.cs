@@ -80,7 +80,7 @@ public class Weaver {
 
         (ClassDecl.Class, MethodDecl.Method[]) HandleMethod(MethodDecl.Method method, ClassDecl.Class parent, IEnumerable<string> path) {
             var metadata = new MethodData(method) {
-                ClassName = parent.Header.Id
+                ClassReference = parent.Header
             };
 
             if(!metadata.Code.IsConstructor && Searcher.IsMarked(metadata.Code, targetAttributes, out string[] marks)) {

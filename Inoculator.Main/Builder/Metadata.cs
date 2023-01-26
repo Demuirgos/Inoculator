@@ -145,7 +145,7 @@ public class MethodData : Printable<MethodData> {
         Success<MethodDecl.Method, Exception> success => success.Value,
         Error<MethodDecl.Method, Exception> failure => throw failure.Message,
     };
-    public IdentifierDecl.Identifier ClassName {get; set;}
+    public ClassDecl.Prefix ClassReference {get; set;}
     public String Name => Code.Header.Name.ToString();
     [JsonIgnore]
     public (TypeData[] Input, TypeData Output)  Signature 
@@ -183,9 +183,9 @@ public class MethodData : Printable<MethodData> {
         if(MethodCall is MethodData.CallType.Instance)
             builder.Append("instance");
         builder.Append(Signature.Output.Code);
-        if(ClassName is not null) {
+        if(ClassReference is not null) {
             builder.Append(" ");
-            builder.Append(ClassName.ToString());
+            builder.Append(ClassReference.Id.ToString());
             builder.Append("::");
         }
         builder.Append(isInoculated ? MangledName : Name);

@@ -218,8 +218,6 @@ public static class EnumRewriter {
             }
         };
 
-        File.WriteAllText($"testResultClass.cs", classRef.ToString());
-        File.WriteAllText($"testResultMethod.cs", metadata.Code.ToString());
         return Success<(ClassDecl.Class, MethodDecl.Method[]), Exception>.From((classRef, new[] { metadata.Code }));
     }
 

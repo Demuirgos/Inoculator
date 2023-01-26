@@ -8,7 +8,7 @@ using static Inoculator.Builder.HandlerTools;
 public static class SyncRewriter {
     public static Result<(ClassDecl.Class, MethodDecl.Method[]), Exception> Rewrite(MethodData metadata, string[] attributeName)
     {
-        var newMethod = Handle(metadata, metadata.ClassName, attributeName);
+        var newMethod = Handle(metadata, metadata.ClassReference.Id, attributeName);
         switch (newMethod)
         {
             case Error<MethodDecl.Method, Exception> e_method:
@@ -70,7 +70,7 @@ public static class SyncRewriter {
         {{{ExtractArguments(metadata.Code.Header.Parameters, ref labelIdx, 0)}}}
         {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.MethodData::set_Parameters(object[])
 
-        {{{CallMethodOnInterceptors(metadata.ClassName.ToString(), AttributeClass, "OnEntry", true, ref labelIdx)}}}
+        {{{CallMethodOnInterceptors(metadata.ClassReference.Id.ToString(), AttributeClass, "OnEntry", true, ref labelIdx)}}}
         .try
         {
             .try
@@ -93,7 +93,7 @@ public static class SyncRewriter {
                             )}"
                 )}}}
                 {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.MethodData::set_ReturnValue(object)
-                {{{CallMethodOnInterceptors(metadata.ClassName.ToString(), AttributeClass, "OnSuccess", true, ref labelIdx)}}}
+                {{{CallMethodOnInterceptors(metadata.ClassReference.Id.ToString(), AttributeClass, "OnSuccess", true, ref labelIdx)}}}
                 {{{(
                     metadata.Signature.Output.IsVoid ? String.Empty
                     : $@"{GetNextLabel(ref labelIdx)}: ldloc.s result"
@@ -106,14 +106,14 @@ public static class SyncRewriter {
                 {{{GetNextLabel(ref labelIdx)}}}: ldloc.s metadata
                 {{{GetNextLabel(ref labelIdx)}}}: ldloc.s e
                 {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.MethodData::set_Exception(class [System.Runtime]System.Exception)
-                {{{CallMethodOnInterceptors(metadata.ClassName.ToString(), AttributeClass, "OnException", true, ref labelIdx)}}}
+                {{{CallMethodOnInterceptors(metadata.ClassReference.Id.ToString(), AttributeClass, "OnException", true, ref labelIdx)}}}
                 {{{GetNextLabel(ref labelIdx)}}}: ldloc.s e
                 {{{GetNextLabel(ref labelIdx)}}}: throw
             } 
         } 
         finally
         {
-            {{{CallMethodOnInterceptors(metadata.ClassName.ToString(), AttributeClass, "OnExit", true, ref labelIdx)}}}
+            {{{CallMethodOnInterceptors(metadata.ClassReference.Id.ToString(), AttributeClass, "OnExit", true, ref labelIdx)}}}
             {{{GetNextLabel(ref labelIdx)}}}: endfinally
         } 
 
