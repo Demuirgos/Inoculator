@@ -6,7 +6,8 @@ public class LogEntrencyAttribute : InterceptorAttribute
 {
     public override void OnEntry(MethodData method)
     {
-        Console.WriteLine($"Started Method {method.Name}");
+        Console.WriteLine($"Started Method {method.Name} with {String.Join(",", method.Parameters.Select(item => item.ToString()))}");
+
     }
 
     public override void OnExit(MethodData method)

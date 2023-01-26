@@ -59,7 +59,6 @@ public static class HandlerTools {
         }
         
         var typeData = new TypeData(parameter);
-        Console.WriteLine(typeData);
         var ilcode = typeData.IsVoid ? string.Empty  : $$$"""
             {{{GetNextLabel(ref labelIdx)}}}: dup
             {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.s {{{paramIdx}}}
