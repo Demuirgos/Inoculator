@@ -57,13 +57,18 @@ public static class HandlerTools {
         if(parameter is not ParameterDecl.DefaultParameter param) {
             throw new Exception("Unknown parameter type");
         }
+        
         var typeData = new TypeData(parameter);
+        Console.WriteLine(typeData);
         var ilcode = typeData.IsVoid ? string.Empty  : $$$"""
             {{{GetNextLabel(ref labelIdx)}}}: dup
             {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.s {{{paramIdx}}}
             {{{LoadArgument(param, ref labelIdx, paramIdx)}}}
-            {{{( typeData.IsReferenceType ? String.Empty :
-                 $"{GetNextLabel(ref labelIdx)}: box {typeData.ToProperName}"
+            {{{(!typeData.IsByRef ? string.Empty
+                    : $"{GetNextLabel(ref labelIdx)}: {GetCILIndirectLoadOpcode(typeData)}" 
+            )}}}
+            {{{( typeData.IsReferenceType ? String.Empty 
+                    : $"{GetNextLabel(ref labelIdx)}: box {typeData.ToProperName}"
             )}}}
             {{{GetNextLabel(ref labelIdx)}}}: stelem.ref
             """;
@@ -79,8 +84,25 @@ public static class HandlerTools {
         }
         var typeComp = param.TypeDeclaration?.ToString();
         var ilcode = typeComp is null ? String.Empty : $"{GetNextLabel(ref labelIdx)}: ldarg.s {param.Id}";
-
         builder.Append(ilcode);
         return builder.ToString();
+    }
+
+    public static string GetCILIndirectLoadOpcode(TypeData type) {
+        return type.PureName switch {
+            "int" => "ldind.i",
+            "int8" => "ldind.i1",
+            "int16" => "ldind.i2",
+            "int32" => "ldind.i4",
+            "int64" => "ldind.i8",
+            "uint8" or "unsigned int8"  => "ldind.u1",
+            "int16" or "unsigned int16" => "ldind.u2",
+            "int32" or "unsigned int32" => "ldind.u4",
+            "int64" or "unsigned int64" => "ldind.u8",
+            "float32" => "ldind.r4",
+            "float64" => "ldind.r8",
+            _ when type.PureName.StartsWith("valuetype") => "ldobj",
+            _ => "ldind.ref"
+        };
     }
 }

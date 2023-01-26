@@ -11,17 +11,14 @@ namespace Program {
     struct Program {
         public string Name { get; set; }
         async static Task Main(string[] args) {
-            var p = new Program();
-            p.Name = "Hello";
-            foreach (var item in p.TestEnumI(100))
-            {
-                Console.WriteLine(item);
-            }
+           TestS(out int start, 10);
+           Console.WriteLine(start);
         }
 
         [ElapsedTime, LogEntrency]
-        public static int TestS(int k, int m) {
+        public static int TestS(out int k, int m) {
             int i = 0;
+            k = 23;
             for (int j = 0; j < k; j++) {
                 i += m + j;
             }
