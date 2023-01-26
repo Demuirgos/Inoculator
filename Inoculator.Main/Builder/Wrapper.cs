@@ -11,7 +11,6 @@ using static Inoculator.Builder.HandlerTools;
 namespace Inoculator.Builder;
 
 public static class Wrapper {
-    
     public static Result<(ClassDecl.Class, MethodDecl.Method[]), Exception> ReplaceNameWith(MethodData metadata, string[] attributeNames, ClassDecl.Class classRef = null, IEnumerable<string> path = null) {
         switch (metadata.MethodBehaviour)
         {
