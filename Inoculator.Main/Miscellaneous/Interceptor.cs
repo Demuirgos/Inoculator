@@ -5,9 +5,9 @@ namespace Inoculator.Attributes;
 public class InterceptorAttribute : System.Attribute
 {
     public InterceptorAttribute() { }
-    public virtual void OnEntry(Metadata method) {}
-    public virtual void OnException(Metadata method) {}
-    public virtual void OnSuccess(Metadata method) {}
-    public virtual void OnExit(Metadata method) {}
+    public virtual void OnEntry(MethodData method) {}
+    public virtual void OnException(MethodData method) {}
+    public virtual void OnSuccess(MethodData method) {}
+    public virtual void OnExit(MethodData method) {}
 
 }

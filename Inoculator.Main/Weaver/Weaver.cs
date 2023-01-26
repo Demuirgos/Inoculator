@@ -79,13 +79,13 @@ public class Weaver {
         }
 
         (ClassDecl.Class, MethodDecl.Method[]) HandleMethod(MethodDecl.Method method, ClassDecl.Class parent, IEnumerable<string> path) {
-            var metadata = new Metadata(method) {
+            var metadata = new MethodData(method) {
                 ClassName = parent.Header.Id
             };
 
             if(!metadata.Code.IsConstructor && Searcher.IsMarked(metadata.Code, targetAttributes, out string[] marks)) {
-                if(metadata.MethodBehaviour is Metadata.MethodType.Sync) {
-                    var result = Wrapper.ReplaceNameWith(metadata, $"{metadata.Name}__Inoculated", marks);
+                if(metadata.MethodBehaviour is MethodData.MethodType.Sync) {
+                    var result = Wrapper.ReplaceNameWith(metadata, marks);
                     if(result is Success<(ClassDecl.Class, MethodDecl.Method[]), Exception> success) {
                         return success.Value;
                     } else if(result is Error<(ClassDecl.Class, MethodDecl.Method[]), Exception> failure) {
@@ -97,7 +97,7 @@ public class Weaver {
                         .Select(x => x.Value)
                         .Where(x => x.Header.Id.ToString().StartsWith($"'<{metadata.Name}>"))
                         .FirstOrDefault();
-                    var result = Wrapper.ReplaceNameWith(metadata, $"{metadata.Name}__Inoculated", marks, generatedStateMachineClass, path);
+                    var result = Wrapper.ReplaceNameWith(metadata, marks, generatedStateMachineClass, path);
                     if(result is Success<(ClassDecl.Class, MethodDecl.Method[]), Exception> success) {
                         return success.Value;
                     } else if(result is Error<(ClassDecl.Class, MethodDecl.Method[]), Exception> failure) {
