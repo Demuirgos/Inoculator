@@ -10,6 +10,10 @@ public class TypeData : Printable<TypeData> {
         ValueType, ReferenceType
     }
 
+    public enum TypeNature {
+        Value, Pointer
+    }
+
     public enum TypeKind {
         Class, Struct, Interface, Enum, Delegate
     }
@@ -37,9 +41,12 @@ public class TypeData : Printable<TypeData> {
     }
 
     public String Name => Code.ToString().Trim();
-    public TypeBehaviour Behaviour => IsValueType(Name) ? TypeBehaviour.ValueType : TypeBehaviour.ReferenceType;
+    public String PureName => Code.ToString().Replace("&", string.Empty).Trim();
+    public TypeBehaviour Behaviour => IsValueType(PureName) ? TypeBehaviour.ValueType : TypeBehaviour.ReferenceType;
     public bool IsReferenceType => Behaviour is TypeBehaviour.ReferenceType;
-    public string ToProperName => ToProperNamedType(Name);
+    public TypeNature Nature => Code.Components.Types.Values.Any(comp => comp is TypeDecl.ReferenceSuffix) ? TypeNature.Pointer : TypeNature.Value;
+    public bool IsByRef => Nature is TypeNature.Pointer;
+    public string ToProperName => ToProperNamedType(PureName);
     public TypeValue ValueKind => Name == "void" ? TypeValue.Void : TypeValue.Typed;
     public bool IsVoid => ValueKind is TypeValue.Void;
     private static bool IsValueType (string type) {
@@ -47,6 +54,8 @@ public class TypeData : Printable<TypeData> {
         return _primitives.Contains(type) || type.StartsWith("valuetype");
     }
     public string ToGenericArity1 => IsVoid ? String.Empty : $"`1<{Name}>";
+    
+
     public static string ToProperNamedType(string type)
     {
         string ret = type;
