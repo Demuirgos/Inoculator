@@ -20,7 +20,7 @@ public static class Searcher {
             var methods = type.Members.Members.Values.OfType<ClassDecl.MethodDefinition>();
             var metadata = methods.Select(x => new MethodData(x.Value)
             {
-                ClassName = type.Header.Id
+                ClassReference = type.Header
             });
             result.AddRange(metadata);
             return result;

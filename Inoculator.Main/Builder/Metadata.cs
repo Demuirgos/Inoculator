@@ -46,7 +46,7 @@ public class TypeData : Printable<TypeData> {
         String[] _primitives = new String[] { "bool", "char", "float32", "float64", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "native" };
         return _primitives.Contains(type) || type.StartsWith("valuetype");
     }
-
+    public string ToGenericArity1 => IsVoid ? String.Empty : $"`1<{Name}>";
     public static string ToProperNamedType(string type)
     {
         string ret = type;
@@ -145,7 +145,7 @@ public class MethodData : Printable<MethodData> {
         Success<MethodDecl.Method, Exception> success => success.Value,
         Error<MethodDecl.Method, Exception> failure => throw failure.Message,
     };
-    public IdentifierDecl.Identifier ClassName {get; set;}
+    public ClassDecl.Prefix ClassReference {get; set;}
     public String Name => Code.Header.Name.ToString();
     [JsonIgnore]
     public (TypeData[] Input, TypeData Output)  Signature 
@@ -183,9 +183,9 @@ public class MethodData : Printable<MethodData> {
         if(MethodCall is MethodData.CallType.Instance)
             builder.Append("instance");
         builder.Append(Signature.Output.Code);
-        if(ClassName is not null) {
+        if(ClassReference is not null) {
             builder.Append(" ");
-            builder.Append(ClassName.ToString());
+            builder.Append(ClassReference.Id.ToString());
             builder.Append("::");
         }
         builder.Append(isInoculated ? MangledName : Name);
