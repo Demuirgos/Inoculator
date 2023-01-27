@@ -1,18 +1,8 @@
 ﻿using System.Collections;
 namespace Program {
-    struct  Student {
-        public Student(string name, int age) {
-            Name = name;
-            Age = age;
-        }
-        public string Name;
-        public int Age;
-    }
     struct Program {
-        public string Name { get; set; }
         async static Task Main(string[] args) {
            TestS(out int start, 10);
-           Console.WriteLine(start);
         }
 
         [ElapsedTime, LogEntrency]
