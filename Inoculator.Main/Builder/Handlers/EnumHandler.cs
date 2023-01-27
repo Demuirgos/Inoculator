@@ -14,7 +14,19 @@ public static class EnumRewriter {
     public static Result<(ClassDecl.Class, MethodDecl.Method[]), Exception> Rewrite(ClassDecl.Class classRef, MethodData metadata, string[] attributeNames, IEnumerable<string> path)
     {
         int labelIdx = 0;
-        var stateMachineFullName = $"{String.Join("/",  path)}/{classRef.Header.Id}";
+
+        bool isContainedInStruct = classRef.Header.Extends.Type.ToString() == "[System.Runtime] System.ValueType";
+        var stateMachineFullNameBuilder = new StringBuilder()
+            .Append(isContainedInStruct ? " valuetype " : " class ")
+            .Append($"{String.Join("/",  path)}")
+            .Append($"/{classRef.Header.Id}");
+        if(classRef.Header.TypeParameters?.Parameters.Values.Length > 0) {
+            stateMachineFullNameBuilder.Append("<")
+                .Append(String.Join(", ", classRef.Header.TypeParameters.Parameters.Values.Select(p => $"!{p}")))
+                .Append(">");
+        }
+        var stateMachineFullName = stateMachineFullNameBuilder.ToString();
+
         Dictionary<string, string> marks = new();
         ClassDecl.MethodDefinition[] HandleMoveNext(ClassDecl.MethodDefinition methodDef) {
             if(methodDef.Value.Header.Name.ToString() != "MoveNext") return new [] { methodDef };

@@ -10,6 +10,10 @@ public class TypeData : Printable<TypeData> {
         ValueType, ReferenceType
     }
 
+    public enum TypeDegree {
+        Zero, One
+    }
+
     public enum TypeNature {
         Value, Pointer
     }
@@ -42,16 +46,20 @@ public class TypeData : Printable<TypeData> {
 
     public String Name => Code.ToString().Trim();
     public String PureName => Code.ToString().Replace("&", string.Empty).Trim();
-    public TypeBehaviour Behaviour => IsValueType(PureName) ? TypeBehaviour.ValueType : TypeBehaviour.ReferenceType;
+    public TypeBehaviour Behaviour => IsValueType ? TypeBehaviour.ValueType : TypeBehaviour.ReferenceType;
     public bool IsReferenceType => Behaviour is TypeBehaviour.ReferenceType;
     public TypeNature Nature => Code.Components.Types.Values.Any(comp => comp is TypeDecl.ReferenceSuffix) ? TypeNature.Pointer : TypeNature.Value;
     public bool IsByRef => Nature is TypeNature.Pointer;
+    public TypeDegree GenericOrder => Code.Components.Types.Values.Any(comp => comp is TypeDecl.GenericTypeParameter) ? TypeDegree.One : TypeDegree.Zero;
+    public bool IsGeneric => GenericOrder is TypeDegree.One;
     public string ToProperName => ToProperNamedType(PureName);
     public TypeValue ValueKind => Name == "void" ? TypeValue.Void : TypeValue.Typed;
     public bool IsVoid => ValueKind is TypeValue.Void;
-    private static bool IsValueType (string type) {
-        String[] _primitives = new String[] { "bool", "char", "float32", "float64", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "native" };
-        return _primitives.Contains(type) || type.StartsWith("valuetype");
+    private bool IsValueType {
+        get {
+            String[] _primitives = new String[] { "bool", "char", "float32", "float64", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "native" };
+            return _primitives.Contains(PureName) || PureName.StartsWith("valuetype") || IsGeneric;
+        }
     }
     public string ToGenericArity1 => IsVoid ? String.Empty : $"`1<{Name}>";
     
@@ -155,7 +163,8 @@ public class MethodData : Printable<MethodData> {
         Error<MethodDecl.Method, Exception> failure => throw failure.Message,
     };
     public ClassDecl.Prefix ClassReference {get; set;}
-    public String Name => Code.Header.Name.ToString();
+    public String Name(bool isFull) => $"{Code.Header.Name}{(isFull ? $"<Code.Header.TypeParameters.ToString().Trim()>" : string.Empty)}";
+    public string MangledName(bool isFull) => $"'<>__{Name(false)}__Inoculated'{(isFull ? $"<Code.Header.TypeParameters.ToString().Trim()>" : string.Empty)}";
     [JsonIgnore]
     public (TypeData[] Input, TypeData Output)  Signature 
         => (Code.Header.Parameters.Parameters.Values.Length > 0 
@@ -186,18 +195,22 @@ public class MethodData : Printable<MethodData> {
     public MethodDecl.Method Code { get; set; }
     [JsonIgnore]
     public ClassDecl.Class Generated { get; set; }
-    public string MangledName => $"'<>__{Name}__Inoculated'";
-    public string MkMethodReference(bool isInoculated) {
+    public string MkMethodReference(bool isInoculated, string? path = null) {
         var builder = new StringBuilder();
         if(MethodCall is MethodData.CallType.Instance)
             builder.Append("instance");
         builder.Append(Signature.Output.Code);
         if(ClassReference is not null) {
             builder.Append(" ");
-            builder.Append(ClassReference.Id.ToString());
+            builder.Append(path ?? ClassReference.Id.ToString());
             builder.Append("::");
         }
-        builder.Append(isInoculated ? MangledName : Name);
+        builder.Append(isInoculated ? MangledName(false) : Name(false));
+        if(TypeParameters.Length > 0) {
+            builder.Append("<");
+            builder.Append(string.Join(", ", Code.Header.TypeParameters.Parameters.Values.Select(param => $"!!{param.Id}")));
+            builder.Append(">");
+        }
         builder.Append("(");
         builder.Append(string.Join(", ", Code.Header.Parameters.Parameters.Values.Select(x => x.ToString())));
         builder.Append(")");

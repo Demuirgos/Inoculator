@@ -6,9 +6,9 @@ using Inoculator.Core;
 using static Inoculator.Builder.HandlerTools;
 
 public static class SyncRewriter {
-    public static Result<(ClassDecl.Class, MethodDecl.Method[]), Exception> Rewrite(MethodData metadata, string[] attributeName)
+    public static Result<(ClassDecl.Class, MethodDecl.Method[]), Exception> Rewrite(ClassDecl.Class _, MethodData metadata, string[] attributeName, IEnumerable<string> path)
     {
-        var newMethod = Handle(metadata, metadata.ClassReference.Id, attributeName);
+        var newMethod = Handle(metadata.ClassReference, metadata, attributeName, path);
         switch (newMethod)
         {
             case Error<MethodDecl.Method, Exception> e_method:
@@ -17,7 +17,7 @@ public static class SyncRewriter {
 
         var n_method = newMethod as Success<MethodDecl.Method, Exception>;
 
-        var renamedMethod = Reader.Parse<MethodDecl.Method>(metadata.Code.ToString().Replace(metadata.Name, metadata.MangledName));
+        var renamedMethod = Reader.Parse<MethodDecl.Method>(metadata.Code.ToString().Replace(metadata.Name(false), metadata.MangledName(false)));
         return renamedMethod switch
         {
             Error<MethodDecl.Method, Exception> e_method
@@ -26,9 +26,27 @@ public static class SyncRewriter {
                 => Success<(ClassDecl.Class, MethodDecl.Method[]), Exception>.From((null, new[] { o_method.Value, n_method.Value }))
         };
     }
-    private static Result<MethodDecl.Method, Exception> Handle(MethodData metadata, IdentifierDecl.Identifier container, string[] AttributeClass)
+    private static Result<MethodDecl.Method, Exception> Handle(ClassDecl.Prefix classRef, MethodData metadata, string[] AttributeClass, IEnumerable<string> path)
     {
         int labelIdx = 0;
+        
+        var pathList = path?.ToList(); 
+        var functionFullPathBuilder = new StringBuilder();
+        bool isContainedInStruct = classRef.Extends.Type.ToString() == "[System.Runtime] System.ValueType";
+        functionFullPathBuilder.Append(isContainedInStruct ? " valuetype " : " class ");
+
+        if(pathList?.Count > 0) {
+            functionFullPathBuilder.Append(String.Join("/", pathList))
+            .Append("/");
+        }
+        functionFullPathBuilder.Append($"{classRef?.Id}");
+        Console.WriteLine(functionFullPathBuilder.ToString());
+        if(classRef.TypeParameters?.Parameters.Values.Length > 0) {
+            functionFullPathBuilder.Append("<")
+                .Append(String.Join(", ", classRef.TypeParameters.Parameters.Values.Select(p => $"!{p}")))
+                .Append(">");
+        }
+        var functionFullPath = functionFullPathBuilder.ToString();
         StringBuilder builder = new();
         Dictionary<string, string> jumptable = new();
 
@@ -77,7 +95,7 @@ public static class SyncRewriter {
             {
                 {{{(metadata.IsStatic ? String.Empty : $@"{GetNextLabel(ref labelIdx)}: ldarg.0")}}}
                 {{{LoadArguments(metadata.Code.Header.Parameters, ref labelIdx, metadata.IsStatic ? 0 : 1)}}}
-                {{{GetNextLabel(ref labelIdx)}}}: call {{{metadata.MkMethodReference(true)}}}
+                {{{GetNextLabel(ref labelIdx)}}}: call {{{metadata.MkMethodReference(true, functionFullPath)}}}
                 {{{(
                     metadata.Signature.Output.IsVoid
                         ? String.Empty
@@ -133,7 +151,7 @@ public static class SyncRewriter {
             builder.Replace($"***{label}***", idx.ToString());
         }
         var result = builder.ToString();
-
+        File.WriteAllText(".\\SyncTests.Il", result);
         return Reader.Parse<MethodDecl.Method>(result);
     }
 }

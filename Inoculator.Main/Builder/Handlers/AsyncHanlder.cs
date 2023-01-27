@@ -14,9 +14,20 @@ public static class AsyncRewriter {
     public static Result<(ClassDecl.Class, MethodDecl.Method[]), Exception> Rewrite(ClassDecl.Class classRef, MethodData metadata, string[] attributeNames, IEnumerable<string> path)
     {
         int labelIdx = 0;
+        
         bool isReleaseMode = classRef.Header.Extends.Type.ToString() == "[System.Runtime] System.ValueType";
-        var stateMachineFullName = $"{(isReleaseMode ? "valuetype" : "class")} {String.Join("/",  path)}/{classRef.Header.Id}";
-        Dictionary<string, string> jumptable = new();
+        var stateMachineFullNameBuilder = new StringBuilder()
+            .Append(isReleaseMode ? " valuetype " : " class ")
+            .Append($"{String.Join("/",  path)}")
+            .Append($"/{classRef.Header.Id}");
+        if(classRef.Header.TypeParameters?.Parameters.Values.Length > 0) {
+            stateMachineFullNameBuilder.Append("<")
+                .Append(String.Join(", ", classRef.Header.TypeParameters.Parameters.Values.Select(p => $"!{p}")))
+                .Append(">");
+        }
+        var stateMachineFullName = stateMachineFullNameBuilder.ToString();
+
+         Dictionary<string, string> jumptable = new();
         
         bool HasField(string fieldName) => classRef.Members.Members.Values.Any(x => x is ClassDecl.FieldDefinition field && field.Value.Id.ToString() == fieldName);
         
