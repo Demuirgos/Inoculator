@@ -8,14 +8,6 @@ public static class HandlerTools {
         return label;
     }
 
-    public static string ExtractArguments(ParameterDecl.Parameter.Collection parameter, ref int labelIdx, int startingIdx) {
-        StringBuilder builder = new StringBuilder();
-        foreach(ParameterDecl.DefaultParameter param in parameter.Parameters.Values.OfType<ParameterDecl.DefaultParameter>()){
-            builder.AppendLine(ExtractArgument(param, ref labelIdx, startingIdx++));
-        }
-        return builder.ToString();
-    }
-
     public static string CallMethodOnInterceptors(string classContainer, string[] interceptorsClass, string methodName, bool isSyncMode, ref int labelIdx) 
     {
         StringBuilder builder = new StringBuilder();
@@ -49,9 +41,23 @@ public static class HandlerTools {
         return builder.ToString();
     }
 
-    
-    
-    
+    public static string ExtractArguments(ParameterDecl.Parameter.Collection parameter, ref int labelIdx, int startingIdx) {
+        StringBuilder builder = new StringBuilder();
+        foreach(ParameterDecl.DefaultParameter param in parameter.Parameters.Values.OfType<ParameterDecl.DefaultParameter>()){
+            builder.AppendLine(ExtractArgument(param, ref labelIdx, startingIdx++));
+        }
+        return builder.ToString();
+    }
+
+    public static string UpdateRefArguments(ParameterDecl.Parameter.Collection parameter, ref int labelIdx, int startingIdx) {
+        StringBuilder builder = new StringBuilder();
+        builder.AppendLine($"");
+        foreach(ParameterDecl.DefaultParameter param in parameter.Parameters.Values.OfType<ParameterDecl.DefaultParameter>()){
+            builder.AppendLine(UpdateRefArgument(param, ref labelIdx, startingIdx++));
+        }
+        return builder.ToString();
+    }
+
     public static string ExtractArgument(ParameterDecl.Parameter parameter, ref int labelIdx, int paramIdx = 0) {
         StringBuilder builder = new StringBuilder();
         if(parameter is not ParameterDecl.DefaultParameter param) {
@@ -64,7 +70,37 @@ public static class HandlerTools {
             {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.s {{{paramIdx}}}
             {{{LoadArgument(param, ref labelIdx, paramIdx)}}}
             {{{(!typeData.IsByRef ? string.Empty
-                    : $"{GetNextLabel(ref labelIdx)}: {GetCILIndirectLoadOpcode(typeData)}" 
+                    : $"{GetNextLabel(ref labelIdx)}: {GetCILIndirectLoadOpcode(typeData).load}" 
+            )}}}
+            {{{( typeData.IsReferenceType ? String.Empty 
+                    : $"{GetNextLabel(ref labelIdx)}: box {typeData.ToProperName}"
+            )}}}
+            {{{GetNextLabel(ref labelIdx)}}}: stelem.ref
+            """;
+
+        builder.Append(ilcode);
+        return builder.ToString();
+    }
+
+    public static string UpdateRefArgument(ParameterDecl.Parameter parameter, ref int labelIdx, int paramIdx = 0) {
+        StringBuilder builder = new StringBuilder();
+        if(parameter is not ParameterDecl.DefaultParameter param) {
+            throw new Exception("Unknown parameter type");
+        }
+        
+        var typeData = new TypeData(parameter);
+
+        if(!typeData.IsByRef) {
+            return string.Empty;
+        }
+
+        var ilcode = typeData.IsVoid ? string.Empty  : $$$"""
+            {{{GetNextLabel(ref labelIdx)}}}: ldloc.s metadata
+            {{{GetNextLabel(ref labelIdx)}}}: callvirt instance object[] [Inoculator.Injector]Inoculator.Builder.MethodData::get_Parameters()
+            {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.s {{{paramIdx}}}
+            {{{LoadArgument(param, ref labelIdx, paramIdx)}}}
+            {{{(!typeData.IsByRef ? string.Empty
+                    : $"{GetNextLabel(ref labelIdx)}: {GetCILIndirectLoadOpcode(typeData).load}" 
             )}}}
             {{{( typeData.IsReferenceType ? String.Empty 
                     : $"{GetNextLabel(ref labelIdx)}: box {typeData.ToProperName}"
@@ -87,21 +123,21 @@ public static class HandlerTools {
         return builder.ToString();
     }
 
-    public static string GetCILIndirectLoadOpcode(TypeData type) {
+    public static (string load, string set) GetCILIndirectLoadOpcode(TypeData type) {
         return type.PureName switch {
-            "int" => "ldind.i",
-            "int8" => "ldind.i1",
-            "int16" => "ldind.i2",
-            "int32" => "ldind.i4",
-            "int64" => "ldind.i8",
-            "uint8" or "unsigned int8"  => "ldind.u1",
-            "int16" or "unsigned int16" => "ldind.u2",
-            "int32" or "unsigned int32" => "ldind.u4",
-            "int64" or "unsigned int64" => "ldind.u8",
-            "float32" => "ldind.r4",
-            "float64" => "ldind.r8",
-            _ when type.PureName.StartsWith("valuetype") => "ldobj",
-            _ => "ldind.ref"
+            "int"   => ("ldind.i", "stind.i"),
+            "int8"  => ("ldind.i1", "stind.i1"),
+            "int16" => ("ldind.i2", "stind.i2"),
+            "int32" => ("ldind.i4", "stind.i4"),
+            "int64" => ("ldind.i8", "stind.i8"),
+            "uint8" or "unsigned int8"  => ("ldind.u1", "stind.u1"),
+            "int16" or "unsigned int16" => ("ldind.u2", "stind.u2"),
+            "int32" or "unsigned int32" => ("ldind.u4", "stind.u4"),
+            "int64" or "unsigned int64" => ("ldind.u8", "stind.u8"),
+            "float32" => ("ldind.r4", "stind.r4"),
+            "float64" => ("ldind.r8", "stind.r8"),
+            _ when type.PureName.StartsWith("valuetype") => ("ldobj", "stobj"),
+            _ => ("ldind.ref", "stind.ref")
         };
     }
 }

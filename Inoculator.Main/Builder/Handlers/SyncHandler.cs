@@ -93,6 +93,7 @@ public static class SyncRewriter {
                             )}"
                 )}}}
                 {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.MethodData::set_ReturnValue(object)
+                {{{UpdateRefArguments(metadata.Code.Header.Parameters, ref labelIdx, metadata.IsStatic ? 0 : 1)}}}
                 {{{CallMethodOnInterceptors(metadata.ClassReference.Id.ToString(), AttributeClass, "OnSuccess", true, ref labelIdx)}}}
                 {{{(
                     metadata.Signature.Output.IsVoid ? String.Empty
