@@ -73,7 +73,7 @@ public static class HandlerTools {
                     : $"{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)} {GetCILIndirectLoadOpcode(typeData).load}" 
             )}}}
             {{{( typeData.IsReferenceType ? String.Empty 
-                    : $"{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)} box {(typeData.IsGeneric ? typeData.Name : typeData.ToProperName)}"
+                    : $"{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)} box {(typeData.IsGeneric ? typeData.FilteredName(true, false) : typeData.ToProperName)}"
             )}}}
             {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} stelem.ref
             """;
@@ -103,7 +103,7 @@ public static class HandlerTools {
                     : $"{GetNextLabel(ref labelIdx)}: {GetCILIndirectLoadOpcode(typeData).load}" 
             )}}}
             {{{( typeData.IsReferenceType ? String.Empty 
-                    : $"{GetNextLabel(ref labelIdx)}: box {(typeData.IsGeneric ? typeData.Name : typeData.ToProperName)}"
+                    : $"{GetNextLabel(ref labelIdx)}: box {(typeData.IsGeneric ? typeData.FilteredName(true, false) : typeData.ToProperName)}"
             )}}}
             {{{GetNextLabel(ref labelIdx)}}}: stelem.ref
             """;

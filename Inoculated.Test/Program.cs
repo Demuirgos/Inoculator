@@ -8,7 +8,8 @@ namespace Program {
             foreach (var itemg in Gen<int>.TestE<int>(23, 100)) {
                 Console.WriteLine(itemg);
             }
-            var sg = Gen<int>.TestS<int>(23, 100);    
+            var sg = Gen<int>.TestS<int>(23, 100); 
+            var srg = Gen<int>.TestSR<int>(ref sg, 100);   
             // NGen region
             var rng = await NGen.TestA(23, 100);
             Console.WriteLine(rng);
@@ -39,6 +40,15 @@ namespace Program {
         
         [ElapsedTime, LogEntrency]
         public static int TestS<T>(T k, int m) {
+            int i = 0;
+            for (int j = 0; j < m; j++) {
+                i += m + j;
+            }
+            return i;
+        }
+
+        [ElapsedTime, LogEntrency]
+        public static int TestSR<T>(ref T k, int m) {
             int i = 0;
             for (int j = 0; j < m; j++) {
                 i += m + j;

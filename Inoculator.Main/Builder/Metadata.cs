@@ -44,8 +44,18 @@ public class TypeData : Printable<TypeData> {
         };
     }
 
-    public String Name => Code.ToString().Trim();
-    public String PureName => Code.ToString().Replace("!", string.Empty).Replace("&", string.Empty).Trim();
+    public String FilteredName(bool removeRefIndicators, bool removeGenIndicators) {
+        var fullName = Code.ToString().Trim();
+        if(removeGenIndicators) {
+            fullName = fullName.Replace("!", string.Empty);
+        }
+        if(removeRefIndicators) {
+            fullName = fullName.Replace("&", string.Empty);
+        }
+        return fullName.Trim();
+    }
+    public String Name => FilteredName(false, false);
+    public String PureName => FilteredName(true, true);
     public TypeBehaviour Behaviour => IsValueType ? TypeBehaviour.ValueType : TypeBehaviour.ReferenceType;
     public bool IsReferenceType => Behaviour is TypeBehaviour.ReferenceType;
     public TypeNature Nature => Code.Components.Types.Values.Any(comp => comp is TypeDecl.ReferenceSuffix) ? TypeNature.Pointer : TypeNature.Value;
