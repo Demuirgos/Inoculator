@@ -45,7 +45,7 @@ public class TypeData : Printable<TypeData> {
     }
 
     public String Name => Code.ToString().Trim();
-    public String PureName => Code.ToString().Replace("&", string.Empty).Trim();
+    public String PureName => Code.ToString().Replace("!", string.Empty).Replace("&", string.Empty).Trim();
     public TypeBehaviour Behaviour => IsValueType ? TypeBehaviour.ValueType : TypeBehaviour.ReferenceType;
     public bool IsReferenceType => Behaviour is TypeBehaviour.ReferenceType;
     public TypeNature Nature => Code.Components.Types.Values.Any(comp => comp is TypeDecl.ReferenceSuffix) ? TypeNature.Pointer : TypeNature.Value;
@@ -60,9 +60,7 @@ public class TypeData : Printable<TypeData> {
             String[] _primitives = new String[] { "bool", "char", "float32", "float64", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "native" };
             return _primitives.Contains(PureName) || PureName.StartsWith("valuetype") || IsGeneric;
         }
-    }
-    public string ToGenericArity1 => IsVoid ? String.Empty : $"`1<{Name}>";
-    
+    }    
 
     public static string ToProperNamedType(string type)
     {

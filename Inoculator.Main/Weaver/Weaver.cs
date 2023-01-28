@@ -95,7 +95,7 @@ public class Weaver {
                     var generatedStateMachineClass = parent.Members.Members.Values
                         .OfType<ClassDecl.NestedClass>()
                         .Select(x => x.Value)
-                        .Where(x => x.Header.Id.ToString().StartsWith($"'<{metadata.Name}>"))
+                        .Where(x => x.Header.Id.ToString().StartsWith($"'<{metadata.Name(false)}>"))
                         .FirstOrDefault();
                     var result = Wrapper.ReplaceNameWith(metadata, marks, generatedStateMachineClass, path);
                     if(result is Success<(ClassDecl.Class, MethodDecl.Method[]), Exception> success) {
