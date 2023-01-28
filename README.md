@@ -1,10 +1,7 @@
 # Innoculator
 An IL code Injector using Ilasm and Ildasm (WIP)
-# Limitations
-    * no support for generics yet
-    * Needs Excessive Testing
-    * Targeting release Build is not predictable (yet)
 # Plan 
+    * Needs Excessive Testing
     * Automatically Add MSbuild PostBuild event handler
 # Usage
 * Reference Inoculator.Injecter
