@@ -27,6 +27,6 @@ public class ElapsedTimeAttribute : InterceptorAttribute
     {
         var sw = (Stopwatch)method.EmbededResource;
         sw.Stop();
-        Console.WriteLine($"Method {method.Name} took {sw.ElapsedMilliseconds}ms");
+        Console.WriteLine($"Method {method.Name(false)} took {sw.ElapsedMilliseconds}ms");
     }
 }

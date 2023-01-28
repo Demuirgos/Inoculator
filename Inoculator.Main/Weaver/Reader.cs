@@ -18,7 +18,7 @@ public partial class Reader : IntermediateIOBase<IL_Unit> {
     internal override string ProcessName => "ildasm";
     public static string TempFilePath = Path.Combine(Environment.CurrentDirectory, "part1.tmp");
     public static Result<T, Exception> Parse<T>(string code) where T : IDeclaration<T> {
-        code = MyRegex().Replace(code, string.Empty);
+        code = CommentRegex().Replace(code, string.Empty);
         if(Parser.TryParse(code, out T assembly, out string error)) {
             return Success<T, Exception>.From(assembly);
         } else {
@@ -51,5 +51,5 @@ public partial class Reader : IntermediateIOBase<IL_Unit> {
     }
 
     [GeneratedRegex("//.*")]
-    private static partial Regex MyRegex();
+    private static partial Regex CommentRegex();
 }

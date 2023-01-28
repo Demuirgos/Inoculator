@@ -33,18 +33,18 @@ public static class HandlerTools {
         return $"{piping}\n{callCode}";
     }
 
-    public static string LoadArguments(ParameterDecl.Parameter.Collection parameter, ref int labelIdx, int startingIdx) {
+    public static string LoadArguments(ParameterDecl.Parameter.Collection parameter, ref int labelIdx, int startingIdx, bool includeLabels = true) {
         StringBuilder builder = new StringBuilder();
         foreach(ParameterDecl.DefaultParameter param in parameter.Parameters.Values.OfType<ParameterDecl.DefaultParameter>()){
-            builder.AppendLine(LoadArgument(param, ref labelIdx, startingIdx++));
+            builder.AppendLine(LoadArgument(param, ref labelIdx, startingIdx++, includeLabels));
         }
         return builder.ToString();
     }
 
-    public static string ExtractArguments(ParameterDecl.Parameter.Collection parameter, ref int labelIdx, int startingIdx) {
+    public static string ExtractArguments(ParameterDecl.Parameter.Collection parameter, ref int labelIdx, int startingIdx, bool includeLabels = true) {
         StringBuilder builder = new StringBuilder();
         foreach(ParameterDecl.DefaultParameter param in parameter.Parameters.Values.OfType<ParameterDecl.DefaultParameter>()){
-            builder.AppendLine(ExtractArgument(param, ref labelIdx, startingIdx++));
+            builder.AppendLine(ExtractArgument(param, ref labelIdx, startingIdx++, includeLabels));
         }
         return builder.ToString();
     }
@@ -58,7 +58,7 @@ public static class HandlerTools {
         return builder.ToString();
     }
 
-    public static string ExtractArgument(ParameterDecl.Parameter parameter, ref int labelIdx, int paramIdx = 0) {
+    public static string ExtractArgument(ParameterDecl.Parameter parameter, ref int labelIdx, int paramIdx = 0, bool includeLabels = true) {
         StringBuilder builder = new StringBuilder();
         if(parameter is not ParameterDecl.DefaultParameter param) {
             throw new Exception("Unknown parameter type");
@@ -66,16 +66,16 @@ public static class HandlerTools {
         
         var typeData = new TypeData(parameter);
         var ilcode = typeData.IsVoid ? string.Empty  : $$$"""
-            {{{GetNextLabel(ref labelIdx)}}}: dup
-            {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.s {{{paramIdx}}}
-            {{{LoadArgument(param, ref labelIdx, paramIdx)}}}
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} dup
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldc.i4.s {{{paramIdx}}}
+            {{{LoadArgument(param, ref labelIdx, paramIdx, includeLabels)}}}
             {{{(!typeData.IsByRef ? string.Empty
-                    : $"{GetNextLabel(ref labelIdx)}: {GetCILIndirectLoadOpcode(typeData).load}" 
+                    : $"{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)} {GetCILIndirectLoadOpcode(typeData).load}" 
             )}}}
             {{{( typeData.IsReferenceType ? String.Empty 
-                    : $"{GetNextLabel(ref labelIdx)}: box {typeData.ToProperName}"
+                    : $"{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)} box {(typeData.IsGeneric ? typeData.FilteredName(true, false) : typeData.ToProperName)}"
             )}}}
-            {{{GetNextLabel(ref labelIdx)}}}: stelem.ref
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} stelem.ref
             """;
 
         builder.Append(ilcode);
@@ -103,7 +103,7 @@ public static class HandlerTools {
                     : $"{GetNextLabel(ref labelIdx)}: {GetCILIndirectLoadOpcode(typeData).load}" 
             )}}}
             {{{( typeData.IsReferenceType ? String.Empty 
-                    : $"{GetNextLabel(ref labelIdx)}: box {typeData.ToProperName}"
+                    : $"{GetNextLabel(ref labelIdx)}: box {(typeData.IsGeneric ? typeData.FilteredName(true, false) : typeData.ToProperName)}"
             )}}}
             {{{GetNextLabel(ref labelIdx)}}}: stelem.ref
             """;
@@ -112,13 +112,16 @@ public static class HandlerTools {
         return builder.ToString();
     }
 
-    public static string LoadArgument(ParameterDecl.Parameter parameter, ref int labelIdx, int paramIdx = 0) {
+    public static bool HasField(ClassDecl.Class classRef, string fieldName) => classRef.Members.Members.Values.Any(x => x is ClassDecl.FieldDefinition field && field.Value.Id.ToString() == fieldName);
+
+
+    public static string LoadArgument(ParameterDecl.Parameter parameter, ref int labelIdx, int paramIdx = 0, bool includeLabels = true) {
         StringBuilder builder = new StringBuilder();
         if(parameter is not ParameterDecl.DefaultParameter param) {
             throw new Exception("Unknown parameter type");
         }
         var typeComp = param.TypeDeclaration?.ToString();
-        var ilcode = typeComp is null ? String.Empty : $"{GetNextLabel(ref labelIdx)}: ldarg.s {param.Id}";
+        var ilcode = typeComp is null ? String.Empty : $"{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)} ldarg.s {param.Id}";
         builder.Append(ilcode);
         return builder.ToString();
     }
