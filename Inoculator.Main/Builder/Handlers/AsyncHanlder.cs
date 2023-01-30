@@ -178,7 +178,8 @@ public static class AsyncRewriter {
             builder.Append($$$"""
                 {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
                 {{{GetNextLabel(ref labelIdx)}}}: ldfld int32 {{{stateMachineFullName}}}::'<>1__state'
-                {{{GetNextLabel(ref labelIdx)}}}: brfalse.s ***JUMPDEST1***
+                {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.m1
+                {{{GetNextLabel(ref labelIdx)}}}: bne.un.s ***JUMPDEST1***
 
 
                 {{{attributeNames.Select(
@@ -196,13 +197,20 @@ public static class AsyncRewriter {
                 {{{GetNextLabel(ref labelIdx)}}}: call instance void {{{stateMachineFullName}}}::MoveNext__inoculated()
 
                 {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
-                {{{GetNextLabel(ref labelIdx)}}}: ldfld int32 {{{stateMachineFullName}}}::'<>1__state'
-                {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.s -2
-                {{{GetNextLabel(ref labelIdx)}}}: bne.un.s ***JUMPDEST1.5***
+                {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Injector]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                {{{GetNextLabel(ref labelIdx)}}}: ldflda valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{{{ToGenericArity1(returnType)}}} {{{stateMachineFullName}}}::'<>t__builder'
+                {{{GetNextLabel(ref labelIdx)}}}: call instance class [System.Runtime]System.Threading.Tasks.Task{{{(String.IsNullOrEmpty(ToGenericArity1(returnType)) ? string.Empty : "`1<!0> valuetype")}}} [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{{{ToGenericArity1(returnType)}}}::get_Task()
+                {{{GetNextLabel(ref labelIdx)}}}: call instance class [System.Runtime]System.AggregateException [System.Runtime]System.Threading.Tasks.Task::get_Exception()
+                {{{GetNextLabel(ref labelIdx)}}}: dup
+                {{{GetNextLabel(ref labelIdx)}}}: stloc.0
+                {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.MethodData::set_Exception(class [System.Runtime]System.Exception)
+
+                {{{GetNextLabel(ref labelIdx)}}}: ldloc.0
+                {{{GetNextLabel(ref labelIdx)}}}: brtrue.s ***FAILURE***
 
                 {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
                 {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Injector]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
-                        
                 {{{(
                     returnType.IsVoid
                     ? $@"
@@ -220,19 +228,18 @@ public static class AsyncRewriter {
                         {GetNextLabel(ref labelIdx)}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.MethodData::set_ReturnValue(object)"
                 )}}}
 
-                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
-                {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Injector]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
-                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
-                {{{GetNextLabel(ref labelIdx)}}}: ldflda valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{{{ToGenericArity1(returnType)}}} {{{stateMachineFullName}}}::'<>t__builder'
-                {{{GetNextLabel(ref labelIdx)}}}: call instance class [System.Runtime]System.Threading.Tasks.Task{{{(String.IsNullOrEmpty(ToGenericArity1(returnType)) ? string.Empty : "`1<!0> valuetype")}}} [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{{{ToGenericArity1(returnType)}}}::get_Task()
-                {{{GetNextLabel(ref labelIdx)}}}: call instance class [System.Runtime]System.AggregateException [System.Runtime]System.Threading.Tasks.Task::get_Exception()
-                {{{GetNextLabel(ref labelIdx)}}}: dup
-                {{{GetNextLabel(ref labelIdx)}}}: stloc.0
-                {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.MethodData::set_Exception(class [System.Runtime]System.Exception)
+                {{{GetNextLabel(ref labelIdx, jumptable, "SUCCESS")}}}: nop
+                {{{attributeNames.Select(
+                    (attrClassName, i) => $@"
+                    {GetNextLabel(ref labelIdx)}: ldarg.0
+                    {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::'<inoculated>__Interceptor{i}'
+                    {GetNextLabel(ref labelIdx)}: ldarg.0
+                    {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Injector]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
+                    {GetNextLabel(ref labelIdx)}: callvirt instance void {attrClassName}::OnSuccess(class [Inoculator.Injector]Inoculator.Builder.MethodData)"
+                ).Aggregate((a, b) => $"{a}\n{b}")}}}
+                {{{GetNextLabel(ref labelIdx)}}}: br.s ***EXIT***
 
-                {{{GetNextLabel(ref labelIdx, jumptable, "JUMPDEST1.5")}}}: ldloc.0
-                {{{GetNextLabel(ref labelIdx)}}}: brfalse.s ***SUCCESS***
-
+                {{{GetNextLabel(ref labelIdx, jumptable, "FAILURE")}}}: nop
                 {{{attributeNames.Select(
                     (attrClassName, i) => $@"
                     {GetNextLabel(ref labelIdx)}: ldarg.0
@@ -241,9 +248,12 @@ public static class AsyncRewriter {
                     {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Injector]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
                     {GetNextLabel(ref labelIdx)}: callvirt instance void {attrClassName}::OnException(class [Inoculator.Injector]Inoculator.Builder.MethodData)"
                 ).Aggregate((a, b) => $"{a}\n{b}")}}}
-                {{{GetNextLabel(ref labelIdx)}}}: br.s ***JUMPDEST2***
+                {{{GetNextLabel(ref labelIdx)}}}: br.s ***EXIT***
 
-                {{{GetNextLabel(ref labelIdx, jumptable, "SUCCESS")}}}: nop
+                {{{GetNextLabel(ref labelIdx, jumptable, "EXIT")}}}: ldarg.0
+                {{{GetNextLabel(ref labelIdx)}}}: ldfld int32 {{{stateMachineFullName}}}::'<>1__state'
+                {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.s -2
+                {{{GetNextLabel(ref labelIdx)}}}: bne.un.s ***JUMPDEST2***
                 {{{attributeNames.Select(
                     (attrClassName, i) => $@"
                     {GetNextLabel(ref labelIdx)}: ldarg.0
