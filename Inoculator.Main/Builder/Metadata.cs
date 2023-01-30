@@ -5,6 +5,13 @@ using System.Text.Json.Serialization;
 using Inoculator.Core;
 
 namespace Inoculator.Builder;
+public class ExceptionData : Printable<ExceptionData> {
+    public ExceptionData(Exception e) 
+        => (Message, StackTrace, Source) = (e.Message, e.StackTrace, e.Source); 
+    public string Message {get; set;}
+    public virtual string? StackTrace { get; }
+    public virtual string? Source { get; set; }
+}
 public class TypeData : Printable<TypeData> {
     public enum TypeBehaviour {
         ValueType, ReferenceType
@@ -171,6 +178,7 @@ public class MethodData : Printable<MethodData> {
         Error<MethodDecl.Method, Exception> failure => throw failure.Message,
     };
     public ClassDecl.Prefix ClassReference {get; set;}
+    public string MethodName => Code.Header.Name.ToString();
     public String Name(bool isFull) => $"{Code.Header.Name}{(isFull ? $"<Code.Header.TypeParameters.ToString().Trim()>" : string.Empty)}";
     public string MangledName(bool isFull) => $"'<>__{Name(false)}__Inoculated'{(isFull ? $"<Code.Header.TypeParameters.ToString().Trim()>" : string.Empty)}";
     [JsonIgnore]
@@ -180,6 +188,7 @@ public class MethodData : Printable<MethodData> {
                 : new[] { new TypeData("void") },
             new TypeData(Code.Header.Type));
 
+    [JsonIgnore]
     public MethodType MethodBehaviour =>
         Code.Body.Items.Values.
             OfType<MethodDecl.CustomAttributeItem>()
@@ -189,7 +198,9 @@ public class MethodData : Printable<MethodData> {
                     .OfType<MethodDecl.CustomAttributeItem>()
                     .Any(a => a.Value.AttributeCtor.Spec.ToString() == "[System.Runtime] System.Runtime.CompilerServices.IteratorStateMachineAttribute")
                 ? MethodType.Iter  : MethodType.Sync;
+    [JsonIgnore]
     public CallType MethodCall => Code.Header.Convention is null || Code.Header.MethodAttributes.Attributes.Values.Any(a => a is AttributeDecl.MethodSimpleAttribute { Name: "static" }) ? CallType.Static : CallType.Instance;
+    [JsonIgnore]
     public bool IsStatic => MethodCall is CallType.Static;
     public string TypeSignature => $"({string.Join(", ", Signature.Input.Select(item => item.Name))} -> {Signature.Output.Code})";
     public string[] TypeParameters => Code.Header?.TypeParameters?
@@ -197,7 +208,9 @@ public class MethodData : Printable<MethodData> {
         .Select(x => x.Id.ToString())
         .ToArray() ?? new string[0];
     public Object?[] Parameters { get; set; }
-    public Exception Exception{ get; set; }
+    public ExceptionData ExceptionRef => Exception is null ? null : new ExceptionData(Exception);
+    [JsonIgnore]
+    public Exception Exception { get; set; }
     public Object? ReturnValue { get; set; }
     [JsonIgnore]
     public MethodDecl.Method Code { get; set; }

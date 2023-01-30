@@ -10,6 +10,15 @@ public class LogEntrencyAttribute : InterceptorAttribute
 
     }
 
+    public override void OnException(MethodData method)
+    {
+        Console.WriteLine($"Failed: {method.Exception.Message}");
+    }
+    public override void OnSuccess(MethodData method)
+    {
+        Console.WriteLine($"Success: {method.ReturnValue}");
+    }
+
     public override void OnExit(MethodData method)
     {
         Console.WriteLine($"After: {method}");
@@ -18,15 +27,15 @@ public class LogEntrencyAttribute : InterceptorAttribute
 
 public class ElapsedTimeAttribute : InterceptorAttribute
 {
+    private Stopwatch watch = new();
     public override void OnEntry(MethodData method)
     {
-        method.EmbededResource = Stopwatch.StartNew();        
+        watch.Start();
     }
 
     public override void OnExit(MethodData method)
     {
-        var sw = (Stopwatch)method.EmbededResource;
-        sw.Stop();
-        Console.WriteLine($"Method {method.Name(false)} took {sw.ElapsedMilliseconds}ms");
+        watch.Stop();
+        Console.WriteLine($"Method {method.Name(false)} took {watch.ElapsedMilliseconds}ms");
     }
 }
