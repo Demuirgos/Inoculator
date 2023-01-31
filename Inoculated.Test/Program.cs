@@ -51,6 +51,7 @@ namespace Program {
             int i = 0;
             for (int j = 0; j <= k; j++) {
                 i += j;
+                throw new Exception();
             }
             return i;
         }

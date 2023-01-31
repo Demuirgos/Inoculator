@@ -6,11 +6,23 @@ using Inoculator.Core;
 
 namespace Inoculator.Builder;
 public class ExceptionData : Printable<ExceptionData> {
-    public ExceptionData(Exception e) 
-        => (Message, StackTrace, Source) = (e.Message, e.StackTrace, e.Source); 
-    public string Message {get; set;}
-    public virtual string? StackTrace { get; }
-    public virtual string? Source { get; set; }
+    public record Datum(String Message, string StackTrace, String Source);
+    public ExceptionData(Exception e) {
+        switch(e) {
+            case AggregateException agg : 
+                InnerData = new Datum(agg?.Message, agg?.StackTrace, agg?.Source);
+                ChildData = agg.InnerExceptions.Select(i_e => new ExceptionData(i_e)).ToArray();
+                break;
+            default : 
+                InnerData = new Datum(e?.Message, e?.StackTrace, e?.Source);
+                ChildData = e?.InnerException is not null 
+                                ? new  ExceptionData[] {new ExceptionData(e?.InnerException)}
+                                : null ;
+                break;
+        }
+    } 
+    public Datum InnerData {get; set;}
+    public ExceptionData[] ChildData {get; set;}
 }
 public class TypeData : Printable<TypeData> {
     public enum TypeBehaviour {
