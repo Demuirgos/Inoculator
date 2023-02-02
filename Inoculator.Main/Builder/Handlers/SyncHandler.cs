@@ -40,7 +40,6 @@ public static class SyncRewriter {
             .Append("/");
         }
         functionFullPathBuilder.Append($"{classRef?.Id}");
-        Console.WriteLine(functionFullPathBuilder.ToString());
         if(classRef.TypeParameters?.Parameters.Values.Length > 0) {
             functionFullPathBuilder.Append("<")
                 .Append(String.Join(", ", classRef.TypeParameters.Parameters.Values.Select(p => $"!{p}")))

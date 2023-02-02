@@ -18,8 +18,8 @@ public class Weaver {
                 => Error<string, Exception>.From(error.Message)
         }; 
 
-    public static Result<IL_Unit, Exception> Modify(IL_Unit assembly) {
-        var targetAttributes = Searcher.SearchForInterceptors(assembly);
+    public static Result<IL_Unit, Exception> Modify(string path, IL_Unit assembly) {
+        var targetAttributes = Searcher.SearchForInterceptors(path);
         Declaration[] HandleDeclaration(Declaration declaration) {
             switch(declaration) {
                 case ClassDecl.Class type:
@@ -56,12 +56,6 @@ public class Weaver {
             var methodMembers = classMethodSegregation
                 .Where(x => !x.Key)
                 .SelectMany(x => x.SelectMany(y => HandleMember(y)));
-
-            foreach (var flagged in flaggedNestedClasses)
-            {
-                Console.WriteLine("flagged : " + flagged);
-            }
-
             var nestedClasses = classMethodSegregation
                 .Where(x => x.Key)
                 .SelectMany(members =>  
@@ -126,7 +120,7 @@ public class Weaver {
             Success<Reader, Exception> reader =>
                 reader.Value.Run() switch {
                     Success<IL_Unit, Exception> holder
-                        => Modify(holder.Value),
+                        => Modify(path, holder.Value),
                     Error<IL_Unit, Exception> error 
                         => Error<IL_Unit, Exception>.From(error.Message),
                     _ => throw new Exception("Unreachable code")

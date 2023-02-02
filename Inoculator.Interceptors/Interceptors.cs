@@ -1,6 +1,6 @@
-using System.Diagnostics;
-using Inoculator.Attributes;
+﻿using Inoculator.Attributes;
 using Inoculator.Builder;
+using System.Diagnostics;
 
 public class LogEntrencyAttribute : InterceptorAttribute
 {

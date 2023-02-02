@@ -7,12 +7,12 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-      <ProjectReference Include="..\Inoculator.Main\Inoculator.Injector.csproj"/>
+      <ProjectReference Include="..\Inoculator.Interceptors\Inoculator.Interceptors.csproj"/>
   </ItemGroup>
   
   <Target Name="InjectionStep" BeforeTargets="AfterBuild">
     <Exec WorkingDirectory="$(MSbuildProjectDirectory)\$(BaseOutputPath)$(Configuration)\$(TargetFramework)" Command="Inoculator.Injector.exe $(AssemblyName).dll" />
-    <Exec WorkingDirectory="$(MSbuildProjectDirectory)\$(BaseOutputPath)$(Configuration)\$(TargetFramework)" Command='ilverify Inoculated.Test.dll -r "C:\Program Files (x86)\dotnet\shared\Microsoft.NETCore.App\7.0.0\*.dll" ".\Inoculator.Injector.dll" ".\Dove.Shared.dll" ".\Dove.Parser.dll"' >
+    <Exec WorkingDirectory="$(MSbuildProjectDirectory)\$(BaseOutputPath)$(Configuration)\$(TargetFramework)" Command='ilverify Inoculated.Test.dll -r "C:\Program Files (x86)\dotnet\shared\Microsoft.NETCore.App\7.0.0\*.dll" ".\Inoculator.Injector.dll" ".\Inoculator.Interceptors.dll" ".\Dove.Shared.dll" ".\Dove.Parser.dll"' >
       <Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
     </Exec>
   </Target>
