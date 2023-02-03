@@ -3,8 +3,12 @@ namespace Program {
     struct Program {
         async static Task Main(string[] args) {
             // Gen region
-            var rg = await NGen.TestC(3, 0);
-            Console.WriteLine(rg);
+            _ = await NGen.TestC(3, 0);
+            _ = await NGen.TestC(3, 0);
+            _ = await NGen.TestC(3, 0);
+            foreach(var kvp in CallCountAttribute.CallCounter) {
+                Console.WriteLine($"{kvp.Key}: called {kvp.Value}: times");
+            }
         }
     }
     class Gen<P> {
@@ -51,7 +55,6 @@ namespace Program {
             int i = 0;
             for (int j = 0; j <= k; j++) {
                 i += j;
-                throw new Exception();
             }
             return i;
         }
@@ -62,7 +65,7 @@ namespace Program {
             return i;
         }
 
-        [ElapsedTime, LogEntrency]
+        [ElapsedTime, LogEntrency, CallCount]
         public static async Task<int> TestC(int k, int m) {
             int r1 = await SumUntil1(k);
             int r2 = await SumUntil2(k);

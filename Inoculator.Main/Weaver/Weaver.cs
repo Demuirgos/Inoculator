@@ -19,7 +19,7 @@ public class Weaver {
         }; 
 
     public static Result<IL_Unit, Exception> Modify(string path, IL_Unit assembly) {
-        var targetAttributes = Searcher.SearchForInterceptors(path);
+        var targetAttributes = Searcher.SearchForInterceptors(path, assembly);
         Declaration[] HandleDeclaration(Declaration declaration) {
             switch(declaration) {
                 case ClassDecl.Class type:

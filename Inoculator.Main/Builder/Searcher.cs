@@ -40,14 +40,37 @@ public static class Searcher {
 
         return foundAttributes.Length > 0;
     }
-    public static List<string> SearchForInterceptors(string currentPath)
+    public static List<string>  SearchForInterceptors(Declaration.Collection ilfile)
     {
-        var dlls = Directory.GetFiles(Directory.GetCurrentDirectory(), "*.dll").Where(path => !path.EndsWith(currentPath));
-        return dlls.SelectMany(dll => {
-            var assembly = Assembly.LoadFrom(dll);
-            var types = assembly.GetTypes();
-            var interceptors = types.Where(x => x.IsSubclassOf(typeof(InterceptorAttribute)));
-            return interceptors.Select(x => $"[{Path.GetFileNameWithoutExtension(dll)}] {x.FullName}"); // hack : space between file ref and name 
-        }).ToList();
+        var toplevel = ilfile
+            .Declarations.Values
+            .OfType<ClassDecl.Class>()
+            .Where(type => {
+                var inheritedType = new String(type.Header.Extends?.Type.ToString().Where(c => !Char.IsWhiteSpace(c)).ToArray());
+                return inheritedType == "[Inoculator.Injector]Inoculator.Attributes.InterceptorAttribute";
+            });
+        return toplevel.Select(x => x.Header.Id.ToString()).ToList();
+    }
+    public static List<string> SearchForInterceptors(string currentPath, Declaration.Collection ilfile)
+    {
+        IEnumerable<string> handlePath(string path) {
+            if(!path.EndsWith(currentPath)) {
+                var assembly = Assembly.LoadFrom(path);
+                var types = assembly.GetTypes();
+                var interceptors = types.Where(x => x.IsSubclassOf(typeof(InterceptorAttribute)));
+                return interceptors.Select(x => $"[{Path.GetFileNameWithoutExtension(path)}] {x.FullName}"); // hack : space between file ref and name 
+            } else {
+                var toplevel = ilfile
+                    .Declarations.Values
+                    .OfType<ClassDecl.Class>()
+                    .Where(type => {
+                        var inheritedType = new String(type.Header.Extends?.Type.ToString().Where(c => !Char.IsWhiteSpace(c)).ToArray());
+                        return inheritedType == "[Inoculator.Injector]Inoculator.Attributes.InterceptorAttribute";
+                    });
+                return toplevel.Select(x => x.Header.Id.ToString());
+            }
+        }
+
+        return Directory.GetFiles(Directory.GetCurrentDirectory(), "*.dll").SelectMany(handlePath).ToList();
     }
 }
