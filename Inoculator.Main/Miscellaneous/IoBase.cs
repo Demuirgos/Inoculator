@@ -9,13 +9,13 @@ using System.Runtime.InteropServices;
 namespace Inoculator.Extensions;
 
 public abstract class IntermediateIOBase<TOutput> {
-    readonly static string defaultPath = 
+    readonly public static string DefaultPath = 
           RuntimeInformation.IsOSPlatform(OSPlatform.Windows)   ? "runtimes\\win-x64\\native\\" 
         : RuntimeInformation.IsOSPlatform(OSPlatform.Linux)     ? "runtimes\\linux-x64\\native\\" 
         : RuntimeInformation.IsOSPlatform(OSPlatform.OSX)       ? "runtimes\\osx-arm64\\native\\"
         : throw new PlatformNotSupportedException();
 
-    readonly static string coreRoot = Environment.GetEnvironmentVariable("CORE_ROOT") ?? defaultPath;
+    readonly static string coreRoot = Environment.GetEnvironmentVariable("CORE_ROOT") ?? DefaultPath;
     internal virtual string ProcessName {get; set;} = string.Empty;
     protected Process process = null; 
     public virtual Result<TOutput, Exception> Run() {
@@ -57,7 +57,7 @@ public abstract class IntermediateIOBase<TOutput> {
         var currentDirectory = Path.GetDirectoryName(currentPath);
 
         var ProcessPath = String.Empty;
-        if (coreRoot != defaultPath && string.IsNullOrWhiteSpace(coreRoot))
+        if (coreRoot != DefaultPath && string.IsNullOrWhiteSpace(coreRoot))
         {
             return Error<string, ArgumentException>.From(new ArgumentException("Environment variable is not set: 'CORE_ROOT'"));
         }

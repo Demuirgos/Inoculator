@@ -7,9 +7,7 @@ public class LogEntrencyAttribute : InterceptorAttribute
     public override void OnEntry(MethodData method)
     {
         Console.WriteLine($"Before: {method}");
-
     }
-
     public override void OnException(MethodData method)
     {
         Console.WriteLine($"Failed: {method.Exception.Message}");
@@ -18,7 +16,6 @@ public class LogEntrencyAttribute : InterceptorAttribute
     {
         Console.WriteLine($"Success: {method.ReturnValue}");
     }
-
     public override void OnExit(MethodData method)
     {
         Console.WriteLine($"After: {method}");

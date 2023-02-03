@@ -1,5 +1,5 @@
 # Innoculator
-An IL code Injector using Ilasm and Ildasm (WIP)
+An IL code Injector using Ilasm and Ildasm
 # Plan 
     * Needs Excessive Testing
     * Automatically Add MSbuild PostBuild event handler
@@ -13,73 +13,65 @@ An IL code Injector using Ilasm and Ildasm (WIP)
   ```
 * Inherit InterceptorAttribute and override Function lifecycle nodes :  
 ```csharp
-public class LogEntrencyAttribute : InterceptorAttribute
+public class ElapsedTimeAttribute : InterceptorAttribute
 {
+    private Stopwatch watch = new();
     public override void OnEntry(MethodData method)
-        => Console.WriteLine($"Before: {method}");
+        => watch.Start();
 
     public override void OnExit(MethodData method)
-        => Console.WriteLine($"After: {method}");
+        => Console.WriteLine($"Method {method.Name(false)} took {watch.ElapsedMilliseconds}ms");
 }
 ```
 * Flag function to be injected with code : 
 ```csharp
 async static Task Main(string[] args) {
-    TestS(out int start, 10);
+            // Gen region
+    _ = SumIntervalIsEven(7, 23, out _);
+    foreach(var kvp in CallCountAttribute.CallCounter) {
+        Console.WriteLine($"{kvp.Key}: called {kvp.Value}: times");
+    }
 }
 
-[ElapsedTime, LogEntrency]
-public static int TestS(out int k, int m) {
-    int i = 0;
-    k = 23;
-    for (int j = 0; j < k; j++) {
-        i += m + j;
+
+[ElapsedTime, LogEntrency, CallCount]
+public static bool SumIntervalIsEven(int start, int end, out int r) {
+    int result = 0;
+    for (int j = start; j < end; j++) {
+        result += j;
     }
-    return i;
+    r = result;
+    return r % 2 == 0;
 }
 ```
 * Output :
 ```json
 Before: {
-  "EmbededResource": {
-    "IsRunning": true,
-    "Elapsed": "00:00:00.0695625",
-    "ElapsedMilliseconds": 71,
-    "ElapsedTicks": 713658
-  },
-  "Name": "TestS",
-  "MethodBehaviour": 1,
-  "MethodCall": 0,
-  "IsStatic": true,
-  "TypeSignature": "(int32 &, int32 -> int32)",
+  "MethodName": "SumIntervalIsEven",
+  "TypeSignature": "(int32, int32, int32 & -> bool)",
   "TypeParameters": [],
   "Parameters": [
-    0,
-    10
-  ],
-  "MangledName": "'<>__TestS__Inoculated'"
+    7,
+    23,
+    0
+  ]
 }
 
-Method TestS took 84ms
+Success: True
+
+Method SumIntervalIsEven took 93ms
 
 After: {
-  "EmbededResource": {
-    "IsRunning": false,
-    "Elapsed": "00:00:00.0845090",
-    "ElapsedMilliseconds": 84,
-    "ElapsedTicks": 845090
-  },
-  "Name": "TestS",
-  "MethodBehaviour": 1,
-  "MethodCall": 0,
-  "IsStatic": true,
-  "TypeSignature": "(int32 &, int32 -> int32)",
+  "MethodName": "SumIntervalIsEven",
+  "TypeSignature": "(int32, int32, int32 & -> bool)",
   "TypeParameters": [],
   "Parameters": [
+    7,
     23,
-    10
+    232
   ],
-  "ReturnValue": 483,
-  "MangledName": "'<>__TestS__Inoculated'"
+  "ReturnValue": true
 }
+
+SumIntervalIsEven: called 1: times
 ```

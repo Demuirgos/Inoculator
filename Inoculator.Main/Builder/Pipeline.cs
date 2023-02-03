@@ -6,6 +6,7 @@ public class Pipeline
 {
     private Reader reader;
     private Writer writer;
+    private Verifier verifier;
     string TargetPath;
     public Pipeline(string targetPath)
     {
@@ -19,23 +20,22 @@ public class Pipeline
             Success<Writer, Exception> success => success.Value,
             Error<Writer, Exception> failure => throw failure.Message,
         };
+
+        verifier = Verifier.Create<Verifier>(targetPath) switch {
+            Success<Verifier, Exception> success => success.Value,
+            Error<Verifier, Exception> failure => throw failure.Message,
+        };
     }
 
     public Result<string, Exception> Run()
     {
         return reader.Run().Bind(assembly => {
             var result = Weaver.Modify(TargetPath, assembly);
-            return result switch {
-                Success<RootDecl.Declaration.Collection, Exception> success => Continuation(success.Value),
-                Error<RootDecl.Declaration.Collection, Exception> failure => Error<string, Exception>.From(failure.Message) as Result<string, Exception>,
-            };
+            return result.Bind(Ilcode => {
+                string result = Ilcode.ToString();
+                File.WriteAllText(Writer.TempFilePath, result);
+                return writer.Run();//.Bind(_ => verifier.Run());
+            });
         });
-    }
-
-    private Result<string, Exception> Continuation(RootDecl.Declaration.Collection Ilcode)
-    {
-        string result = Ilcode.ToString();
-        File.WriteAllText(Writer.TempFilePath, result);
-        return writer.Run();
     }
 }
