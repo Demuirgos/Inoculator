@@ -214,7 +214,7 @@ public class MethodData : Printable<MethodData> {
     public CallType MethodCall => Code.Header.Convention is null || Code.Header.MethodAttributes.Attributes.Values.Any(a => a is AttributeDecl.MethodSimpleAttribute { Name: "static" }) ? CallType.Static : CallType.Instance;
     [JsonIgnore]
     public bool IsStatic => MethodCall is CallType.Static;
-    public string TypeSignature => $"({string.Join(", ", Signature.Input.Select(item => item.Name))} -> {Signature.Output.Code})";
+    public string TypeSignature => $"({string.Join(", ", Signature.Input.Select(item => item.Name.ToString().Replace(" ", String.Empty)))}) -> {Signature.Output.Code}";
     public string[] TypeParameters => Code.Header?.TypeParameters?
         .Parameters.Values
         .Select(x => x.Id.ToString())
