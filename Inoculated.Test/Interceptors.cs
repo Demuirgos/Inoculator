@@ -1,6 +1,8 @@
 ﻿using Inoculator.Attributes;
 using Inoculator.Builder;
 using System.Diagnostics;
+using System.Reflection;
+
 public class CallCountAttribute : InterceptorAttribute
 {
     public static Dictionary<string, int> CallCounter = new Dictionary<string, int>();
@@ -9,5 +11,21 @@ public class CallCountAttribute : InterceptorAttribute
         if(!CallCounter.ContainsKey(method.MethodName))
             CallCounter.Add(method.MethodName, 0);
         CallCounter[method.MethodName]++;
+    }
+}
+
+public class UpdateStaticClassAttribute<T> : InterceptorAttribute
+{
+    private FieldInfo targetField;
+    public UpdateStaticClassAttribute() {
+        var assembly = typeof(T).Assembly;
+        // get static field of type Name U
+        var type = assembly.GetType(typeof(T).FullName);
+        targetField = type.GetField("CallCount");
+    }
+    public static Dictionary<string, int> CallCounter = new Dictionary<string, int>();
+    public override void OnEntry(MethodData method)
+    {
+        targetField.SetValue(null, 23);
     }
 }

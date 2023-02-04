@@ -56,7 +56,6 @@ public static class SyncRewriter {
             builder.AppendLine(member.ToString());
         }
         builder.AppendLine($".maxstack {(metadata.Code.Header.Parameters.Parameters.Values.Length > 0 ? 8 : 2)}");
-
         builder.AppendLine($$$"""
         .locals init (
             {{{String.Join("\n", AttributeClass.Select((attrClassName, i) => $"class {attrClassName} {GenerateInterceptorName(attrClassName)},"))}}}
@@ -73,7 +72,7 @@ public static class SyncRewriter {
         builder.Append($$$"""
         {{{AttributeClass.Select(
                 (attrClassName, i) => $@"
-                {GetNextLabel(ref labelIdx)}: newobj instance void {attrClassName}::.ctor()
+                {GetNextLabel(ref labelIdx)}: newobj instance void class {attrClassName}::.ctor()
                 {GetNextLabel(ref labelIdx)}: stloc.s {i}"
             ).Aggregate((a, b) => $"{a}\n{b}")}}}
         {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{new string(metadata.Code.ToString().ToCharArray().Select(c => c != '\n' ? c : ' ').ToArray())}}}"

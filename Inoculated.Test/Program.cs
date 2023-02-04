@@ -3,10 +3,11 @@ namespace Program {
     struct Program {
         async static Task Main(string[] args) {
             // Gen region
-            _ = SumIntervalIsEven(7, 23, out _);
+            _ = SlideSumWindow(out _);
             foreach(var kvp in CallCountAttribute.CallCounter) {
                 Console.WriteLine($"{kvp.Key}: called {kvp.Value}: times");
             }
+            Console.WriteLine(MetadataSink.CallCount);
         }
         
 
@@ -17,6 +18,16 @@ namespace Program {
                 result += j;
             }
             r = result;
+            return r % 2 == 0;
+        }
+
+        [ElapsedTime, UpdateStaticClass<MetadataSink>]
+        public static bool SlideSumWindow(out int r) {
+            r = 0;
+            for (int j = 7; j < 13; j++) {
+                _ = SumIntervalIsEven(j, j + 23, out int result);
+                r += result;
+            }
             return r % 2 == 0;
         }
     }

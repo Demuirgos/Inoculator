@@ -30,7 +30,7 @@ public partial class Reader : IntermediateIOBase<IL_Unit> {
         base.Run();
         try {
             string disasmIl = File.ReadAllText(TempFilePath);
-            File.Delete(TempFilePath);
+            //File.Delete(TempFilePath);
             return Parse<IL_Unit>(disasmIl);
         } catch (Exception exception) {
             return Error<IL_Unit, Exception>.From(exception);

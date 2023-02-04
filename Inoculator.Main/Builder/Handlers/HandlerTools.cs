@@ -29,7 +29,7 @@ public static class HandlerTools {
                  {GetNextLabel(ref labelIdx)}: ldarg.0
                  {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Injector]Inoculator.Builder.MethodData {classContainer}::'<inoculated>__Metadata'";
         
-        string callCode = $"{GetNextLabel(ref labelIdx)}: callvirt instance void {interceptorClass}::{methodName}(class [Inoculator.Injector]Inoculator.Builder.MethodData)";
+        string callCode = $"{GetNextLabel(ref labelIdx)}: callvirt instance void class {interceptorClass}::{methodName}(class [Inoculator.Injector]Inoculator.Builder.MethodData)";
         return $"{piping}\n{callCode}";
     }
 

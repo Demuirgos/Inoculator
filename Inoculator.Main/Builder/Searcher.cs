@@ -35,8 +35,10 @@ public static class Searcher {
     public static bool IsMarked(MethodDecl.Method method, List<string> interceptors, out string[] foundAttributes) {
         var attrs = method.Body.Items
             .Values.OfType<MethodDecl.CustomAttributeItem>()
-            .Select(attr => attr.Value.AttributeCtor.Spec.ToString());
-        foundAttributes = attrs.Where(attr => interceptors.Any(id => attr.Contains(id))).ToArray();
+            .Select(attr => attr.Value.AttributeCtor.Spec.ToString().Trim());
+        foundAttributes = attrs.Where(attr => interceptors.Any(id => attr.Contains(id)))
+            .Select(fullname => fullname.StartsWith("class") ? fullname.Substring(6) : fullname)
+            .ToArray();
 
         return foundAttributes.Length > 0;
     }
@@ -67,7 +69,7 @@ public static class Searcher {
                         var inheritedType = new String(type.Header.Extends?.Type.ToString().Where(c => !Char.IsWhiteSpace(c)).ToArray());
                         return inheritedType == "[Inoculator.Injector]Inoculator.Attributes.InterceptorAttribute";
                     });
-                return toplevel.Select(x => x.Header.Id.ToString());
+                return toplevel.Select(x => x.Header.Id.ToString().Trim());
             }
         }
 
