@@ -31,22 +31,19 @@ public static class SyncRewriter {
         int labelIdx = 0;
         
         var pathList = path?.ToList(); 
-        var functionFullPathBuilder = new StringBuilder();
         bool isContainedInStruct = classRef.Extends.Type.ToString() == "[System.Runtime] System.ValueType";
-        functionFullPathBuilder.Append(isContainedInStruct ? " valuetype " : " class ");
-
-        if(pathList?.Count > 0) {
-            functionFullPathBuilder.Append(String.Join("/", pathList))
-            .Append("/");
-        }
-        functionFullPathBuilder.Append($"{classRef?.Id}");
-        if(classRef.TypeParameters?.Parameters.Values.Length > 0) {
+        var functionFullPathBuilder = new StringBuilder()
+            .Append(isContainedInStruct ? " valuetype " : " class ")
+            .Append($"{String.Join("/", path)}");
+        if (classRef.TypeParameters?.Parameters.Values.Length > 0)
+        {
             functionFullPathBuilder.Append("<")
                 .Append(String.Join(", ", classRef.TypeParameters.Parameters.Values.Select(p => $"!{p}")))
                 .Append(">");
         }
-
         var functionFullPath = functionFullPathBuilder.ToString();
+        Console.WriteLine(functionFullPath);
+
         StringBuilder builder = new();
         Dictionary<string, string> jumptable = new();
         int argumentsCount = metadata.IsStatic 
