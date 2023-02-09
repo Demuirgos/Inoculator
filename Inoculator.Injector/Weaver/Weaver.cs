@@ -79,7 +79,7 @@ public class Weaver {
 
             if(!metadata.Code.IsConstructor && Searcher.IsMarked(metadata.Code, targetAttributes, out string[] marks)) {
                 if(metadata.MethodBehaviour is MethodData.MethodType.Sync) {
-                    var result = Wrapper.ReplaceNameWith(metadata, marks);
+                    var result = Wrapper.ReplaceNameWith(metadata, marks, parent, path);
                     if(result is Success<(ClassDecl.Class, MethodDecl.Method[]), Exception> success) {
                         return success.Value;
                     } else if(result is Error<(ClassDecl.Class, MethodDecl.Method[]), Exception> failure) {

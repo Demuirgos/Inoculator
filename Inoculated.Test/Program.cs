@@ -4,18 +4,19 @@ namespace Program {
     class Program : Printable<Program> {
         public string Name {get; set;} = "Program";
         async static Task Main(string[] args) {
-            _ = (new Program()).SumIntervalIsEven(7, 23);
+            _ = Utils.SumIntervalIsEven(7, 23);
         }
         
+        static class Utils {
 
-        [InvokeReflectiveAttribute]
-        public bool SumIntervalIsEven(int start, int end) {
-            int result = 0;
-            for (int j = start; j < end; j++) {
-                result += j;
+            [Date, LogEntrency]
+            public static bool SumIntervalIsEven(int start, int end) {
+                int result = 0;
+                for (int j = start; j < end; j++) {
+                    result += j;
+                }
+                return result % 2 == 0;
             }
-            Console.WriteLine(Name);
-            return result % 2 == 0;
         }
     }
 }
