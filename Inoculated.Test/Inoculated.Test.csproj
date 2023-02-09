@@ -7,9 +7,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-      <ProjectReference Include="..\Inoculator.Interceptors\Inoculator.Interceptors.csproj"/>
+      <ProjectReference Include="..\Inoculator.Injector\Inoculator.Injector.csproj" />
+      <ProjectReference Include="..\Inoculator.Interceptors\Inoculator.Interceptors.csproj" />
   </ItemGroup>
-  
+
   <Target Name="InjectionStep" BeforeTargets="AfterBuild">
     <Exec WorkingDirectory="$(MSbuildProjectDirectory)\$(BaseOutputPath)$(Configuration)\$(TargetFramework)" Command="Inoculator.Injector.exe $(AssemblyName).dll" />
   </Target>

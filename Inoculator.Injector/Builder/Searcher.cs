@@ -67,7 +67,7 @@ public static class Searcher {
                     .OfType<ClassDecl.Class>()
                     .Where(type => {
                         var inheritedType = new String(type.Header.Extends?.Type.ToString().Where(c => !Char.IsWhiteSpace(c)).ToArray());
-                        return inheritedType == "[Inoculator.Injector]Inoculator.Attributes.InterceptorAttribute";
+                        return inheritedType == "[Inoculator.Interceptors]Inoculator.Attributes.InterceptorAttribute";
                     });
                 return toplevel.Select(x => x.Header.Id.ToString().Trim());
             }

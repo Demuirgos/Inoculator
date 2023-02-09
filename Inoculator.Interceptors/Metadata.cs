@@ -1,8 +1,7 @@
-using System.Extensions;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Inoculator.Core;
 
 namespace Inoculator.Builder;
 public class ExceptionData : Printable<ExceptionData> {
@@ -51,10 +50,7 @@ public class TypeData : Printable<TypeData> {
 
     public TypeData(TypeDecl.Type source) => Code = source;
 
-    public TypeData(string sourceCode) => Code = Reader.Parse<TypeDecl.Type>(sourceCode) switch {
-        Success<TypeDecl.Type, Exception> success => success.Value,
-        Error<TypeDecl.Type, Exception> failure => throw failure.Message,
-    };
+    public TypeData(string sourceCode) => Code = Dove.Core.Parser.Parse<TypeDecl.Type>(sourceCode);
 
     public TypeData(ParameterDecl.Parameter param) {
         Code = param switch {
@@ -185,14 +181,22 @@ public class MethodData : Printable<MethodData> {
 
     public Object EmbededResource { get; set; }
     public MethodData(MethodDecl.Method source) => Code = source;
-    public MethodData(string sourceCode) => Code = Reader.Parse<MethodDecl.Method>(sourceCode) switch {
-        Success<MethodDecl.Method, Exception> success => success.Value,
-        Error<MethodDecl.Method, Exception> failure => throw failure.Message,
-    };
+    public MethodData(string sourceCode) => Code = Dove.Core.Parser.Parse<MethodDecl.Method>(sourceCode);
     public ClassDecl.Prefix ClassReference {get; set;}
     public string MethodName => Code.Header.Name.ToString();
     public String Name(bool isFull) => $"{Code.Header.Name}{(isFull ? $"<Code.Header.TypeParameters.ToString().Trim()>" : string.Empty)}";
     public string MangledName(bool isFull) => $"'<>__{Name(false)}__Inoculated'{(isFull ? $"<Code.Header.TypeParameters.ToString().Trim()>" : string.Empty)}";
+    
+
+    public string TypeSignature => $"({string.Join(", ", Signature.Input.Select(item => item.Name.ToString().Replace(" ", String.Empty)))}) -> {Signature.Output.Code}";
+    public string[] TypeParameters => Code.Header?.TypeParameters?
+        .Parameters.Values
+        .Select(x => x.Id.ToString())
+        .ToArray() ?? new string[0];
+    public Object?[] Parameters { get; set; }
+    public ExceptionData ExceptionRef => Exception is null ? null : new ExceptionData(Exception);
+    public Object? ReturnValue { get; set; }
+
     [JsonIgnore]
     public (TypeData[] Input, TypeData Output)  Signature 
         => (Code.Header.Parameters.Parameters.Values.Length > 0 
@@ -214,18 +218,27 @@ public class MethodData : Printable<MethodData> {
     public CallType MethodCall => Code.Header.Convention is null || Code.Header.MethodAttributes.Attributes.Values.Any(a => a is AttributeDecl.MethodSimpleAttribute { Name: "static" }) ? CallType.Static : CallType.Instance;
     [JsonIgnore]
     public bool IsStatic => MethodCall is CallType.Static;
-    public string TypeSignature => $"({string.Join(", ", Signature.Input.Select(item => item.Name.ToString().Replace(" ", String.Empty)))}) -> {Signature.Output.Code}";
-    public string[] TypeParameters => Code.Header?.TypeParameters?
-        .Parameters.Values
-        .Select(x => x.Id.ToString())
-        .ToArray() ?? new string[0];
-    public Object?[] Parameters { get; set; }
-    public ExceptionData ExceptionRef => Exception is null ? null : new ExceptionData(Exception);
     [JsonIgnore]
     public Exception Exception { get; set; }
-    public Object? ReturnValue { get; set; }
     [JsonIgnore]
     public MethodDecl.Method Code { get; set; }
+    [JsonIgnore]
+    public MethodInfo ReflectionInfo {
+        get {
+            switch(MethodBehaviour) {
+                case MethodType.Sync:
+                    var assemblyName = Assembly.GetCallingAssembly().GetName().Name;
+                    Console.WriteLine(assemblyName);
+                    Console.WriteLine(ClassReference.Id);
+                    var type = Type.GetType($"{assemblyName}.{ClassReference.Id}");
+                    var methodinfo = type.GetMethod(MangledName(true), IsStatic ? BindingFlags.Static: BindingFlags.Instance);  
+                    Console.WriteLine(methodinfo is null ? "null" : methodinfo.Name);
+                    return methodinfo;
+                default:
+                    throw new Exception("Invalid method call type");
+            }
+        }
+    }
     [JsonIgnore]
     public ClassDecl.Class Generated { get; set; }
     public string MkMethodReference(bool isInoculated, string? path = null) {

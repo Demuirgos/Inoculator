@@ -27,30 +27,41 @@ public static class HandlerTools {
             : $@"{GetNextLabel(ref labelIdx)}: ldarg.0
                  {GetNextLabel(ref labelIdx)}: ldfld class {interceptorClass} {classContainer}::{GenerateInterceptorName(interceptorClass)}
                  {GetNextLabel(ref labelIdx)}: ldarg.0
-                 {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Injector]Inoculator.Builder.MethodData {classContainer}::'<inoculated>__Metadata'";
+                 {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {classContainer}::'<inoculated>__Metadata'";
         
-        string callCode = $"{GetNextLabel(ref labelIdx)}: callvirt instance void class {interceptorClass}::{methodName}(class [Inoculator.Injector]Inoculator.Builder.MethodData)";
+        string callCode = $"{GetNextLabel(ref labelIdx)}: callvirt instance void class {interceptorClass}::{methodName}(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)";
         return $"{piping}\n{callCode}";
     }
 
-    public static string LoadArguments(ParameterDecl.Parameter.Collection parameter, ref int labelIdx, int startingIdx, bool includeLabels = true) {
+    public static string LoadArguments(ParameterDecl.Parameter.Collection parameter, ref int labelIdx, bool isStatic, bool includeLabels = true) {
         StringBuilder builder = new StringBuilder();
+        if(!isStatic) {
+            builder.AppendLine(LoadThisArgument(ref labelIdx, includeLabels));
+        }
+
         foreach(ParameterDecl.DefaultParameter param in parameter.Parameters.Values.OfType<ParameterDecl.DefaultParameter>()){
-            builder.AppendLine(LoadArgument(param, ref labelIdx, startingIdx++, includeLabels));
+            builder.AppendLine(LoadArgument(param, ref labelIdx, includeLabels));
         }
         return builder.ToString();
     }
 
-    public static string ExtractArguments(ParameterDecl.Parameter.Collection parameter, ref int labelIdx, int startingIdx, bool includeLabels = true) {
+    public static string ExtractArguments(MethodData methodAst, ref int labelIdx, bool isStatic, bool includeLabels = true) {
         StringBuilder builder = new StringBuilder();
-        foreach(ParameterDecl.DefaultParameter param in parameter.Parameters.Values.OfType<ParameterDecl.DefaultParameter>()){
+        int startingIdx = isStatic ? 0 : 1;
+
+        if(!isStatic) {
+            builder.AppendLine(ExtractThisArgument(methodAst.ClassReference, ref labelIdx, includeLabels));
+        }
+        foreach(ParameterDecl.DefaultParameter param in methodAst.Code.Header.Parameters.Parameters.Values.OfType<ParameterDecl.DefaultParameter>()){
             builder.AppendLine(ExtractArgument(param, ref labelIdx, startingIdx++, includeLabels));
         }
         return builder.ToString();
     }
 
-    public static string UpdateRefArguments(ParameterDecl.Parameter.Collection parameter, ref int labelIdx, int startingIdx) {
+    public static string UpdateRefArguments(ParameterDecl.Parameter.Collection parameter, bool isStatic, ref int labelIdx) {
         StringBuilder builder = new StringBuilder();
+        int startingIdx = isStatic ? 0 : 1;
+
         builder.AppendLine($"");
         foreach(ParameterDecl.DefaultParameter param in parameter.Parameters.Values.OfType<ParameterDecl.DefaultParameter>()){
             builder.AppendLine(UpdateRefArgument(param, ref labelIdx, startingIdx++));
@@ -58,6 +69,27 @@ public static class HandlerTools {
         return builder.ToString();
     }
 
+    public static string ExtractThisArgument(ClassDecl.Prefix ClassHeader, ref int labelIdx, bool includeLabels = true) {
+        StringBuilder builder = new StringBuilder();
+        var IsValueType = ClassHeader.Implements is not null && ClassHeader.Implements.Types.ToString(string.Empty).Contains("System.ValueType");
+        builder.Append($$$"""
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} dup
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldc.i4.s 0
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldarg.0
+        """);
+        if(IsValueType) {
+            builder.Append($$$"""
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldobj {ClassHeader.Name}
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} box {ClassHeader.Name}
+        """);
+        }   
+        builder.Append($$$"""
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} stelem.ref
+        """);
+
+        return builder.ToString();
+
+    }
     public static string ExtractArgument(ParameterDecl.Parameter parameter, ref int labelIdx, int paramIdx = 0, bool includeLabels = true) {
         StringBuilder builder = new StringBuilder();
         if(parameter is not ParameterDecl.DefaultParameter param) {
@@ -68,7 +100,7 @@ public static class HandlerTools {
         var ilcode = typeData.IsVoid ? string.Empty  : $$$"""
             {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} dup
             {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldc.i4.s {{{paramIdx}}}
-            {{{LoadArgument(param, ref labelIdx, paramIdx, includeLabels)}}}
+            {{{LoadArgument(param, ref labelIdx, includeLabels)}}}
             {{{(!typeData.IsByRef ? string.Empty
                     : $"{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)} {GetCILIndirectLoadOpcode(typeData).load}" 
             )}}}
@@ -96,9 +128,9 @@ public static class HandlerTools {
 
         var ilcode = typeData.IsVoid ? string.Empty  : $$$"""
             {{{GetNextLabel(ref labelIdx)}}}: ldloc.s metadata
-            {{{GetNextLabel(ref labelIdx)}}}: callvirt instance object[] [Inoculator.Injector]Inoculator.Builder.MethodData::get_Parameters()
+            {{{GetNextLabel(ref labelIdx)}}}: callvirt instance object[] [Inoculator.Interceptors]Inoculator.Builder.MethodData::get_Parameters()
             {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.s {{{paramIdx}}}
-            {{{LoadArgument(param, ref labelIdx, paramIdx)}}}
+            {{{LoadArgument(param, ref labelIdx)}}}
             {{{(!typeData.IsByRef ? string.Empty
                     : $"{GetNextLabel(ref labelIdx)}: {GetCILIndirectLoadOpcode(typeData).load}" 
             )}}}
@@ -114,8 +146,13 @@ public static class HandlerTools {
 
     public static bool HasField(ClassDecl.Class classRef, string fieldName) => classRef.Members.Members.Values.Any(x => x is ClassDecl.FieldDefinition field && field.Value.Id.ToString() == fieldName);
 
-
-    public static string LoadArgument(ParameterDecl.Parameter parameter, ref int labelIdx, int paramIdx = 0, bool includeLabels = true) {
+    public static string LoadThisArgument(ref int labelIdx, bool includeLabels = true) {
+        StringBuilder builder = new StringBuilder();
+        var ilcode = $"{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)} ldarg.0";
+        builder.Append(ilcode);
+        return builder.ToString();
+    }
+    public static string LoadArgument(ParameterDecl.Parameter parameter, ref int labelIdx, bool includeLabels = true) {
         StringBuilder builder = new StringBuilder();
         if(parameter is not ParameterDecl.DefaultParameter param) {
             throw new Exception("Unknown parameter type");

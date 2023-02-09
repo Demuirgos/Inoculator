@@ -3,6 +3,21 @@ using Inoculator.Builder;
 using System.Diagnostics;
 using System.Reflection;
 
+
+public class DateAttribute : InterceptorAttribute
+{
+    private Stopwatch watch = new();
+    public override void OnEntry(MethodData method)
+    {
+        Console.WriteLine($"started : {DateTime.UtcNow}");
+    }
+
+    public override void OnExit(MethodData method)
+    {
+        Console.WriteLine($"ended : {DateTime.UtcNow}");
+    }
+}
+
 public class CallCountAttribute : InterceptorAttribute
 {
     public static Dictionary<string, int> CallCounter = new Dictionary<string, int>();
@@ -27,5 +42,15 @@ public class UpdateStaticClassAttribute<T> : InterceptorAttribute
     public override void OnEntry(MethodData method)
     {
         targetField.SetValue(null, 23);
+    }
+}
+
+
+public class InvokeReflectiveAttribute : InterceptorAttribute
+{
+    public override void OnEntry(MethodData method)
+    {
+        var methodInfo = method.ReflectionInfo;
+        Console.WriteLine("ReflectionInfo: {methodInfo?.Name}");
     }
 }

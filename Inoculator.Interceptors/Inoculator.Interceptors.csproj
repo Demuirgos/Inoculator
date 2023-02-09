@@ -5,7 +5,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
   <ItemGroup>
-      <ProjectReference Include="..\Inoculator.Main\Inoculator.Injector.csproj"/>
+    <PackageReference Include="Dove.Parser" Version="0.1.4.9" />
   </ItemGroup>
+
 </Project>

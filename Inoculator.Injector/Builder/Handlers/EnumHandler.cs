@@ -44,6 +44,9 @@ public static class EnumRewriter {
                 .Append(">");
         }
         var stateMachineFullName = stateMachineFullNameBuilder.ToString();
+        int argumentsCount = metadata.IsStatic 
+            ? metadata.Code.Header.Parameters.Parameters.Values.Length 
+            : metadata.Code.Header.Parameters.Parameters.Values.Length + 1;
 
         metadata.Code = metadata.Code with
         {
@@ -67,15 +70,15 @@ public static class EnumRewriter {
                                             var injectionCode = $$$"""
                                         {{{GetNextLabel(ref labelIdx)}}}: dup
                                         {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{new string(metadata.Code.ToString().ToCharArray().Select(c => c != '\n' ? c : ' ').ToArray())}}}"
-                                        {{{GetNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Injector]Inoculator.Builder.MethodData::.ctor(string)
+                                        {{{GetNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::.ctor(string)
 
                                         {{{GetNextLabel(ref labelIdx)}}}: dup
-                                        {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.s {{{metadata.Code.Header.Parameters.Parameters.Values.Length}}}
+                                        {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.s {{{argumentsCount}}}
                                         {{{GetNextLabel(ref labelIdx)}}}: newarr [System.Runtime]System.Object
-                                        {{{ExtractArguments(metadata.Code.Header.Parameters, ref labelIdx, 0)}}}
+                                        {{{ExtractArguments(metadata, ref labelIdx, metadata.IsStatic)}}}
 
-                                        {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.MethodData::set_Parameters(object[])
-                                        {{{GetNextLabel(ref labelIdx)}}}: stfld class [Inoculator.Injector]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                                        {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_Parameters(object[])
+                                        {{{GetNextLabel(ref labelIdx)}}}: stfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
                                         {{{attributeNames.Select(
                                                     (attrClassName, i) => $"""
                                         {GetNextLabel(ref labelIdx)}: dup
@@ -117,7 +120,7 @@ public static class EnumRewriter {
                                 }).Union(
                                 attributeNames
                                     .Select((attr, i) => $".field public class {attr} {GenerateInterceptorName(attr)}")
-                                    .Append($".field public class [Inoculator.Injector]Inoculator.Builder.MethodData '<inoculated>__Metadata'")
+                                    .Append($".field public class [Inoculator.Interceptors]Inoculator.Builder.MethodData '<inoculated>__Metadata'")
                                     .Select(Parse<ClassDecl.Member>)
                                 ).ToArray()
                         )
@@ -181,8 +184,8 @@ public static class EnumRewriter {
                     {GetNextLabel(ref labelIdx)}: ldarg.0
                     {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName)}
                     {GetNextLabel(ref labelIdx)}: ldarg.0
-                    {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Injector]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
-                    {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName}::OnEntry(class [Inoculator.Injector]Inoculator.Builder.MethodData)"
+                    {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
+                    {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName}::OnEntry(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"
                 ).Aggregate((a, b) => $"{a}\n{b}")}}}
 
                 {{{GetNextLabel(ref labelIdx, jumptable, "JUMPDEST1")}}}: nop
@@ -192,37 +195,37 @@ public static class EnumRewriter {
                         {{{GetNextLabel(ref labelIdx)}}}: call instance bool {{{stateMachineFullName}}}::MoveNext__inoculated()
                         {{{GetNextLabel(ref labelIdx)}}}: stloc.0
                         {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
-                        {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Injector]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                        {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
                         {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
                         {{{GetNextLabel(ref labelIdx)}}}: ldfld {{{(returnType.IsGeneric ? $"!{returnType.PureName}" : returnType.Name)}}} {{{stateMachineFullName}}}::'<>2__current'
                         {{{(
                             returnType.IsReferenceType ? String.Empty
                             : $@"{GetNextLabel(ref labelIdx)}: box {(returnType.IsGeneric ? $"!{returnType.PureName}" : returnType.Name)}"
                         )}}}
-                        {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.MethodData::set_ReturnValue(object)
+                        {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_ReturnValue(object)
                         {{{attributeNames.Select(
                             (attrClassName, i) => $@"
                             {GetNextLabel(ref labelIdx)}: ldarg.0
                             {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName)}
                             {GetNextLabel(ref labelIdx)}: ldarg.0
-                            {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Injector]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
-                            {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName}::OnSuccess(class [Inoculator.Injector]Inoculator.Builder.MethodData)"
+                            {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
+                            {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName}::OnSuccess(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"
                         ).Aggregate((a, b) => $"{a}\n{b}")}}}
                         {{{GetNextLabel(ref labelIdx)}}}: leave.s ***END***
                     } catch [System.Runtime]System.Exception
                     {
                         {{{GetNextLabel(ref labelIdx)}}}: stloc.s e
                         {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
-                        {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Injector]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                        {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
                         {{{GetNextLabel(ref labelIdx)}}}: ldloc.s e
-                        {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Injector]Inoculator.Builder.MethodData::set_Exception(class [System.Runtime]System.Exception)
+                        {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_Exception(class [System.Runtime]System.Exception)
                         {{{attributeNames.Select(
                                 (attrClassName, i) => $@"
                                 {GetNextLabel(ref labelIdx)}: ldarg.0
                                 {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName)}
                                 {GetNextLabel(ref labelIdx)}: ldarg.0
-                                {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Injector]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
-                                {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName}::OnException(class [Inoculator.Injector]Inoculator.Builder.MethodData)"
+                                {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
+                                {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName}::OnException(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"
                             ).Aggregate((a, b) => $"{a}\n{b}")}}}
                         {{{GetNextLabel(ref labelIdx)}}}: ldloc.s e
                         {{{GetNextLabel(ref labelIdx)}}}: throw
@@ -239,8 +242,8 @@ public static class EnumRewriter {
                         {GetNextLabel(ref labelIdx)}: ldarg.0
                         {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName)}
                         {GetNextLabel(ref labelIdx)}: ldarg.0
-                        {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Injector]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
-                        {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName}::OnExit(class [Inoculator.Injector]Inoculator.Builder.MethodData)"
+                        {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
+                        {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName}::OnExit(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"
                     ).Aggregate((a, b) => $"{a}\n{b}")}}}
                     {{{GetNextLabel(ref labelIdx, jumptable, "JUMPDEST2")}}}: endfinally
                 }
