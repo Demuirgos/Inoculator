@@ -81,9 +81,11 @@ public static class SyncRewriter {
                 {GetNextLabel(ref labelIdx)}: stloc.s {i}"
             ).Aggregate((a, b) => $"{a}\n{b}")}}}
         {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{new string(metadata.Code.ToString().ToCharArray().Select(c => c != '\n' ? c : ' ').ToArray())}}}"
-        {{{GetNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::.ctor(string)
+        {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{new string(metadata.ClassReference.ToString().ToCharArray().Select(c => c != '\n' ? c : ' ').ToArray())}}}"
+        {{{GetNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::.ctor(string, string)
         {{{GetNextLabel(ref labelIdx)}}}: stloc.s metadata
 
+        
         {{{GetNextLabel(ref labelIdx)}}}: ldloc.s metadata
         {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.{{{argumentsCount}}}
         {{{GetNextLabel(ref labelIdx)}}}: newarr [System.Runtime]System.Object

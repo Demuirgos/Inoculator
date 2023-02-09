@@ -51,6 +51,9 @@ public class InvokeReflectiveAttribute : InterceptorAttribute
     public override void OnEntry(MethodData method)
     {
         var methodInfo = method.ReflectionInfo;
-        Console.WriteLine("ReflectionInfo: {methodInfo?.Name}");
+        var parameters = methodInfo.GetParameters();
+        var args = method.IsStatic ? method.Parameters : method.Parameters.Skip(1).ToArray();
+        var result = methodInfo.Invoke(!method.IsStatic ? method.Parameters[0] : null , args);
+        Console.WriteLine($"Result: {result}");
     }
 }

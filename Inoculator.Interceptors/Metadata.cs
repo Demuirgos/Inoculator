@@ -181,7 +181,12 @@ public class MethodData : Printable<MethodData> {
 
     public Object EmbededResource { get; set; }
     public MethodData(MethodDecl.Method source) => Code = source;
-    public MethodData(string sourceCode) => Code = Dove.Core.Parser.Parse<MethodDecl.Method>(sourceCode);
+
+    public MethodData(string sourceCode, string classRefHeader) {
+        ClassReference = Dove.Core.Parser.Parse<ClassDecl.Prefix>(classRefHeader);    
+        Code = Dove.Core.Parser.Parse<MethodDecl.Method>(sourceCode);
+    }
+
     public ClassDecl.Prefix ClassReference {get; set;}
     public string MethodName => Code.Header.Name.ToString();
     public String Name(bool isFull) => $"{Code.Header.Name}{(isFull ? $"<Code.Header.TypeParameters.ToString().Trim()>" : string.Empty)}";
@@ -227,12 +232,13 @@ public class MethodData : Printable<MethodData> {
         get {
             switch(MethodBehaviour) {
                 case MethodType.Sync:
-                    var assemblyName = Assembly.GetCallingAssembly().GetName().Name;
-                    Console.WriteLine(assemblyName);
-                    Console.WriteLine(ClassReference.Id);
-                    var type = Type.GetType($"{assemblyName}.{ClassReference.Id}");
-                    var methodinfo = type.GetMethod(MangledName(true), IsStatic ? BindingFlags.Static: BindingFlags.Instance);  
-                    Console.WriteLine(methodinfo is null ? "null" : methodinfo.Name);
+                    var assembly = Assembly.GetCallingAssembly();
+                    var type = assembly.GetType($"{ClassReference.Id}");
+                    var functionName = $"{MangledName(false).ToString()[1..^1]}";
+                    if(TypeParameters.Length > 0)
+                        functionName += $"`{TypeParameters.Length}";
+                        
+                    var methodinfo = type.GetMethod(functionName);  
                     return methodinfo;
                 default:
                     throw new Exception("Invalid method call type");

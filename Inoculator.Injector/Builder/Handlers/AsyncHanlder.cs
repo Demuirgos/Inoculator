@@ -32,7 +32,7 @@ public static class AsyncRewriter {
         int argumentsCount = metadata.IsStatic 
             ? metadata.Code.Header.Parameters.Parameters.Values.Length 
             : metadata.Code.Header.Parameters.Parameters.Values.Length + 1;
-            
+
         var stateMachineFullNameBuilder = new StringBuilder()
             .Append(isReleaseMode ? " valuetype " : " class ")
             .Append($"{String.Join("/", path)}")
@@ -66,7 +66,9 @@ public static class AsyncRewriter {
         string injectionCode = $$$"""
             {{{loadLocalStateMachine}}}
             ldstr "{{{new string(metadata.Code.ToString().ToCharArray().Select(c => c != '\n' ? c : ' ').ToArray())}}}"
-            newobj instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::.ctor(string)
+            {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{new string(metadata.ClassReference.ToString().ToCharArray().Select(c => c != '\n' ? c : ' ').ToArray())}}}"
+            {{{GetNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::.ctor(string, string)
+
 
             dup
             ldc.i4.s {{{argumentsCount}}}
