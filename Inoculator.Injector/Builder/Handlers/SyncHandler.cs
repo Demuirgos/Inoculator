@@ -79,16 +79,17 @@ public static class SyncRewriter {
             ).Aggregate((a, b) => $"{a}\n{b}")}}}
         {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{new string(metadata.Code.ToString().ToCharArray().Select(c => c != '\n' ? c : ' ').ToArray())}}}"
         {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{new string(metadata.ClassReference.ToString().ToCharArray().Select(c => c != '\n' ? c : ' ').ToArray())}}}"
-        {{{GetNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::.ctor(string, string)
+        {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{functionFullPath}}}"
+        {{{GetNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::.ctor(string, string,string)
         {{{GetNextLabel(ref labelIdx)}}}: stloc.s metadata
 
         
         {{{GetNextLabel(ref labelIdx)}}}: ldloc.s metadata
         {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.{{{argumentsCount}}}
-        {{{GetNextLabel(ref labelIdx)}}}: newarr [System.Runtime]System.Object
+        {{{GetNextLabel(ref labelIdx)}}}: newarr [Inoculator.Interceptors]Inoculator.Builder.ParameterData
         
         {{{ExtractArguments(metadata, ref labelIdx, metadata.IsStatic)}}}
-        {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_Parameters(object[])
+        {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_Parameters(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData[])
 
         {{{CallMethodOnInterceptors(metadata.ClassReference.Id.ToString(), AttributeClass, "OnEntry", true, ref labelIdx)}}}
         .try
@@ -103,15 +104,7 @@ public static class SyncRewriter {
                         : $@"{GetNextLabel(ref labelIdx)}: stloc.s result"
                 )}}}
                 {{{GetNextLabel(ref labelIdx)}}}: ldloc.s metadata
-                {{{(
-                    metadata.Signature.Output.IsVoid
-                        ? $@"{GetNextLabel(ref labelIdx)}: ldnull"
-                        : $@"{GetNextLabel(ref labelIdx)}: ldloc.s result
-                            {(  metadata.Signature.Output.IsReferenceType ? String.Empty
-                                : $@"{GetNextLabel(ref labelIdx)}: box {metadata.Signature.Output.ToProperName}"
-                            )}"
-                )}}}
-                {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_ReturnValue(object)
+                {{{ExtractReturnValue(metadata.Signature.Output, ref labelIdx)}}}
                 {{{UpdateRefArguments(metadata.Code.Header.Parameters, metadata.IsStatic, ref labelIdx)}}}
                 {{{CallMethodOnInterceptors(metadata.ClassReference.Id.ToString(), AttributeClass, "OnSuccess", true, ref labelIdx)}}}
                 {{{(
@@ -152,7 +145,6 @@ public static class SyncRewriter {
             builder.Replace($"***{label}***", idx.ToString());
         }
         var result = builder.ToString();
-        File.WriteAllText(".\\SyncTests.Il", result);
         return Reader.Parse<MethodDecl.Method>(result);
     }
 }

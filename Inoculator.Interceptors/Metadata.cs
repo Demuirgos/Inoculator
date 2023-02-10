@@ -70,16 +70,25 @@ public class TypeData : Printable<TypeData> {
         return fullName.Trim();
     }
     public String Name => FilteredName(false, false);
+    
+    [JsonIgnore]
     public String PureName => FilteredName(true, true);
+    [JsonIgnore]
     public TypeBehaviour Behaviour => IsValueType ? TypeBehaviour.ValueType : TypeBehaviour.ReferenceType;
     public bool IsReferenceType => Behaviour is TypeBehaviour.ReferenceType;
+    [JsonIgnore]
     public TypeNature Nature => Code.Components.Types.Values.Any(comp => comp is TypeDecl.ReferenceSuffix) ? TypeNature.Pointer : TypeNature.Value;
     public bool IsByRef => Nature is TypeNature.Pointer;
+    [JsonIgnore]
     public TypeDegree GenericOrder => Code.Components.Types.Values.Any(comp => comp is TypeDecl.GenericTypeParameter) ? TypeDegree.One : TypeDegree.Zero;
     public bool IsGeneric => GenericOrder is TypeDegree.One;
+    [JsonIgnore]
     public string ToProperName => ToProperNamedType(PureName);
+    [JsonIgnore]
     public TypeValue ValueKind => Name == "void" ? TypeValue.Void : TypeValue.Typed;
+    [JsonIgnore]
     public bool IsVoid => ValueKind is TypeValue.Void;
+    [JsonIgnore]
     private bool IsValueType {
         get {
             String[] _primitives = new String[] { "bool", "char", "float32", "float64", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "native" };
@@ -170,6 +179,19 @@ public class TypeData : Printable<TypeData> {
         return ret;
     }
 }
+
+public class ParameterData : Printable<ParameterData> {
+    public ParameterData(string typesrc, Object Value, string name = null) {
+        Name = name is null ? String.Empty : name;
+        Type = new TypeData(typesrc);
+        this.Value = Value;
+    }
+
+    public String Name {get; init; }
+    public TypeData Type { get; init; }
+    public Object Value { get; set; }
+}
+
 public class MethodData : Printable<MethodData> {
     public enum MethodType {
         Async, Sync, Iter
@@ -182,12 +204,14 @@ public class MethodData : Printable<MethodData> {
     public Object EmbededResource { get; set; }
     public MethodData(MethodDecl.Method source) => Code = source;
 
-    public MethodData(string sourceCode, string classRefHeader) {
+    public MethodData(string sourceCode, string classRefHeader, string path) {
         ClassReference = Dove.Core.Parser.Parse<ClassDecl.Prefix>(classRefHeader);    
         Code = Dove.Core.Parser.Parse<MethodDecl.Method>(sourceCode);
+        ReferencePath = path;
     }
 
-    public ClassDecl.Prefix ClassReference {get; set;}
+    
+    public string ReferencePath {get; init;}
     public string MethodName => Code.Header.Name.ToString();
     public String Name(bool isFull) => $"{Code.Header.Name}{(isFull ? $"<Code.Header.TypeParameters.ToString().Trim()>" : string.Empty)}";
     public string MangledName(bool isFull) => $"'<>__{Name(false)}__Inoculated'{(isFull ? $"<Code.Header.TypeParameters.ToString().Trim()>" : string.Empty)}";
@@ -198,10 +222,13 @@ public class MethodData : Printable<MethodData> {
         .Parameters.Values
         .Select(x => x.Id.ToString())
         .ToArray() ?? new string[0];
-    public Object?[] Parameters { get; set; }
-    public ExceptionData ExceptionRef => Exception is null ? null : new ExceptionData(Exception);
-    public Object? ReturnValue { get; set; }
 
+    public ParameterData?[] Parameters { get; set; }
+    public ExceptionData ExceptionRef => Exception is null ? null : new ExceptionData(Exception);
+    public ParameterData? ReturnValue { get; set; }
+
+    [JsonIgnore]
+    public ClassDecl.Prefix ClassReference {get; init;}
     [JsonIgnore]
     public (TypeData[] Input, TypeData Output)  Signature 
         => (Code.Header.Parameters.Parameters.Values.Length > 0 
@@ -233,7 +260,7 @@ public class MethodData : Printable<MethodData> {
             switch(MethodBehaviour) {
                 case MethodType.Sync:
                     var assembly = Assembly.GetCallingAssembly();
-                    var type = assembly.GetType($"{ClassReference.Id}");
+                    var type = assembly.GetType(ReferencePath);
                     var functionName = $"{MangledName(false).ToString()[1..^1]}";
                     if(TypeParameters.Length > 0)
                         functionName += $"`{TypeParameters.Length}";
@@ -247,6 +274,7 @@ public class MethodData : Printable<MethodData> {
     }
     [JsonIgnore]
     public ClassDecl.Class Generated { get; set; }
+    
     public string MkMethodReference(bool isInoculated, string? path = null) {
         var builder = new StringBuilder();
         if(MethodCall is MethodData.CallType.Instance)

@@ -58,9 +58,16 @@ public static class EnumRewriter {
                                 {
                                     if (item is MethodDecl.LabelItem label)
                                     {
-                                        return new[] { label with {
-                                        Value = new CodeLabel(new SimpleName(GetNextLabel(ref labelIdx)))
-                                    }
+                                        return new[] { 
+                                            label with {
+                                                Value = new CodeLabel(new SimpleName(GetNextLabel(ref labelIdx)))
+                                            }
+                                        };
+                                    } else if(item is MethodDecl.MaxStackItem stack) {
+                                        return new[] {
+                                            stack with {
+                                                Value = new INT(16, 32, false)
+                                            }
                                         };
                                     }
                                     else if (item is MethodDecl.InstructionItem instruction)
@@ -69,16 +76,17 @@ public static class EnumRewriter {
                                         {
                                             var injectionCode = $$$"""
                                         {{{GetNextLabel(ref labelIdx)}}}: dup
-                                        {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{new string(metadata.Code.ToString().ToCharArray().Select(c => c != '\n' ? c : ' ').ToArray())}}}"
-                                        {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{new string(metadata.ClassReference.ToString().ToCharArray().Select(c => c != '\n' ? c : ' ').ToArray())}}}"
-                                        {{{GetNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::.ctor(string, string)
+                                        {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{metadata.Code.ToString().Replace("\n", " ")}}}"
+                                        {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{metadata.ClassReference.ToString().Replace("\n", " ")}}}"
+                                        {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{stateMachineFullName}}}"
+                                        {{{GetNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::.ctor(string, string, string)
 
                                         {{{GetNextLabel(ref labelIdx)}}}: dup
                                         {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.s {{{argumentsCount}}}
-                                        {{{GetNextLabel(ref labelIdx)}}}: newarr [System.Runtime]System.Object
+                                        {{{GetNextLabel(ref labelIdx)}}}: newarr [Inoculator.Interceptors]Inoculator.Builder.ParameterData
                                         {{{ExtractArguments(metadata, ref labelIdx, metadata.IsStatic)}}}
 
-                                        {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_Parameters(object[])
+                                        {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_Parameters(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData[])
                                         {{{GetNextLabel(ref labelIdx)}}}: stfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
                                         {{{attributeNames.Select(
                                                     (attrClassName, i) => $"""
@@ -197,13 +205,18 @@ public static class EnumRewriter {
                         {{{GetNextLabel(ref labelIdx)}}}: stloc.0
                         {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
                         {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                        
+                        {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{returnType.Name}}}"
                         {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
                         {{{GetNextLabel(ref labelIdx)}}}: ldfld {{{(returnType.IsGeneric ? $"!{returnType.PureName}" : returnType.Name)}}} {{{stateMachineFullName}}}::'<>2__current'
                         {{{(
                             returnType.IsReferenceType ? String.Empty
                             : $@"{GetNextLabel(ref labelIdx)}: box {(returnType.IsGeneric ? $"!{returnType.PureName}" : returnType.Name)}"
                         )}}}
-                        {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_ReturnValue(object)
+                        {{{GetNextLabel(ref labelIdx)}}}: ldnull
+                        {{{GetNextLabel(ref labelIdx)}}}: newobj instance void class [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(string,object,string)
+                        {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_ReturnValue(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData)
+
                         {{{attributeNames.Select(
                             (attrClassName, i) => $@"
                             {GetNextLabel(ref labelIdx)}: ldarg.0
@@ -258,7 +271,11 @@ public static class EnumRewriter {
             {
                 builder.Replace($"***{label}***", idx.ToString());
             }
-            var newFunction = new ClassDecl.MethodDefinition(Parse<MethodDecl.Method>(builder.ToString()));
+            if(!Dove.Core.Parser.TryParse(builder.ToString(), out MethodDecl.Method newMethod, out string error)) {
+                Console.WriteLine(error);
+                File.WriteAllText("error.txt", builder.ToString());
+            }
+            var newFunction = new ClassDecl.MethodDefinition(newMethod);
             
             var oldFunction = methodDef with {
                 Value = methodDef.Value with {

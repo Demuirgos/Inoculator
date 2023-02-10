@@ -53,7 +53,7 @@ public static class AsyncRewriter {
 
         bool isWithinAStruct = metadata.ClassReference.Extends.Type.ToString() == "[System.Runtime] System.ValueType";
         
-        string stackClause = ".maxstack 8";
+        string stackClause = ".maxstack 16";
         var LocalsClause = metadata.Code.Body.Items.Values.OfType<MethodDecl.LocalsItem>().FirstOrDefault();
 
         var oldInstructions = metadata.Code.Body.Items.Values.OfType<MethodDecl.InstructionItem>();
@@ -65,17 +65,16 @@ public static class AsyncRewriter {
 
         string injectionCode = $$$"""
             {{{loadLocalStateMachine}}}
-            ldstr "{{{new string(metadata.Code.ToString().ToCharArray().Select(c => c != '\n' ? c : ' ').ToArray())}}}"
-            {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{new string(metadata.ClassReference.ToString().ToCharArray().Select(c => c != '\n' ? c : ' ').ToArray())}}}"
-            {{{GetNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::.ctor(string, string)
-
-
+            ldstr "{{{metadata.Code.ToString().Replace("\n", " ")}}}"
+            ldstr "{{{metadata.ClassReference.ToString().Replace("\n", " ")}}}"
+            ldstr "{{{stateMachineFullName}}}"
+            newobj instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::.ctor(string, string, string)
             dup
             ldc.i4.s {{{argumentsCount}}}
-            newarr [System.Runtime]System.Object
+            newarr [Inoculator.Interceptors]Inoculator.Builder.ParameterData
             {{{ExtractArguments(metadata, ref labelIdx, metadata.IsStatic, false)}}}
 
-            callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_Parameters(object[])
+            callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_Parameters(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData[])
             stfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
             {{{attributeNames.Select(
                     (attrClassName, i) => $@"
@@ -220,8 +219,9 @@ public static class AsyncRewriter {
                     returnType.IsVoid
                     ? $@"
                         {GetNextLabel(ref labelIdx)}: ldnull
-                        {GetNextLabel(ref labelIdx)}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_ReturnValue(object)"
+                        {GetNextLabel(ref labelIdx)}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_ReturnValue(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData)"
                     : $@"
+                        {GetNextLabel(ref labelIdx)}: ldstr ""{returnType.Name}""
                         {GetNextLabel(ref labelIdx)}: ldarg.0
                         {GetNextLabel(ref labelIdx)}: ldflda valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{ToGenericArity1(returnType)} {stateMachineFullName}::'<>t__builder'
                         {GetNextLabel(ref labelIdx)}: call instance class [System.Runtime]System.Threading.Tasks.Task`1<!0> valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{ToGenericArity1(returnType)}::get_Task()
@@ -230,7 +230,9 @@ public static class AsyncRewriter {
                             returnType.IsReferenceType ? string.Empty
                             : $"{GetNextLabel(ref labelIdx)}: box {(returnType.IsGeneric ? $"!{returnType.PureName}" : returnType.Name)}"
                         )}
-                        {GetNextLabel(ref labelIdx)}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_ReturnValue(object)"
+                        {GetNextLabel(ref labelIdx)}: ldnull
+                        {GetNextLabel(ref labelIdx)}: newobj instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(string,object,string)
+                        {GetNextLabel(ref labelIdx)}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_ReturnValue(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData)"
                 )}}}
 
                 {{{GetNextLabel(ref labelIdx, jumptable, "SUCCESS")}}}: nop
