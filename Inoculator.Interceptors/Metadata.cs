@@ -207,14 +207,14 @@ public class MethodData : Printable<MethodData> {
     public MethodData(string sourceCode, string classRefHeader, string path) {
         ClassReference = Dove.Core.Parser.Parse<ClassDecl.Prefix>(classRefHeader);    
         Code = Dove.Core.Parser.Parse<MethodDecl.Method>(sourceCode);
-        ReferencePath = path;
+        ReferencePath = path[(1+path.IndexOf(" "))..].Replace("/", "+");
     }
 
     
     public string ReferencePath {get; init;}
     public string MethodName => Code.Header.Name.ToString();
     public String Name(bool isFull) => $"{Code.Header.Name}{(isFull ? $"<Code.Header.TypeParameters.ToString().Trim()>" : string.Empty)}";
-    public string MangledName(bool isFull) => $"'<>__{Name(false)}__Inoculated'{(isFull ? $"<Code.Header.TypeParameters.ToString().Trim()>" : string.Empty)}";
+    public string MangledName(bool isFull) => $"'<{TypeSignature.Replace(" ", String.Empty)}>__{Name(false)}__Inoculated'{(isFull ? $"<Code.Header.TypeParameters.ToString().Trim()>" : string.Empty)}";
     
 
     public string TypeSignature => $"({string.Join(", ", Signature.Input.Select(item => item.Name.ToString().Replace(" ", String.Empty)))}) -> {Signature.Output.Code}";
@@ -264,8 +264,7 @@ public class MethodData : Printable<MethodData> {
                     var functionName = $"{MangledName(false).ToString()[1..^1]}";
                     if(TypeParameters.Length > 0)
                         functionName += $"`{TypeParameters.Length}";
-                        
-                    var methodinfo = type.GetMethod(functionName);  
+                    var methodinfo = type.GetMethod(functionName); 
                     return methodinfo;
                 default:
                     throw new Exception("Invalid method call type");

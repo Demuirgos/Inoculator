@@ -53,7 +53,7 @@ public class InvokeReflectiveAttribute : InterceptorAttribute
         var methodInfo = method.ReflectionInfo;
         var parameters = methodInfo.GetParameters();
         var args = method.IsStatic ? method.Parameters : method.Parameters.Skip(1).ToArray();
-        var result = methodInfo.Invoke(!method.IsStatic ? method.Parameters[0] : null , args);
+        var result = methodInfo.Invoke(!method.IsStatic ? method.Parameters[0] : null , args.Select(arg => arg.Value).ToArray());
         Console.WriteLine($"Result: {result}");
     }
 }
