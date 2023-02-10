@@ -1,41 +1,17 @@
 using Inoculator.Builder;
 namespace Inoculator.Attributes;
 
-public interface IEntryInterceptor
+[AttributeUsage(AttributeTargets.Method)]
+public abstract class RewriterAttribute : System.Attribute
 {
-    void OnEntry(MethodData method);
+    public abstract MethodData OnCall(MethodData method);
 }
-
-public interface IExceptionInterceptor
-{
-    void OnException(MethodData method);
-}
-
-// public interface ICallInterceptor
-// {
-//     void OnCall(MethodData method);
-// }
-
-public interface ISuccessInterceptor
-{
-    void OnSuccess(MethodData method);
-}
-
-public interface IExitInterceptor
-{
-    void OnExit(MethodData method);
-}
-
-public interface IInterceptor : IEntryInterceptor, IExceptionInterceptor, ISuccessInterceptor, IExitInterceptor {} //ICallInterceptor {}
 
 [AttributeUsage(AttributeTargets.Method)]
-public class InterceptorAttribute : System.Attribute, IInterceptor
+public class InterceptorAttribute : System.Attribute
 {
-    public bool OverwriteCall { get; set; }
-    public InterceptorAttribute() {}
     public virtual void OnEntry(MethodData method) {}
     public virtual void OnException(MethodData method) {}
-    // public virtual void OnCall(MethodData method) {}
     public virtual void OnSuccess(MethodData method) {}
     public virtual void OnExit(MethodData method) {}
 }

@@ -4,12 +4,16 @@ namespace Program {
     class Program : Printable<Program> {
         public string Name {get; set;} = "Program";
         async static Task Main(string[] args) {
-            var result = Utils.SumIntervalIsEven(0, 23);
-            Console.WriteLine(result);
+            _ = Utils.SumIntervalIsEven(0, 23);
+            _ = Utils.SumIntervalIsEven(0, 23);
+            _ = Utils.SumIntervalIsEven(0, 23);
+            _ = Utils.SumIntervalIsEven(0, 23);
+            _ = Utils.SumIntervalIsEven(0, 23);
+            _ = Utils.SumIntervalIsEven(0, 24);
         }
         
         static class Utils {
-            [InvokeReflectiveAttribute]
+            [ElapsedTime, Memoize]
             public static bool SumIntervalIsEven(int start, int end) {
                 int result = 0;
                 for (int j = start; j < end; j++) {

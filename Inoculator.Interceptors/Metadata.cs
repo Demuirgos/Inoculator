@@ -235,7 +235,6 @@ public class MethodData : Printable<MethodData> {
                 ? Code.Header.Parameters.Parameters.Values.Select(x => new TypeData(x)).ToArray()
                 : new[] { new TypeData("void") },
             new TypeData(Code.Header.Type));
-
     [JsonIgnore]
     public MethodType MethodBehaviour =>
         Code.Body.Items.Values.

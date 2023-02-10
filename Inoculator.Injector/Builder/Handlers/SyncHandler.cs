@@ -6,9 +6,9 @@ using Inoculator.Core;
 using static Inoculator.Builder.HandlerTools;
 
 public static class SyncRewriter {
-    public static Result<(ClassDecl.Class, MethodDecl.Method[]), Exception> Rewrite(ClassDecl.Class _, MethodData metadata, string[] attributeName, IEnumerable<string> path)
+    public static Result<(ClassDecl.Class, MethodDecl.Method[]), Exception> Rewrite(ClassDecl.Class _, MethodData metadata, string[] interceptors, string rewriter, IEnumerable<string> path)
     {
-        var newMethod = Handle(metadata.ClassReference, metadata, attributeName, path);
+        var newMethod = Handle(metadata.ClassReference, metadata, interceptors, rewriter, path);
         switch (newMethod)
         {
             case Error<MethodDecl.Method, Exception> e_method:
@@ -26,10 +26,11 @@ public static class SyncRewriter {
                 => Success<(ClassDecl.Class, MethodDecl.Method[]), Exception>.From((null, new[] { o_method.Value, n_method.Value }))
         };
     }
-    private static Result<MethodDecl.Method, Exception> Handle(ClassDecl.Prefix classRef, MethodData metadata, string[] AttributeClass, IEnumerable<string> path)
+    private static Result<MethodDecl.Method, Exception> Handle(ClassDecl.Prefix classRef, MethodData metadata, string[] interceptorsClasses, string? rewriterClass, IEnumerable<string> path)
     {
         int labelIdx = 0;
-        
+        bool isToBeRewritten = !String.IsNullOrEmpty(rewriterClass);
+
         var pathList = path?.ToList(); 
         bool isContainedInStruct = classRef.Extends.Type.ToString() == "[System.Runtime] System.ValueType";
         var functionFullPathBuilder = new StringBuilder()
@@ -42,7 +43,6 @@ public static class SyncRewriter {
                 .Append(">");
         }
         var functionFullPath = functionFullPathBuilder.ToString();
-        Console.WriteLine(functionFullPath);
 
         StringBuilder builder = new();
         Dictionary<string, string> jumptable = new();
@@ -60,7 +60,8 @@ public static class SyncRewriter {
         builder.AppendLine($".maxstack {(metadata.Code.Header.Parameters.Parameters.Values.Length > 0 ? 8 : 2)}");
         builder.AppendLine($$$"""
         .locals init (
-            {{{String.Join("\n", AttributeClass.Select((attrClassName, i) => $"class {attrClassName} {GenerateInterceptorName(attrClassName)},"))}}}
+            {{{String.Join("\n", interceptorsClasses?.Select((attrClassName, i) => $"class {attrClassName} {GenerateInterceptorName(attrClassName)},"))}}}
+            {{{(isToBeRewritten ? $"class {rewriterClass} {GenerateInterceptorName(rewriterClass)}," : String.Empty)}}}
             class [Inoculator.Interceptors]Inoculator.Builder.MethodData metadata,
             {{{(
                 metadata.Signature.Output.IsVoid
@@ -72,11 +73,19 @@ public static class SyncRewriter {
         """);
 
         builder.Append($$$"""
-        {{{AttributeClass.Select(
+        {{{String.Join("\n", 
+            interceptorsClasses?.Select(
                 (attrClassName, i) => $@"
                 {GetNextLabel(ref labelIdx)}: newobj instance void class {attrClassName}::.ctor()
                 {GetNextLabel(ref labelIdx)}: stloc.s {i}"
-            ).Aggregate((a, b) => $"{a}\n{b}")}}}
+        ))}}}
+        {{{(
+            isToBeRewritten
+                ? $@"
+                {GetNextLabel(ref labelIdx)}: newobj instance void class {rewriterClass}::.ctor()
+                {GetNextLabel(ref labelIdx)}: stloc.s {interceptorsClasses.Length}"
+                : String.Empty
+        )}}}
         {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{new string(metadata.Code.ToString().ToCharArray().Select(c => c != '\n' ? c : ' ').ToArray())}}}"
         {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{new string(metadata.ClassReference.ToString().ToCharArray().Select(c => c != '\n' ? c : ' ').ToArray())}}}"
         {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{functionFullPath}}}"
@@ -91,22 +100,13 @@ public static class SyncRewriter {
         {{{ExtractArguments(metadata, ref labelIdx, metadata.IsStatic)}}}
         {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_Parameters(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData[])
 
-        {{{CallMethodOnInterceptors(metadata.ClassReference.Id.ToString(), AttributeClass, "OnEntry", true, ref labelIdx)}}}
+        {{{CallMethodOnInterceptors(metadata.ClassReference.Id.ToString(), interceptorsClasses, "OnEntry", true, ref labelIdx)}}}
         .try
         {
             .try
             {
-                {{{LoadArguments(metadata.Code.Header.Parameters, ref labelIdx, metadata.IsStatic)}}}
-                {{{GetNextLabel(ref labelIdx)}}}: call {{{metadata.MkMethodReference(true, functionFullPath)}}}
-                {{{(
-                    metadata.Signature.Output.IsVoid
-                        ? String.Empty
-                        : $@"{GetNextLabel(ref labelIdx)}: stloc.s result"
-                )}}}
-                {{{GetNextLabel(ref labelIdx)}}}: ldloc.s metadata
-                {{{ExtractReturnValue(metadata.Signature.Output, ref labelIdx)}}}
-                {{{UpdateRefArguments(metadata.Code.Header.Parameters, metadata.IsStatic, ref labelIdx)}}}
-                {{{CallMethodOnInterceptors(metadata.ClassReference.Id.ToString(), AttributeClass, "OnSuccess", true, ref labelIdx)}}}
+                {{{InvokeFunction(functionFullPath, metadata, ref labelIdx, rewriterClass, isToBeRewritten)}}}
+                {{{CallMethodOnInterceptors(metadata.ClassReference.Id.ToString(), interceptorsClasses, "OnSuccess", true, ref labelIdx)}}}
                 {{{(
                     metadata.Signature.Output.IsVoid ? String.Empty
                     : $@"{GetNextLabel(ref labelIdx)}: ldloc.s result"
@@ -119,14 +119,14 @@ public static class SyncRewriter {
                 {{{GetNextLabel(ref labelIdx)}}}: ldloc.s metadata
                 {{{GetNextLabel(ref labelIdx)}}}: ldloc.s e
                 {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_Exception(class [System.Runtime]System.Exception)
-                {{{CallMethodOnInterceptors(metadata.ClassReference.Id.ToString(), AttributeClass, "OnException", true, ref labelIdx)}}}
+                {{{CallMethodOnInterceptors(metadata.ClassReference.Id.ToString(), interceptorsClasses, "OnException", true, ref labelIdx)}}}
                 {{{GetNextLabel(ref labelIdx)}}}: ldloc.s e
                 {{{GetNextLabel(ref labelIdx)}}}: throw
             } 
         } 
         finally
         {
-            {{{CallMethodOnInterceptors(metadata.ClassReference.Id.ToString(), AttributeClass, "OnExit", true, ref labelIdx)}}}
+            {{{CallMethodOnInterceptors(metadata.ClassReference.Id.ToString(), interceptorsClasses, "OnExit", true, ref labelIdx)}}}
             {{{GetNextLabel(ref labelIdx)}}}: endfinally
         } 
 
@@ -145,6 +145,45 @@ public static class SyncRewriter {
             builder.Replace($"***{label}***", idx.ToString());
         }
         var result = builder.ToString();
+        Console.WriteLine(result);
         return Reader.Parse<MethodDecl.Method>(result);
+    }
+
+    private static string InvokeFunction(string functionPath, MethodData metadata, ref int labelIdx, string? rewriterClass, bool rewrite) {
+        if(!rewrite) {
+            return $$$"""
+                {{{LoadArguments(metadata.Code.Header.Parameters, ref labelIdx, metadata.IsStatic)}}}
+                {{{GetNextLabel(ref labelIdx)}}}: call {{{metadata.MkMethodReference(true, functionPath)}}}
+                {{{(
+                    metadata.Signature.Output.IsVoid
+                        ? String.Empty
+                        : $@"{GetNextLabel(ref labelIdx)}: stloc.s result"
+                )}}}
+                {{{GetNextLabel(ref labelIdx)}}}: ldloc.s metadata
+                {{{ExtractReturnValue(metadata.Signature.Output, ref labelIdx)}}}
+                {{{UpdateRefArguments(metadata.Code.Header.Parameters, metadata.IsStatic, ref labelIdx)}}}
+            """;
+        } else {
+            string callCode = $"callvirt instance class [Inoculator.Interceptors]Inoculator.Builder.MethodData class {rewriterClass}::OnCall(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)";
+            return $$$"""
+                {{{GetNextLabel(ref labelIdx)}}}: ldloc.s {{{GenerateInterceptorName(rewriterClass)}}}
+                {{{GetNextLabel(ref labelIdx)}}}: ldloc.s metadata
+                {{{GetNextLabel(ref labelIdx)}}}: {{{callCode}}}
+                {{{GetNextLabel(ref labelIdx)}}}: stloc.s metadata
+                {{{GetNextLabel(ref labelIdx)}}}: ldloc.s metadata
+                {{{GetNextLabel(ref labelIdx)}}}: dup
+                {{{GetNextLabel(ref labelIdx)}}}: stloc.s metadata
+                {{{(
+                    metadata.Signature.Output.IsVoid
+                        ? String.Empty
+                        : $@"
+                            {GetNextLabel(ref labelIdx)}: callvirt instance class [Inoculator.Interceptors]Inoculator.Builder.ParameterData [Inoculator.Interceptors]Inoculator.Builder.MethodData::get_ReturnValue()
+                            {GetNextLabel(ref labelIdx)}: callvirt instance object [Inoculator.Interceptors]Inoculator.Builder.ParameterData::get_Value()
+                            {GetNextLabel(ref labelIdx)}: {(metadata.Signature.Output.IsReferenceType ? $"castclass {metadata.Signature.Output}" : $"unbox.any {metadata.Signature.Output.ToProperName}")}
+                        "
+                )}}}
+                {{{GetNextLabel(ref labelIdx)}}}: stloc.s result
+            """;
+        }
     }
 }
