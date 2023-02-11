@@ -44,9 +44,11 @@ public class TypeData : Printable<TypeData> {
         Typed, Void, VarArg
     }
 
-
     [JsonIgnore]
     public TypeDecl.Type Code { get; set; }
+
+    [JsonIgnore]
+    public Type TypeInstance {get; set;}
 
     public TypeData(TypeDecl.Type source) => Code = source;
 
@@ -69,10 +71,11 @@ public class TypeData : Printable<TypeData> {
         }
         return fullName.Trim();
     }
-    public String Name => FilteredName(false, false);
-    
+
     [JsonIgnore]
+    public String Name => FilteredName(false, false);
     public String PureName => FilteredName(true, true);
+
     [JsonIgnore]
     public TypeBehaviour Behaviour => IsValueType ? TypeBehaviour.ValueType : TypeBehaviour.ReferenceType;
     public bool IsReferenceType => Behaviour is TypeBehaviour.ReferenceType;
@@ -181,9 +184,11 @@ public class TypeData : Printable<TypeData> {
 }
 
 public class ParameterData : Printable<ParameterData> {
-    public ParameterData(string typesrc, Object Value, string name = null) {
+    public ParameterData(string typesrc, Object Value, Type type, string name = null) {
         Name = name is null ? String.Empty : name;
-        Type = new TypeData(typesrc);
+        Type = new TypeData(typesrc) {
+            TypeInstance = type
+        };
         this.Value = Value;
     }
 
@@ -258,7 +263,6 @@ public class MethodData : Printable<MethodData> {
         get {
             Assembly? assembly = Assembly.GetCallingAssembly();
             Type? type = assembly.GetType(ReferencePath);
-            Console.WriteLine(ReferencePath);
             var functionName = String.Empty;
             if(MethodBehaviour is MethodType.Sync)
                 functionName = $"{MangledName(false)[1..^1]}";

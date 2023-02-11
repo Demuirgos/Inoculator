@@ -326,8 +326,10 @@ public static class AsyncRewriter {
                         returnType.IsReferenceType ? string.Empty
                         : $"{GetNextLabel(ref labelIdx)}: box {(returnType.IsGeneric ? $"!{returnType.PureName}" : returnType.Name)}"
                     )}
+                    {GetNextLabel(ref labelIdx)}: dup
+                    {GetNextLabel(ref labelIdx)}: callvirt instance class [System.Runtime]System.Type [System.Runtime]System.Object::GetType()
                     {GetNextLabel(ref labelIdx)}: ldnull
-                    {GetNextLabel(ref labelIdx)}: newobj instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(string,object,string)
+                    {GetNextLabel(ref labelIdx)}: newobj instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(string,object,class [System.Runtime]System.Type,string)
                     {GetNextLabel(ref labelIdx)}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_ReturnValue(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData)"
             )}}}
         """;

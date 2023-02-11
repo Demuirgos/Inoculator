@@ -11,7 +11,7 @@ namespace Program {
         }
         
         static class Utils {
-            [ElapsedTime, Memoize]
+            [ElapsedTime, Reflective]
             public static bool SumIntervalIsEven(int start, int end) {
                 int result = 0;
                 for (int j = start; j < end; j++) {
@@ -20,7 +20,7 @@ namespace Program {
                 return result % 2 == 0;
             }
 
-            [Memoize]
+            [Reflective]
             public static async Task<int> SumIntervalIsEvenAsync(int start, int end) {
                 int result = 0;
                 for (int j = start; j < end; j++) {
@@ -39,7 +39,7 @@ namespace Program {
                 return result % 2 == 0;
             }
 
-            [Memoize]
+            [Reflective]
             public static IEnumerable<bool> SumIntervalIsEvenEnum(int start, int end) {
                 int result = 0;
                 for (int j = start; j < end; j++) {

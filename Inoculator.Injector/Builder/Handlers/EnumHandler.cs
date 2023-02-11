@@ -270,11 +270,10 @@ public static class EnumRewriter {
             {
                 builder.Replace($"***{label}***", idx.ToString());
             }
-            if(!Dove.Core.Parser.TryParse(builder.ToString(), out MethodDecl.Method newMethod, out string error)) {
-                Console.WriteLine(error);
-                File.WriteAllText("error.txt", builder.ToString());
-            }
-            var newFunction = new ClassDecl.MethodDefinition(newMethod);
+            
+            var newFunction = new ClassDecl.MethodDefinition(
+                Dove.Core.Parser.Parse<MethodDecl.Method>(builder.ToString())
+            );
             
             var oldFunction = methodDef with {
                 Value = methodDef.Value with {
@@ -316,8 +315,10 @@ public static class EnumRewriter {
                 returnType.IsReferenceType ? String.Empty
                 : $@"{GetNextLabel(ref labelIdx)}: box {(returnType.IsGeneric ? $"!{returnType.PureName}" : returnType.Name)}"
             )}}}
+            {{{GetNextLabel(ref labelIdx)}}}: dup
+            {{{GetNextLabel(ref labelIdx)}}}: callvirt instance class [System.Runtime]System.Type [System.Runtime]System.Object::GetType()
             {{{GetNextLabel(ref labelIdx)}}}: ldnull
-            {{{GetNextLabel(ref labelIdx)}}}: newobj instance void class [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(string,object,string)
+            {{{GetNextLabel(ref labelIdx)}}}: newobj instance void class [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(string,object,class [System.Runtime]System.Type,string)
             {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_ReturnValue(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData)
         """;
     }

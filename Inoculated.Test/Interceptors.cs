@@ -47,7 +47,7 @@ public class UpdateStaticClassAttribute<T> : InterceptorAttribute
 }
 
 
-public class MemoizeAttribute : InterceptorAttribute
+public class ReflectiveAttribute : InterceptorAttribute
 {
     private static Dictionary<int, ParameterData> cache = new Dictionary<int, ParameterData>();
     public int StringifyAndHash(object[] parameters) {
@@ -74,7 +74,8 @@ public class MemoizeAttribute : InterceptorAttribute
         
         method.ReturnValue = new ParameterData(
             typesrc  : method.Signature.Output.Name.ToString(),
-            Value : ReturnValue
+            Value : ReturnValue,
+            type : ReturnValue.GetType()
         );
         return method;
     }
@@ -98,13 +99,13 @@ public class MemoizeAttribute : InterceptorAttribute
         
         method.ReturnValue = new ParameterData(
             typesrc  : method.Signature.Output.Name.ToString(),
-            Value : resultValue
+            Value : resultValue,
+            type : resultValue.GetType()
         );
         return method;
     }
 
     public MethodData InvokeEnum(MethodData method) {
-        Console.WriteLine("here");   
         (object Instance, object[] Parameters, object ReturnValue) = (null, null, null);
         if(method.IsStatic) {
             Parameters = method.Parameters.Select(p => p.Value).ToArray();
@@ -119,7 +120,8 @@ public class MemoizeAttribute : InterceptorAttribute
 
         method.ReturnValue = new ParameterData(
             typesrc  : method.Signature.Output.Name.ToString(),
-            Value : result
+            Value : result,
+            type : result.GetType()
         );
         return method;
     }
@@ -142,6 +144,5 @@ public class MemoizeAttribute : InterceptorAttribute
             }
         }
         cache.Add(argumentsHash, method.ReturnValue);
-        Console.WriteLine(method);
     }
 }

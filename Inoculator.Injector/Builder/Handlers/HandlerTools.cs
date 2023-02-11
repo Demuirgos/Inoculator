@@ -85,8 +85,10 @@ public static class HandlerTools {
         """);
         }   
         builder.Append($$$"""
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} dup
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} callvirt instance class [System.Runtime]System.Type [System.Runtime]System.Object::GetType()
             {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldstr "<>this"
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} newobj instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(string,object,string)
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} newobj instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(string,object,class [System.Runtime]System.Type,string)
             {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} stelem.ref
         """);
 
@@ -106,8 +108,10 @@ public static class HandlerTools {
                             : $@"{GetNextLabel(ref labelIdx)}: box {Output.ToProperName}"
                         )}"
             )}}}
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} dup
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} callvirt instance class [System.Runtime]System.Type [System.Runtime]System.Object::GetType()
             {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldnull
-            {{{GetNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(string,object,string)
+            {{{GetNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(string,object,class [System.Runtime]System.Type,string)
             {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_ReturnValue(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData)
         """);
 
@@ -133,8 +137,10 @@ public static class HandlerTools {
             {{{( typeData.IsReferenceType ? String.Empty 
                     : $"{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)} box {(typeData.IsGeneric ? typeData.FilteredName(true, false) : typeData.ToProperName)}"
             )}}}
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} dup
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} callvirt instance class [System.Runtime]System.Type [System.Runtime]System.Object::GetType()
             {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldstr "{{{parameter.AsDefaultParameter()?.Id}}}"
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} newobj instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(string,object,string)
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} newobj instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(string,object,class [System.Runtime]System.Type,string)
             {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} stelem.ref
             """;
 
