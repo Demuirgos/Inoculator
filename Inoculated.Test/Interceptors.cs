@@ -123,10 +123,8 @@ public class MemoizeAttribute : RewriterAttribute
         );
         return method;
     }
-    private static int count  = 0;  
     public override MethodData OnCall(MethodData method)
     {
-        Console.WriteLine($"Overriden {method.MethodName}");
         var argumentsHash = StringifyAndHash(method.Parameters);
         if(method.MethodBehaviour is not MethodData.MethodType.Iter && cache.ContainsKey(argumentsHash)) {
             method.ReturnValue = cache[argumentsHash];

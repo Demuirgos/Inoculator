@@ -284,11 +284,8 @@ public static class EnumRewriter {
             {
                 builder.Replace($"***{label}***", idx.ToString());
             }
-            if(!Dove.Core.Parser.TryParse(builder.ToString(), out MethodDecl.Method newMethod, out string error)) {
-                Console.WriteLine(error);
-                File.WriteAllText("error.txt", builder.ToString());
-            }
-            var newFunction = new ClassDecl.MethodDefinition(newMethod);
+            
+            var newFunction = new ClassDecl.MethodDefinition(Dove.Core.Parser.Parse<MethodDecl.Method>(builder.ToString()));
             
             var oldFunction = methodDef with {
                 Value = methodDef.Value with {

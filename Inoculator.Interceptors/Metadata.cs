@@ -258,7 +258,6 @@ public class MethodData : Printable<MethodData> {
         get {
             Assembly? assembly = Assembly.GetCallingAssembly();
             Type? type = assembly.GetType(ReferencePath);
-            Console.WriteLine(ReferencePath);
             var functionName = String.Empty;
             if(MethodBehaviour is MethodType.Sync)
                 functionName = $"{MangledName(false)[1..^1]}";
