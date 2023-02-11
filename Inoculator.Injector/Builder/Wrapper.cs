@@ -17,7 +17,7 @@ public static class Wrapper {
             case MethodData.MethodType.Sync:
                 return SyncRewriter.Rewrite(classRef, metadata, interceptors, rewriter, path);
             case MethodData.MethodType.Iter:
-                return EnumRewriter.Rewrite(classRef, metadata, interceptors, path);
+                return EnumRewriter.Rewrite(classRef, metadata, interceptors, rewriter, path);
             case MethodData.MethodType.Async:
                 return AsyncRewriter.Rewrite(classRef, metadata, interceptors, rewriter, path);
         }

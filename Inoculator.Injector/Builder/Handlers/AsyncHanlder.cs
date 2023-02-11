@@ -91,7 +91,7 @@ public static class AsyncRewriter {
                     (attrClassName, i) => $@"
                         {loadLocalStateMachine}
                         newobj instance void class {attrClassName}::.ctor()
-                        stfld class {attrClassName} {stateMachineFullName}::'<inoculated>__Interceptor{i}'"
+                        stfld class {attrClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName)}"
             ))}}}
             {{{(
                 !isToBeRewritten ? String.Empty : $@"
@@ -129,7 +129,7 @@ public static class AsyncRewriter {
 
         List<string> members = new();
         if(interceptorsClasses.Length > 0 ) {
-            members.AddRange(interceptorsClasses.Select((attr, i) => $".field public class {attr} '<inoculated>__Interceptor{i}'"));
+            members.AddRange(interceptorsClasses.Select((attr, i) => $".field public class {attr} {GenerateInterceptorName(attr)}"));
         }
         members.Add($".field public class [Inoculator.Interceptors]Inoculator.Builder.MethodData '<inoculated>__Metadata'");
         if(isToBeRewritten) {
@@ -214,7 +214,7 @@ public static class AsyncRewriter {
                     interceptorClasses?.Select(
                         (attrClassName, i) => $@"
                         {GetNextLabel(ref labelIdx)}: ldarg.0
-                        {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::'<inoculated>__Interceptor{i}'
+                        {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName)}
                         {GetNextLabel(ref labelIdx)}: ldarg.0
                         {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
                         {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName}::OnEntry(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"
@@ -229,7 +229,7 @@ public static class AsyncRewriter {
                     interceptorClasses?.Select(
                         (attrClassName, i) => $@"
                         {GetNextLabel(ref labelIdx)}: ldarg.0
-                        {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::'<inoculated>__Interceptor{i}'
+                        {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName)}
                         {GetNextLabel(ref labelIdx)}: ldarg.0
                         {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
                         {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName}::OnSuccess(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"
@@ -241,7 +241,7 @@ public static class AsyncRewriter {
                     interceptorClasses?.Select(
                         (attrClassName, i) => $@"
                         {GetNextLabel(ref labelIdx)}: ldarg.0
-                        {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::'<inoculated>__Interceptor{i}'
+                        {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName)}
                         {GetNextLabel(ref labelIdx)}: ldarg.0
                         {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
                         {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName}::OnException(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"
@@ -256,7 +256,7 @@ public static class AsyncRewriter {
                     interceptorClasses?.Select(
                         (attrClassName, i) => $@"
                         {GetNextLabel(ref labelIdx)}: ldarg.0
-                        {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::'<inoculated>__Interceptor{i}'
+                        {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName)}
                         {GetNextLabel(ref labelIdx)}: ldarg.0
                         {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
                         {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName}::OnExit(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"

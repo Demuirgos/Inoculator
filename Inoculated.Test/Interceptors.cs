@@ -1,5 +1,6 @@
 ﻿using Inoculator.Attributes;
 using Inoculator.Builder;
+using System.Collections;
 using System.Diagnostics;
 using System.Reflection;
 
@@ -97,7 +98,28 @@ public class MemoizeAttribute : RewriterAttribute
         
         method.ReturnValue = new ParameterData(
             typesrc  : method.Signature.Output.Name.ToString(),
-            Value : true
+            Value : resultValue
+        );
+        return method;
+    }
+
+    public MethodData InvokeEnum(MethodData method) {
+        Console.WriteLine("here");   
+        (object Instance, object[] Parameters, object ReturnValue) = (null, null, null);
+        if(method.IsStatic) {
+            Parameters = method.Parameters.Select(p => p.Value).ToArray();
+        } else {
+            Instance = method.Parameters[0].Value;
+            Parameters = method.Parameters.Skip(1).Select(p => p.Value).ToArray();
+        }
+        var methodInfo = method.ReflectionInfo;
+
+
+        var result = (IEnumerable)methodInfo.Invoke(Instance, Parameters);
+
+        method.ReturnValue = new ParameterData(
+            typesrc  : method.Signature.Output.Name.ToString(),
+            Value : result
         );
         return method;
     }
@@ -114,7 +136,8 @@ public class MemoizeAttribute : RewriterAttribute
                 case MethodData.MethodType.Sync:
                     method = Invoke(method);
                     break;
-                default:
+                case MethodData.MethodType.Iter:
+                    method = InvokeEnum(method);
                     break;
             }
         }

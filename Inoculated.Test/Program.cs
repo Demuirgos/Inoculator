@@ -4,8 +4,10 @@ namespace Program {
     class Program : Printable<Program> {
         public string Name {get; set;} = "Program";
         async static Task Main(string[] args) {
-            var result = await Utils.SumIntervalIsEvenAsync(0, 23);
-            Console.WriteLine(result);
+            _ = await Utils.SumIntervalIsEvenAsync(0, 0);
+            foreach(var d in Utils.SumIntervalIsEvenEnum(0, 23)) {
+                Console.WriteLine(d);
+            }
         }
         
         static class Utils {
@@ -19,12 +21,12 @@ namespace Program {
             }
 
             [Memoize]
-            public static async Task<bool> SumIntervalIsEvenAsync(int start, int end) {
+            public static async Task<int> SumIntervalIsEvenAsync(int start, int end) {
                 int result = 0;
                 for (int j = start; j < end; j++) {
                     result += j;
                 }
-                return result % 2 == 0;
+                return result;
             }
 
             [LogEntrency]
@@ -37,7 +39,7 @@ namespace Program {
                 return result % 2 == 0;
             }
 
-            [LogEntrency]
+            [Memoize]
             public static IEnumerable<bool> SumIntervalIsEvenEnum(int start, int end) {
                 int result = 0;
                 for (int j = start; j < end; j++) {
