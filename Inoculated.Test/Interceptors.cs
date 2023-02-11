@@ -73,8 +73,7 @@ public class MemoizeAttribute : RewriterAttribute
 
         
         method.ReturnValue = new ParameterData(
-            typesrc  : method.Signature.Output.Name.ToString(),
-            Value : ReturnValue,
+            value : ReturnValue,
             type : ReturnValue.GetType()
         );
         return method;
@@ -98,8 +97,7 @@ public class MemoizeAttribute : RewriterAttribute
         ReturnValue = resultValue;
         
         method.ReturnValue = new ParameterData(
-            typesrc  : method.Signature.Output.Name.ToString(),
-            Value : resultValue,
+            value : resultValue,
             type : resultValue.GetType()
         );
         return method;
@@ -120,8 +118,7 @@ public class MemoizeAttribute : RewriterAttribute
         method.Stop = !enumHandler.Item2.MoveNext();
         var resultValue = enumHandler.Item2.Current;
         method.ReturnValue = new ParameterData(
-            typesrc  : method.Signature.Output.Name.ToString(),
-            Value : resultValue,
+            value : resultValue,
             type : resultValue.GetType()
         );
         return method;

@@ -323,7 +323,6 @@ public static class EnumRewriter {
                 {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
                 {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
                 
-                {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{returnType.Name}}}"
                 {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
                 {{{GetNextLabel(ref labelIdx)}}}: ldfld {{{(returnType.IsGeneric ? $"!{returnType.PureName}" : returnType.Name)}}} {{{stateMachineFullName}}}::'<>2__current'
                 {{{(
@@ -333,7 +332,7 @@ public static class EnumRewriter {
                 {{{GetNextLabel(ref labelIdx)}}}: dup
                 {{{GetNextLabel(ref labelIdx)}}}: callvirt instance class [System.Runtime]System.Type [System.Runtime]System.Object::GetType()
                 {{{GetNextLabel(ref labelIdx)}}}: ldnull
-                {{{GetNextLabel(ref labelIdx)}}}: newobj instance void class [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(string,object,class [System.Runtime]System.Type,string)
+                {{{GetNextLabel(ref labelIdx)}}}: newobj instance void class [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(object,class [System.Runtime]System.Type,string)
                 {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_ReturnValue(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData)
             """;
         } else {

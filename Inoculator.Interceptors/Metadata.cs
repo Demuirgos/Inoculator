@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
@@ -184,16 +185,12 @@ public class TypeData : Printable<TypeData> {
 }
 
 public class ParameterData : Printable<ParameterData> {
-    public ParameterData(string typesrc, Object Value, Type type, string name = null) {
-        Name = name is null ? String.Empty : name;
-        Type = new TypeData(typesrc) {
-            TypeInstance = type
-        };
-        this.Value = Value;
-    }
+    public ParameterData(Object value, Type type, string name = null) 
+        => (Name, TypeInstance, Value) = (name, type, value);
 
-    public String Name {get; init; }
-    public TypeData Type { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault | JsonIgnoreCondition.WhenWritingNull)]
+    public String? Name {get; init; }
+    [JsonIgnore] public Type TypeInstance { get; init; }
     public Object Value { get; set; }
 }
 
@@ -223,10 +220,10 @@ public class MethodData : Printable<MethodData> {
     
 
     public string TypeSignature => $"({string.Join(", ", Signature.Input.Select(item => item.Name.ToString().Replace(" ", String.Empty)))}) -> {Signature.Output.Code}";
-    public string[] TypeParameters => Code.Header?.TypeParameters?
+    public string[]? TypeParameters => Code.Header?.TypeParameters?
         .Parameters.Values
         .Select(x => x.Id.ToString())
-        .ToArray() ?? new string[0];
+        .ToArray() ?? null;
 
     public ParameterData?[] Parameters { get; set; }
     public ExceptionData ExceptionRef => Exception is null ? null : new ExceptionData(Exception);
@@ -275,27 +272,4 @@ public class MethodData : Printable<MethodData> {
     public bool Stop { get; set; }
     [JsonIgnore]
     public ClassDecl.Class Generated { get; set; }
-    
-    public string MkMethodReference(bool isInoculated, string? path = null) {
-        var builder = new StringBuilder();
-        if(MethodCall is MethodData.CallType.Instance)
-            builder.Append("instance");
-        builder.Append(Signature.Output.Code);
-        if(ClassReference is not null) {
-            builder.Append(" ");
-            builder.Append(path ?? ClassReference.Id.ToString());
-            builder.Append("::");
-        }
-        builder.Append(isInoculated ? MangledName(false) : Name(false));
-        if(TypeParameters.Length > 0) {
-            builder.Append("<");
-            builder.Append(string.Join(", ", Code.Header.TypeParameters.Parameters.Values.Select(param => $"!!{param.Id}")));
-            builder.Append(">");
-        }
-        builder.Append("(");
-        builder.Append(string.Join(", ", Code.Header.Parameters.Parameters.Values.Select(x => x.ToString())));
-        builder.Append(")");
-        return builder.ToString();
-    }
-
 }

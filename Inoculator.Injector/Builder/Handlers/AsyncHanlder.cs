@@ -49,10 +49,10 @@ public static class AsyncRewriter {
             .Append($"/{classRef.Header.Id}");
         if (classRef.Header.TypeParameters?.Parameters.Values.Length > 0)
         {
-            var classTypeParametersCount = classRef.Header.TypeParameters.Parameters.Values.Length;
+            var classTypeParametersCount    = classRef.Header.TypeParameters.Parameters.Values.Length;
             var functionTypeParametersCount = metadata.Code.Header.TypeParameters?.Parameters.Values.Length ?? 0;
-            var classTPs = classRef.Header.TypeParameters.Parameters.Values.Take(classTypeParametersCount - functionTypeParametersCount).Select(p => $"!{p}");
-            var methodTPs = classRef.Header.TypeParameters.Parameters.Values.TakeLast(functionTypeParametersCount).Select(p => $"!!{p}");
+            var classTPs   = classRef.Header.TypeParameters.Parameters.Values.Take(classTypeParametersCount - functionTypeParametersCount).Select(p => $"!{p}");
+            var methodTPs  = classRef.Header.TypeParameters.Parameters.Values.TakeLast(functionTypeParametersCount).Select(p => $"!!{p}");
             stateMachineFullNameBuilder.Append("<")
                 .Append( String.Join(",", classTPs.Union(methodTPs)))
                 .Append(">");
@@ -334,7 +334,6 @@ public static class AsyncRewriter {
                         {GetNextLabel(ref labelIdx)}: ldnull
                         {GetNextLabel(ref labelIdx)}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_ReturnValue(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData)"
                     : $@"
-                        {GetNextLabel(ref labelIdx)}: ldstr ""{returnType.Name}""
                         {GetNextLabel(ref labelIdx)}: ldarg.0
                         {GetNextLabel(ref labelIdx)}: ldflda valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{ToGenericArity1(returnType)} {stateMachineFullName}::'<>t__builder'
                         {GetNextLabel(ref labelIdx)}: call instance class [System.Runtime]System.Threading.Tasks.Task`1<!0> valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{ToGenericArity1(returnType)}::get_Task()
@@ -343,8 +342,10 @@ public static class AsyncRewriter {
                             returnType.IsReferenceType ? string.Empty
                             : $"{GetNextLabel(ref labelIdx)}: box {(returnType.IsGeneric ? $"!{returnType.PureName}" : returnType.Name)}"
                         )}
+                        {GetNextLabel(ref labelIdx)}: dup
+                        {GetNextLabel(ref labelIdx)}: callvirt instance class [System.Runtime]System.Type [System.Runtime]System.Object::GetType()
                         {GetNextLabel(ref labelIdx)}: ldnull
-                        {GetNextLabel(ref labelIdx)}: newobj instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(string,object,string)
+                        {GetNextLabel(ref labelIdx)}: newobj instance void class [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(object,class [System.Runtime]System.Type,string)
                         {GetNextLabel(ref labelIdx)}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_ReturnValue(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData)"
                 )}}}
             """;

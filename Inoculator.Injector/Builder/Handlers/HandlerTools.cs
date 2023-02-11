@@ -75,7 +75,6 @@ public static class HandlerTools {
         builder.Append($$$"""
             {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} dup
             {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldc.i4.s 0
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldstr "{{{ClassHeader.Id}}}"
             {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldarg.0
         """);
         if(IsValueType) {
@@ -88,7 +87,7 @@ public static class HandlerTools {
             {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} dup
             {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} callvirt instance class [System.Runtime]System.Type [System.Runtime]System.Object::GetType()
             {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldstr "<>this"
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} newobj instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(string,object,class [System.Runtime]System.Type,string)
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} newobj instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(object,class [System.Runtime]System.Type,string)
             {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} stelem.ref
         """);
 
@@ -99,7 +98,6 @@ public static class HandlerTools {
     public static string ExtractReturnValue(TypeData Output, ref int labelIdx, bool includeLabels = true) {
         StringBuilder builder = new StringBuilder();
         builder.Append($$$"""
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldstr "{{{Output.Code}}}"
             {{{(
                 Output.IsVoid
                     ? $@"{GetNextLabel(ref labelIdx)}: ldnull"
@@ -111,7 +109,7 @@ public static class HandlerTools {
             {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} dup
             {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} callvirt instance class [System.Runtime]System.Type [System.Runtime]System.Object::GetType()
             {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldnull
-            {{{GetNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(string,object,class [System.Runtime]System.Type,string)
+            {{{GetNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(object,class [System.Runtime]System.Type,string)
             {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_ReturnValue(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData)
         """);
 
@@ -129,7 +127,6 @@ public static class HandlerTools {
         var ilcode = typeData.IsVoid ? string.Empty  : $$$"""
             {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} dup
             {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldc.i4.s {{{paramIdx}}}
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldstr "{{{parameter.AsDefaultParameter().TypeDeclaration}}}"
             {{{LoadArgument(param, ref labelIdx, includeLabels)}}}
             {{{(!typeData.IsByRef ? string.Empty
                     : $"{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)} {GetCILIndirectLoadOpcode(typeData).load}" 
@@ -140,11 +137,33 @@ public static class HandlerTools {
             {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} dup
             {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} callvirt instance class [System.Runtime]System.Type [System.Runtime]System.Object::GetType()
             {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldstr "{{{parameter.AsDefaultParameter()?.Id}}}"
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} newobj instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(string,object,class [System.Runtime]System.Type,string)
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} newobj instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(object,class [System.Runtime]System.Type,string)
             {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} stelem.ref
             """;
 
         builder.Append(ilcode);
+        return builder.ToString();
+    }
+
+    public static string MkMethodReference(this MethodData @this,bool isInoculated, string? path = null) {
+        var builder = new StringBuilder();
+        if(@this.MethodCall is MethodData.CallType.Instance)
+            builder.Append("instance");
+        builder.Append(@this.Signature.Output.Code);
+        if(@this.ClassReference is not null) {
+            builder.Append(" ");
+            builder.Append(path ?? @this.ClassReference.Id.ToString());
+            builder.Append("::");
+        }
+        builder.Append(isInoculated ? @this.MangledName(false) : @this.Name(false));
+        if(@this.TypeParameters?.Length > 0) {
+            builder.Append("<");
+            builder.Append(string.Join(", ", @this.Code.Header.TypeParameters.Parameters.Values.Select(param => $"!!{param.Id}")));
+            builder.Append(">");
+        }
+        builder.Append("(");
+        builder.Append(string.Join(", ", @this.Code.Header.Parameters.Parameters.Values.Select(x => x.ToString())));
+        builder.Append(")");
         return builder.ToString();
     }
 
