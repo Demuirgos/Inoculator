@@ -12,7 +12,7 @@ using static Inoculator.Builder.HandlerTools;
 namespace Inoculator.Builder;
 
 public static class EnumRewriter {
-    public static Result<(ClassDecl.Class[], MethodDecl.Method[]), Exception> Rewrite(ClassDecl.Class classRef, MethodData metadata, string[] interceptors, IEnumerable<string> path)
+    public static Result<(ClassDecl.Class[], MethodDecl.Method[]), Exception> Rewrite(ClassDecl.Class classRef, MethodData metadata, string[] interceptors, string rewriter, IEnumerable<string> path)
     {
         bool isContainedInStruct = classRef.Header.Extends.Type.ToString() == "[System.Runtime] System.ValueType";
         var typeContainer = metadata.Code.Header.Type.Components.Types.Values.First() as TypeDecl.CustomTypeReference;
@@ -24,16 +24,17 @@ public static class EnumRewriter {
             .Replace(classRef.Header.Id.ToString(), oldClassMangledName)
             .Replace(metadata.Code.Header.Name.ToString(), $"'<>__{metadata.Name(false)}_old'")
         );
-        var MoveNextHandler = GetMoveNextHandler(itemType, classRef, path, isContainedInStruct, interceptors);
-        var newClassRef = InjectInoculationFields(classRef, MoveNextHandler, interceptors);
-        metadata = RewriteInceptionPoint(classRef, metadata, interceptors, path, isContainedInStruct);
+        var MoveNextHandler = GetMoveNextHandler(itemType, classRef, path, isContainedInStruct, interceptors, rewriter);
+        var newClassRef = InjectInoculationFields(classRef, MoveNextHandler, interceptors, rewriter);
+        metadata = RewriteInceptionPoint(classRef, metadata, interceptors, rewriter, path, isContainedInStruct);
 
         return Success<(ClassDecl.Class[], MethodDecl.Method[]), Exception>.From((new Class[] { oldClassRef, newClassRef }, new Method[] { oldMethodInstance, metadata.Code }));
     }
 
-    private static MethodData RewriteInceptionPoint(Class classRef, MethodData metadata, string[] interceptorsClasses, IEnumerable<string> path, bool isReleaseMode)
+    private static MethodData RewriteInceptionPoint(Class classRef, MethodData metadata, string[] interceptorsClasses, string rewriterClass, IEnumerable<string> path, bool isReleaseMode)
     {
         int labelIdx = 0;
+        bool isToBeRrwritten = !String.IsNullOrEmpty(rewriterClass);
 
         var stateMachineFullNameBuilder = new StringBuilder()
             .Append(isReleaseMode ? " valuetype " : " class ")
@@ -102,6 +103,13 @@ public static class EnumRewriter {
                                             {GetNextLabel(ref labelIdx)}: stfld class {attrClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName)}
                                             """
                                         ))}}}
+                                        {{{(
+                                            !isToBeRrwritten ? String.Empty :  $"""
+                                            {GetNextLabel(ref labelIdx)}: dup
+                                            {GetNextLabel(ref labelIdx)}: newobj instance void class {rewriterClass}::.ctor()
+                                            {GetNextLabel(ref labelIdx)}: stfld class {rewriterClass} {stateMachineFullName}::'<inoculated>__Rewriter'
+                                            """
+                                        )}}}
                                         {{{GetNextLabel(ref labelIdx)}}}: ret
                                         """;
                                             var res = Parse<MethodDecl.Member.Collection>(injectionCode);
@@ -122,13 +130,18 @@ public static class EnumRewriter {
         return metadata;
     }
 
-    private static ClassDecl.Class InjectInoculationFields(Class classRef, Func<ClassDecl.MethodDefinition, ClassDecl.MethodDefinition[]> MoveNextHandler, string[] interceptorsClasses)
+    private static ClassDecl.Class InjectInoculationFields(Class classRef, Func<ClassDecl.MethodDefinition, ClassDecl.MethodDefinition[]> MoveNextHandler, string[] interceptorsClasses, string rewriterClass)
     {
+        bool isToBeRewritten = !String.IsNullOrEmpty(rewriterClass);
+
         List<string> members = new();
         if(interceptorsClasses.Length > 0 ) {
             members.AddRange(interceptorsClasses.Select((attr, i) => $".field public class {attr} {GenerateInterceptorName(attr)}"));
         }
         members.Add($".field public class [Inoculator.Interceptors]Inoculator.Builder.MethodData '<inoculated>__Metadata'");
+        if(isToBeRewritten) {
+            members.Add($".field public class {rewriterClass} '<inoculated>__Rewriter'");
+        }
 
         classRef = classRef with
         {
@@ -155,8 +168,9 @@ public static class EnumRewriter {
         return classRef;
     }
 
-    private static Func<ClassDecl.MethodDefinition, ClassDecl.MethodDefinition[]> GetMoveNextHandler(TypeData returnType, Class classRef, IEnumerable<string> path, bool isContainedInStruct, string[] interceptorsClasses) {
+    private static Func<ClassDecl.MethodDefinition, ClassDecl.MethodDefinition[]> GetMoveNextHandler(TypeData returnType, Class classRef, IEnumerable<string> path, bool isContainedInStruct, string[] interceptorsClasses, string rewriterClass) {
         return (MethodDefinition methodDef) => {
+            bool isToBeRewritten = !String.IsNullOrEmpty(rewriterClass);
             int labelIdx = 0;
             Dictionary<string, string> jumptable = new();
 
@@ -301,7 +315,6 @@ public static class EnumRewriter {
 
     private static string InvokeFunction(string stateMachineFullName, TypeData returnType, ref int labelIdx, string? rewriterClass, bool rewrite, Dictionary<string, string> jumptable) {
         static string ToGenericArity1(TypeData type) => type.IsVoid ? String.Empty : type.IsGeneric ? $"`1<!{type.PureName}>" : $"`1<{type.Name}>";
-        
         if(!rewrite) {
             return $$$"""
                 {{{GetNextLabel(ref labelIdx)}}}: ldarg.0

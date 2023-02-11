@@ -32,14 +32,17 @@ public static class Searcher {
         return toplevel.Where(x => predicate?.Invoke(x) ?? true).ToList();
     }
 
-    public static bool IsMarked(MethodDecl.Method method, List<string> interceptors, out string[] foundInterceptors) {
+    public static bool IsMarked(MethodDecl.Method method, List<string> interceptors, List<string> rewriters, out string[] foundInterceptors, out string foundRewriter) {
         var attrs = method.Body.Items
             .Values.OfType<MethodDecl.CustomAttributeItem>()
             .Select(attr => attr.Value.AttributeCtor.Spec.ToString().Trim());
         foundInterceptors = attrs.Where(attr => interceptors.Any(id => attr.Contains(id)))
             .Select(fullname => fullname.StartsWith("class") ? fullname.Substring(6) : fullname)
             .ToArray();
-        return foundInterceptors.Length > 0 ;
+        var foundRewriters = attrs.Where(attr => rewriters.Any(id => attr.Contains(id)))
+            .Select(fullname => fullname.StartsWith("class") ? fullname.Substring(6) : fullname);
+        foundRewriter = foundRewriters.FirstOrDefault();
+        return foundInterceptors.Length > 0 || foundRewriters.Count() == 1;
     }
     public static List<string>  SearchForInterceptors(Declaration.Collection ilfile)
     {
@@ -67,6 +70,29 @@ public static class Searcher {
                     .Where(type => {
                         var inheritedType = new String(type.Header.Extends?.Type.ToString().Where(c => !Char.IsWhiteSpace(c)).ToArray());
                         return inheritedType == "[Inoculator.Interceptors]Inoculator.Attributes.InterceptorAttribute";
+                    });
+                return toplevel.Select(x => x.Header.Id.ToString().Trim());
+            }
+        }
+
+        return Directory.GetFiles(Directory.GetCurrentDirectory(), "*.dll").SelectMany(handlePath).ToList();
+    }
+
+    public static List<string> SearchForRewriters(string currentPath, Declaration.Collection ilfile)
+    {
+        IEnumerable<string> handlePath(string path) {
+            if(!path.EndsWith(currentPath)) {
+                var assembly = Assembly.LoadFrom(path);
+                var types = assembly.GetTypes();
+                var interceptors = types.Where(x => x.IsSubclassOf(typeof(RewriterAttribute)));
+                return interceptors.Select(x => $"[{Path.GetFileNameWithoutExtension(path)}] {x.FullName}"); // hack : space between file ref and name 
+            } else {
+                var toplevel = ilfile
+                    .Declarations.Values
+                    .OfType<ClassDecl.Class>()
+                    .Where(type => {
+                        var inheritedType = new String(type.Header.Extends?.Type.ToString().Where(c => !Char.IsWhiteSpace(c)).ToArray());
+                        return inheritedType == "[Inoculator.Interceptors]Inoculator.Attributes.RewriterAttribute";
                     });
                 return toplevel.Select(x => x.Header.Id.ToString().Trim());
             }

@@ -1,5 +1,12 @@
 using Inoculator.Builder;
 namespace Inoculator.Attributes;
+
+[AttributeUsage(AttributeTargets.Method)]
+public abstract class RewriterAttribute : System.Attribute
+{
+    public abstract MethodData OnCall(MethodData method);
+}
+
 [AttributeUsage(AttributeTargets.Method)]
 public class InterceptorAttribute : System.Attribute
 {

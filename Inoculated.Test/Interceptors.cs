@@ -47,7 +47,7 @@ public class UpdateStaticClassAttribute<T> : InterceptorAttribute
 }
 
 
-public class ReflectiveAttribute : InterceptorAttribute
+public class MemoizeAttribute : RewriterAttribute
 {
     private static Dictionary<int, ParameterData> cache = new Dictionary<int, ParameterData>();
     public int StringifyAndHash(object[] parameters) {
@@ -126,7 +126,7 @@ public class ReflectiveAttribute : InterceptorAttribute
         );
         return method;
     }
-    public override void OnEntry(MethodData method)
+    public override MethodData OnCall(MethodData method)
     {
         var argumentsHash = StringifyAndHash(method.Parameters);
         if(method.MethodBehaviour is not MethodData.MethodType.Iter && cache.ContainsKey(argumentsHash)) {
@@ -144,6 +144,8 @@ public class ReflectiveAttribute : InterceptorAttribute
                     break;
             }
         }
-        cache.Add(argumentsHash, method.ReturnValue);
+        cache.TryAdd(argumentsHash, method.ReturnValue);
+        Console.WriteLine(method);
+        return method;
     }
 }
