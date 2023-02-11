@@ -6,13 +6,13 @@ using Inoculator.Core;
 using static Inoculator.Builder.HandlerTools;
 
 public static class SyncRewriter {
-    public static Result<(ClassDecl.Class, MethodDecl.Method[]), Exception> Rewrite(ClassDecl.Class _, MethodData metadata, string[] interceptors, string rewriter, IEnumerable<string> path)
+    public static Result<(ClassDecl.Class[], MethodDecl.Method[]), Exception> Rewrite(ClassDecl.Class _, MethodData metadata, string[] interceptors, string rewriter, IEnumerable<string> path)
     {
         var newMethod = Handle(metadata.ClassReference, metadata, interceptors, rewriter, path);
         switch (newMethod)
         {
             case Error<MethodDecl.Method, Exception> e_method:
-                return Error<(ClassDecl.Class, MethodDecl.Method[]), Exception>.From(new Exception($"failed to parse new method\n{e_method.Message}"));
+                return Error<(ClassDecl.Class[], MethodDecl.Method[]), Exception>.From(new Exception($"failed to parse new method\n{e_method.Message}"));
         }
 
         var n_method = newMethod as Success<MethodDecl.Method, Exception>;
@@ -21,9 +21,9 @@ public static class SyncRewriter {
         return renamedMethod switch
         {
             Error<MethodDecl.Method, Exception> e_method
-                => Error<(ClassDecl.Class, MethodDecl.Method[]), Exception>.From(new Exception($"failed to parse modified old method\n{e_method.Message}")),
+                => Error<(ClassDecl.Class[], MethodDecl.Method[]), Exception>.From(new Exception($"failed to parse modified old method\n{e_method.Message}")),
             Success<MethodDecl.Method, Exception> o_method
-                => Success<(ClassDecl.Class, MethodDecl.Method[]), Exception>.From((null, new[] { o_method.Value, n_method.Value }))
+                => Success<(ClassDecl.Class[], MethodDecl.Method[]), Exception>.From((null, new[] { o_method.Value, n_method.Value }))
         };
     }
     private static Result<MethodDecl.Method, Exception> Handle(ClassDecl.Prefix classRef, MethodData metadata, string[] interceptorsClasses, string? rewriterClass, IEnumerable<string> path)
@@ -88,7 +88,7 @@ public static class SyncRewriter {
         )}}}
         {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{new string(metadata.Code.ToString().ToCharArray().Select(c => c != '\n' ? c : ' ').ToArray())}}}"
         {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{new string(metadata.ClassReference.ToString().ToCharArray().Select(c => c != '\n' ? c : ' ').ToArray())}}}"
-        {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{functionFullPath}}}"
+        {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{String.Join("/", path)}}}"
         {{{GetNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::.ctor(string, string,string)
         {{{GetNextLabel(ref labelIdx)}}}: stloc.s metadata
 
@@ -145,7 +145,6 @@ public static class SyncRewriter {
             builder.Replace($"***{label}***", idx.ToString());
         }
         var result = builder.ToString();
-        Console.WriteLine(result);
         return Reader.Parse<MethodDecl.Method>(result);
     }
 
@@ -171,15 +170,13 @@ public static class SyncRewriter {
                 {{{GetNextLabel(ref labelIdx)}}}: {{{callCode}}}
                 {{{GetNextLabel(ref labelIdx)}}}: stloc.s metadata
                 {{{GetNextLabel(ref labelIdx)}}}: ldloc.s metadata
-                {{{GetNextLabel(ref labelIdx)}}}: dup
-                {{{GetNextLabel(ref labelIdx)}}}: stloc.s metadata
                 {{{(
                     metadata.Signature.Output.IsVoid
                         ? String.Empty
                         : $@"
                             {GetNextLabel(ref labelIdx)}: callvirt instance class [Inoculator.Interceptors]Inoculator.Builder.ParameterData [Inoculator.Interceptors]Inoculator.Builder.MethodData::get_ReturnValue()
                             {GetNextLabel(ref labelIdx)}: callvirt instance object [Inoculator.Interceptors]Inoculator.Builder.ParameterData::get_Value()
-                            {GetNextLabel(ref labelIdx)}: {(metadata.Signature.Output.IsReferenceType ? $"castclass {metadata.Signature.Output}" : $"unbox.any {metadata.Signature.Output.ToProperName}")}
+                            {GetNextLabel(ref labelIdx)}: {(metadata.Signature.Output.IsReferenceType ? $"castclass {metadata.Signature.Output.Name}" : $"unbox.any {metadata.Signature.Output.ToProperName}")}
                         "
                 )}}}
                 {{{GetNextLabel(ref labelIdx)}}}: stloc.s result

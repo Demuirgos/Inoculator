@@ -65,11 +65,39 @@ public class MemoizeAttribute : RewriterAttribute
             Parameters = method.Parameters.Skip(1).Select(p => p.Value).ToArray();
         }
         var methodInfo = method.ReflectionInfo;
+
+
         var result = methodInfo.Invoke(Instance, Parameters);
         ReturnValue = result;
+
+        
         method.ReturnValue = new ParameterData(
             typesrc  : method.Signature.Output.Name.ToString(),
             Value : ReturnValue
+        );
+        return method;
+    }
+
+    public MethodData InvokeAsync(MethodData method) {
+        (object Instance, object[] Parameters, object ReturnValue) = (null, null, null);
+        if(method.IsStatic) {
+            Parameters = method.Parameters.Select(p => p.Value).ToArray();
+        } else {
+            Instance = method.Parameters[0].Value;
+            Parameters = method.Parameters.Skip(1).Select(p => p.Value).ToArray();
+        }
+        var methodInfo = method.ReflectionInfo;
+
+
+        var result = (Task)methodInfo.Invoke(Instance, Parameters);
+        result.Wait();
+        var resultProperty = result.GetType().GetProperty("Result");
+        var resultValue = resultProperty.GetValue(result);
+        ReturnValue = resultValue;
+        
+        method.ReturnValue = new ParameterData(
+            typesrc  : method.Signature.Output.Name.ToString(),
+            Value : true
         );
         return method;
     }
@@ -79,9 +107,19 @@ public class MemoizeAttribute : RewriterAttribute
         if(cache.ContainsKey(argumentsHash)) {
             method.ReturnValue = cache[argumentsHash];
         } else {
-            method = Invoke(method);
-            cache.Add(argumentsHash, method.ReturnValue);
+            switch(method.MethodBehaviour) {
+                case MethodData.MethodType.Async:
+                    method = InvokeAsync(method);
+                    break;
+                case MethodData.MethodType.Sync:
+                    method = Invoke(method);
+                    break;
+                default:
+                    break;
+            }
         }
+        cache.Add(argumentsHash, method.ReturnValue);
+        Console.WriteLine(method);
         return method;
     }
 }

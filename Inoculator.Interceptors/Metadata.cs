@@ -207,7 +207,7 @@ public class MethodData : Printable<MethodData> {
     public MethodData(string sourceCode, string classRefHeader, string path) {
         ClassReference = Dove.Core.Parser.Parse<ClassDecl.Prefix>(classRefHeader);    
         Code = Dove.Core.Parser.Parse<MethodDecl.Method>(sourceCode);
-        ReferencePath = path[(1+path.IndexOf(" "))..].Replace("/", "+");
+        ReferencePath = path.Replace("/", "+");
     }
 
     
@@ -256,18 +256,18 @@ public class MethodData : Printable<MethodData> {
     [JsonIgnore]
     public MethodInfo ReflectionInfo {
         get {
-            switch(MethodBehaviour) {
-                case MethodType.Sync:
-                    var assembly = Assembly.GetCallingAssembly();
-                    var type = assembly.GetType(ReferencePath);
-                    var functionName = $"{MangledName(false).ToString()[1..^1]}";
-                    if(TypeParameters.Length > 0)
-                        functionName += $"`{TypeParameters.Length}";
-                    var methodinfo = type.GetMethod(functionName); 
-                    return methodinfo;
-                default:
-                    throw new Exception("Invalid method call type");
-            }
+            Assembly? assembly = Assembly.GetCallingAssembly();
+            Type? type = assembly.GetType(ReferencePath);
+            Console.WriteLine(ReferencePath);
+            var functionName = String.Empty;
+            if(MethodBehaviour is MethodType.Sync)
+                functionName = $"{MangledName(false)[1..^1]}";
+            else functionName = $"<>__{Name(false)}_old";
+
+            if(TypeParameters.Length > 0)
+                functionName += $"`{TypeParameters.Length}";
+            var methodinfo = type.GetMethod(functionName); 
+            return methodinfo;
         }
     }
     [JsonIgnore]

@@ -40,8 +40,8 @@ public class Weaver {
                         var result = HandleMethod(method.Value, @class, parentNamespaces);
                         var CastedResult = result.Item2.Select(x => new ClassDecl.MethodDefinition(x) as ClassDecl.Member);
                         if(result.Item1 is not null) {
-                            flaggedNestedClasses.Add(result.Item1.Header.Id.ToString());
-                            CastedResult = CastedResult.Append(new ClassDecl.NestedClass(result.Item1));
+                            flaggedNestedClasses.AddRange(result.Item1.Select(c => c.Header.Id.ToString()));
+                            CastedResult = CastedResult.Union(result.Item1.Select(c => new ClassDecl.NestedClass(c)));
                         }
                         return CastedResult.ToArray();
                     case ClassDecl.NestedClass type:
@@ -73,7 +73,7 @@ public class Weaver {
             }}}};
         }
 
-        (ClassDecl.Class, MethodDecl.Method[]) HandleMethod(MethodDecl.Method method, ClassDecl.Class parent, IEnumerable<string> path) {
+        (ClassDecl.Class[], MethodDecl.Method[]) HandleMethod(MethodDecl.Method method, ClassDecl.Class parent, IEnumerable<string> path) {
             var metadata = new MethodData(method) {
                 ClassReference = parent.Header
             };
@@ -81,9 +81,9 @@ public class Weaver {
             if(!metadata.Code.IsConstructor && Searcher.IsMarked(metadata.Code, targetInterceptorsAttributes, targetRewritersAttributes, out string[] interceptors, out string rewriter)) {
                 if(metadata.MethodBehaviour is MethodData.MethodType.Sync) {
                     var result = Wrapper.ReplaceNameWith(metadata, interceptors, rewriter, parent, path);
-                    if(result is Success<(ClassDecl.Class, MethodDecl.Method[]), Exception> success) {
+                    if(result is Success<(ClassDecl.Class[], MethodDecl.Method[]), Exception> success) {
                         return success.Value;
-                    } else if(result is Error<(ClassDecl.Class, MethodDecl.Method[]), Exception> failure) {
+                    } else if(result is Error<(ClassDecl.Class[], MethodDecl.Method[]), Exception> failure) {
                         throw failure.Message;
                     }
                 } else {
@@ -93,9 +93,9 @@ public class Weaver {
                         .Where(x => x.Header.Id.ToString().StartsWith($"'<{metadata.Name(false)}>"))
                         .FirstOrDefault();
                     var result = Wrapper.ReplaceNameWith(metadata, interceptors, rewriter, generatedStateMachineClass, path);
-                    if(result is Success<(ClassDecl.Class, MethodDecl.Method[]), Exception> success) {
+                    if(result is Success<(ClassDecl.Class[], MethodDecl.Method[]), Exception> success) {
                         return success.Value;
-                    } else if(result is Error<(ClassDecl.Class, MethodDecl.Method[]), Exception> failure) {
+                    } else if(result is Error<(ClassDecl.Class[], MethodDecl.Method[]), Exception> failure) {
                         throw failure.Message;
                     }
                 }

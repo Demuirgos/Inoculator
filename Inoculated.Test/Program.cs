@@ -4,17 +4,22 @@ namespace Program {
     class Program : Printable<Program> {
         public string Name {get; set;} = "Program";
         async static Task Main(string[] args) {
-            _ = Utils.SumIntervalIsEven(0, 23);
-            _ = Utils.SumIntervalIsEven(0, 23);
-            _ = Utils.SumIntervalIsEven(0, 23);
-            _ = Utils.SumIntervalIsEven(0, 23);
-            _ = Utils.SumIntervalIsEven(0, 23);
-            _ = Utils.SumIntervalIsEven(0, 24);
+            var result = await Utils.SumIntervalIsEvenAsync(0, 23);
+            Console.WriteLine(result);
         }
         
         static class Utils {
             [ElapsedTime, Memoize]
             public static bool SumIntervalIsEven(int start, int end) {
+                int result = 0;
+                for (int j = start; j < end; j++) {
+                    result += j;
+                }
+                return result % 2 == 0;
+            }
+
+            [Memoize]
+            public static async Task<bool> SumIntervalIsEvenAsync(int start, int end) {
                 int result = 0;
                 for (int j = start; j < end; j++) {
                     result += j;
@@ -29,15 +34,6 @@ namespace Program {
                     result += j;
                 }
                 end = 123;
-                return result % 2 == 0;
-            }
-
-            [LogEntrency]
-            public static async Task<bool> SumIntervalIsEvenAsync(int start, int end) {
-                int result = 0;
-                for (int j = start; j < end; j++) {
-                    result += j;
-                }
                 return result % 2 == 0;
             }
 

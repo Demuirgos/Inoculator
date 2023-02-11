@@ -12,17 +12,23 @@ using static Inoculator.Builder.HandlerTools;
 namespace Inoculator.Builder;
 
 public static class EnumRewriter {
-    public static Result<(ClassDecl.Class, MethodDecl.Method[]), Exception> Rewrite(ClassDecl.Class classRef, MethodData metadata, string[] attributeNames, IEnumerable<string> path)
+    public static Result<(ClassDecl.Class[], MethodDecl.Method[]), Exception> Rewrite(ClassDecl.Class classRef, MethodData metadata, string[] attributeNames, IEnumerable<string> path)
     {
         bool isContainedInStruct = classRef.Header.Extends.Type.ToString() == "[System.Runtime] System.ValueType";
         var typeContainer = metadata.Code.Header.Type.Components.Types.Values.First() as TypeDecl.CustomTypeReference;
         var itemType = new TypeData(typeContainer.Reference.GenericTypes?.Types.Values.FirstOrDefault()?.ToString() ?? "object");
             
+        var oldClassMangledName= $"'<>__{Math.Abs(classRef.Header.Id.GetHashCode())}_old'";
+        var oldClassRef = Parse<Class>(classRef.ToString().Replace(classRef.Header.Id.ToString(), oldClassMangledName));
+        var oldMethodInstance = Parse<Method>(metadata.Code.ToString()
+            .Replace(classRef.Header.Id.ToString(), oldClassMangledName)
+            .Replace(metadata.Code.Header.Name.ToString(), $"'<>__{metadata.Name(false)}_old'")
+        );
         var MoveNextHandler = GetMoveNextHandler(itemType, classRef, path, isContainedInStruct, attributeNames);
-        classRef = InjectInoculationFields(classRef, MoveNextHandler, attributeNames);
+        var newClassRef = InjectInoculationFields(classRef, MoveNextHandler, attributeNames);
         metadata = RewriteInceptionPoint(classRef, metadata, attributeNames, path, isContainedInStruct);
 
-        return Success<(ClassDecl.Class, MethodDecl.Method[]), Exception>.From((classRef, new[] { metadata.Code }));
+        return Success<(ClassDecl.Class[], MethodDecl.Method[]), Exception>.From((new Class[] { oldClassRef, newClassRef }, new Method[] { oldMethodInstance, metadata.Code }));
     }
 
     private static MethodData RewriteInceptionPoint(Class classRef, MethodData metadata, string[] attributeNames, IEnumerable<string> path, bool isReleaseMode)
