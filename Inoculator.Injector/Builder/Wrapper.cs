@@ -11,15 +11,15 @@ using static Inoculator.Builder.HandlerTools;
 namespace Inoculator.Builder;
 
 public static class Wrapper {
-    public static Result<(ClassDecl.Class[], MethodDecl.Method[]), Exception> ReplaceNameWith(MethodData metadata, string[] interceptors, string rewriter, ClassDecl.Class classRef = null, IEnumerable<string> path = null) {
+    public static Result<(ClassDecl.Class[], MethodDecl.Method[]), Exception> ReplaceNameWith(MethodData metadata, string[] interceptors, ClassDecl.Class classRef = null, IEnumerable<string> path = null) {
         switch (metadata.MethodBehaviour)
         {
             case MethodData.MethodType.Sync:
-                return SyncRewriter.Rewrite(classRef, metadata, interceptors, rewriter, path);
+                return SyncRewriter.Rewrite(classRef, metadata, interceptors, path);
             case MethodData.MethodType.Iter:
-                return EnumRewriter.Rewrite(classRef, metadata, interceptors, rewriter, path);
+                return EnumRewriter.Rewrite(classRef, metadata, interceptors, path);
             case MethodData.MethodType.Async:
-                return AsyncRewriter.Rewrite(classRef, metadata, interceptors, rewriter, path);
+                return AsyncRewriter.Rewrite(classRef, metadata, interceptors, path);
         }
         return Success<(ClassDecl.Class[], MethodDecl.Method[]), Exception>.From((new ClassDecl.Class[] { classRef }, new MethodDecl.Method[] { metadata.Code }));
     }

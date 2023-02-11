@@ -47,7 +47,7 @@ public class UpdateStaticClassAttribute<T> : InterceptorAttribute
 }
 
 
-public class MemoizeAttribute : RewriterAttribute
+public class MemoizeAttribute : InterceptorAttribute
 {
     private static Dictionary<int, ParameterData> cache = new Dictionary<int, ParameterData>();
     public int StringifyAndHash(object[] parameters) {
@@ -123,7 +123,7 @@ public class MemoizeAttribute : RewriterAttribute
         );
         return method;
     }
-    public override MethodData OnCall(MethodData method)
+    public override void OnEntry(MethodData method)
     {
         var argumentsHash = StringifyAndHash(method.Parameters);
         if(cache.ContainsKey(argumentsHash)) {
@@ -143,6 +143,5 @@ public class MemoizeAttribute : RewriterAttribute
         }
         cache.Add(argumentsHash, method.ReturnValue);
         Console.WriteLine(method);
-        return method;
     }
 }

@@ -19,7 +19,6 @@ public class Weaver {
         }; 
 
     public static Result<IL_Unit, Exception> Modify(string path, IL_Unit assembly) {
-        var targetRewritersAttributes = Searcher.SearchForRewriters(path, assembly);
         var targetInterceptorsAttributes = Searcher.SearchForInterceptors(path, assembly);
         Declaration[] HandleDeclaration(Declaration declaration) {
             switch(declaration) {
@@ -78,9 +77,9 @@ public class Weaver {
                 ClassReference = parent.Header
             };
 
-            if(!metadata.Code.IsConstructor && Searcher.IsMarked(metadata.Code, targetInterceptorsAttributes, targetRewritersAttributes, out string[] interceptors, out string rewriter)) {
+            if(!metadata.Code.IsConstructor && Searcher.IsMarked(metadata.Code, targetInterceptorsAttributes, out string[] interceptors)) {
                 if(metadata.MethodBehaviour is MethodData.MethodType.Sync) {
-                    var result = Wrapper.ReplaceNameWith(metadata, interceptors, rewriter, parent, path);
+                    var result = Wrapper.ReplaceNameWith(metadata, interceptors, parent, path);
                     if(result is Success<(ClassDecl.Class[], MethodDecl.Method[]), Exception> success) {
                         return success.Value;
                     } else if(result is Error<(ClassDecl.Class[], MethodDecl.Method[]), Exception> failure) {
@@ -92,7 +91,7 @@ public class Weaver {
                         .Select(x => x.Value)
                         .Where(x => x.Header.Id.ToString().StartsWith($"'<{metadata.Name(false)}>"))
                         .FirstOrDefault();
-                    var result = Wrapper.ReplaceNameWith(metadata, interceptors, rewriter, generatedStateMachineClass, path);
+                    var result = Wrapper.ReplaceNameWith(metadata, interceptors, generatedStateMachineClass, path);
                     if(result is Success<(ClassDecl.Class[], MethodDecl.Method[]), Exception> success) {
                         return success.Value;
                     } else if(result is Error<(ClassDecl.Class[], MethodDecl.Method[]), Exception> failure) {

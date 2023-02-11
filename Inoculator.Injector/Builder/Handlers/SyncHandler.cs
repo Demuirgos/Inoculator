@@ -6,9 +6,9 @@ using Inoculator.Core;
 using static Inoculator.Builder.HandlerTools;
 
 public static class SyncRewriter {
-    public static Result<(ClassDecl.Class[], MethodDecl.Method[]), Exception> Rewrite(ClassDecl.Class _, MethodData metadata, string[] interceptors, string rewriter, IEnumerable<string> path)
+    public static Result<(ClassDecl.Class[], MethodDecl.Method[]), Exception> Rewrite(ClassDecl.Class _, MethodData metadata, string[] interceptors, IEnumerable<string> path)
     {
-        var newMethod = Handle(metadata.ClassReference, metadata, interceptors, rewriter, path);
+        var newMethod = Handle(metadata.ClassReference, metadata, interceptors, path);
         switch (newMethod)
         {
             case Error<MethodDecl.Method, Exception> e_method:
@@ -26,10 +26,9 @@ public static class SyncRewriter {
                 => Success<(ClassDecl.Class[], MethodDecl.Method[]), Exception>.From((null, new[] { o_method.Value, n_method.Value }))
         };
     }
-    private static Result<MethodDecl.Method, Exception> Handle(ClassDecl.Prefix classRef, MethodData metadata, string[] interceptorsClasses, string? rewriterClass, IEnumerable<string> path)
+    private static Result<MethodDecl.Method, Exception> Handle(ClassDecl.Prefix classRef, MethodData metadata, string[] interceptorsClasses, IEnumerable<string> path)
     {
         int labelIdx = 0;
-        bool isToBeRewritten = !String.IsNullOrEmpty(rewriterClass);
 
         var pathList = path?.ToList(); 
         bool isContainedInStruct = classRef.Extends.Type.ToString() == "[System.Runtime] System.ValueType";
@@ -61,7 +60,6 @@ public static class SyncRewriter {
         builder.AppendLine($$$"""
         .locals init (
             {{{String.Join("\n", interceptorsClasses?.Select((attrClassName, i) => $"class {attrClassName} {GenerateInterceptorName(attrClassName)},"))}}}
-            {{{(isToBeRewritten ? $"class {rewriterClass} {GenerateInterceptorName(rewriterClass)}," : String.Empty)}}}
             class [Inoculator.Interceptors]Inoculator.Builder.MethodData metadata,
             {{{(
                 metadata.Signature.Output.IsVoid
@@ -79,13 +77,6 @@ public static class SyncRewriter {
                 {GetNextLabel(ref labelIdx)}: newobj instance void class {attrClassName}::.ctor()
                 {GetNextLabel(ref labelIdx)}: stloc.s {i}"
         ))}}}
-        {{{(
-            isToBeRewritten
-                ? $@"
-                {GetNextLabel(ref labelIdx)}: newobj instance void class {rewriterClass}::.ctor()
-                {GetNextLabel(ref labelIdx)}: stloc.s {interceptorsClasses.Length}"
-                : String.Empty
-        )}}}
         {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{new string(metadata.Code.ToString().ToCharArray().Select(c => c != '\n' ? c : ' ').ToArray())}}}"
         {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{new string(metadata.ClassReference.ToString().ToCharArray().Select(c => c != '\n' ? c : ' ').ToArray())}}}"
         {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{String.Join("/", path)}}}"
@@ -105,7 +96,7 @@ public static class SyncRewriter {
         {
             .try
             {
-                {{{InvokeFunction(functionFullPath, metadata, ref labelIdx, rewriterClass, isToBeRewritten)}}}
+                {{{InvokeFunction(functionFullPath, metadata, ref labelIdx)}}}
                 {{{CallMethodOnInterceptors(metadata.ClassReference.Id.ToString(), interceptorsClasses, "OnSuccess", true, ref labelIdx)}}}
                 {{{(
                     metadata.Signature.Output.IsVoid ? String.Empty
@@ -148,39 +139,18 @@ public static class SyncRewriter {
         return Reader.Parse<MethodDecl.Method>(result);
     }
 
-    private static string InvokeFunction(string functionPath, MethodData metadata, ref int labelIdx, string? rewriterClass, bool rewrite) {
-        if(!rewrite) {
-            return $$$"""
-                {{{LoadArguments(metadata.Code.Header.Parameters, ref labelIdx, metadata.IsStatic)}}}
-                {{{GetNextLabel(ref labelIdx)}}}: call {{{metadata.MkMethodReference(true, functionPath)}}}
-                {{{(
-                    metadata.Signature.Output.IsVoid
-                        ? String.Empty
-                        : $@"{GetNextLabel(ref labelIdx)}: stloc.s result"
-                )}}}
-                {{{GetNextLabel(ref labelIdx)}}}: ldloc.s metadata
-                {{{ExtractReturnValue(metadata.Signature.Output, ref labelIdx)}}}
-                {{{UpdateRefArguments(metadata.Code.Header.Parameters, metadata.IsStatic, ref labelIdx)}}}
-            """;
-        } else {
-            string callCode = $"callvirt instance class [Inoculator.Interceptors]Inoculator.Builder.MethodData class {rewriterClass}::OnCall(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)";
-            return $$$"""
-                {{{GetNextLabel(ref labelIdx)}}}: ldloc.s {{{GenerateInterceptorName(rewriterClass)}}}
-                {{{GetNextLabel(ref labelIdx)}}}: ldloc.s metadata
-                {{{GetNextLabel(ref labelIdx)}}}: {{{callCode}}}
-                {{{GetNextLabel(ref labelIdx)}}}: stloc.s metadata
-                {{{GetNextLabel(ref labelIdx)}}}: ldloc.s metadata
-                {{{(
-                    metadata.Signature.Output.IsVoid
-                        ? String.Empty
-                        : $@"
-                            {GetNextLabel(ref labelIdx)}: callvirt instance class [Inoculator.Interceptors]Inoculator.Builder.ParameterData [Inoculator.Interceptors]Inoculator.Builder.MethodData::get_ReturnValue()
-                            {GetNextLabel(ref labelIdx)}: callvirt instance object [Inoculator.Interceptors]Inoculator.Builder.ParameterData::get_Value()
-                            {GetNextLabel(ref labelIdx)}: {(metadata.Signature.Output.IsReferenceType ? $"castclass {metadata.Signature.Output.Name}" : $"unbox.any {metadata.Signature.Output.ToProperName}")}
-                        "
-                )}}}
-                {{{GetNextLabel(ref labelIdx)}}}: stloc.s result
-            """;
-        }
+    private static string InvokeFunction(string functionPath, MethodData metadata, ref int labelIdx) {
+        return $$$"""
+            {{{LoadArguments(metadata.Code.Header.Parameters, ref labelIdx, metadata.IsStatic)}}}
+            {{{GetNextLabel(ref labelIdx)}}}: call {{{metadata.MkMethodReference(true, functionPath)}}}
+            {{{(
+                metadata.Signature.Output.IsVoid
+                    ? String.Empty
+                    : $@"{GetNextLabel(ref labelIdx)}: stloc.s result"
+            )}}}
+            {{{GetNextLabel(ref labelIdx)}}}: ldloc.s metadata
+            {{{ExtractReturnValue(metadata.Signature.Output, ref labelIdx)}}}
+            {{{UpdateRefArguments(metadata.Code.Header.Parameters, metadata.IsStatic, ref labelIdx)}}}
+        """;
     }
 }
