@@ -48,7 +48,7 @@ public static class AsyncRewriter {
         if (classRef.Header.TypeParameters?.Parameters.Values.Length > 0)
         {
             var classTypeParametersCount = classRef.Header.TypeParameters.Parameters.Values.Length;
-            var functionTypeParametersCount = metadata.Code.Header.TypeParameters.Parameters.Values.Length;
+            var functionTypeParametersCount = metadata.Code.Header.TypeParameters?.Parameters.Values.Length ?? 0;
             var classTPs = classRef.Header.TypeParameters.Parameters.Values.Take(classTypeParametersCount - functionTypeParametersCount).Select(p => $"!{p}");
             var methodTPs = classRef.Header.TypeParameters.Parameters.Values.TakeLast(functionTypeParametersCount).Select(p => $"!!{p}");
             stateMachineFullNameBuilder.Append("<")
