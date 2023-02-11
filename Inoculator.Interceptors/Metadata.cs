@@ -267,9 +267,6 @@ public class MethodData : Printable<MethodData> {
             if(MethodBehaviour is MethodType.Sync)
                 functionName = $"{MangledName(false)[1..^1]}";
             else functionName = $"<>__{Name(false)}_old";
-
-            if(TypeParameters.Length > 0)
-                functionName += $"`{TypeParameters.Length}";
             var methodinfo = type.GetMethod(functionName); 
             return methodinfo;
         }

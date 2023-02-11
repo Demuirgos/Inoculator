@@ -35,7 +35,6 @@ namespace Program {
                 for (int j = start; j < end; j++) {
                     result += j;
                 }
-                end = 123;
                 return result % 2 == 0;
             }
 
