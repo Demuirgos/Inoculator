@@ -103,8 +103,8 @@ public class MemoizeAttribute : RewriterAttribute
         return method;
     }
 
+    private (IEnumerable, IEnumerator)  enumHandler;
     public MethodData InvokeEnum(MethodData method) {
-        Console.WriteLine("here");   
         (object Instance, object[] Parameters, object ReturnValue) = (null, null, null);
         if(method.IsStatic) {
             Parameters = method.Parameters.Select(p => p.Value).ToArray();
@@ -113,20 +113,22 @@ public class MemoizeAttribute : RewriterAttribute
             Parameters = method.Parameters.Skip(1).Select(p => p.Value).ToArray();
         }
         var methodInfo = method.ReflectionInfo;
-
-
-        var result = (IEnumerable)methodInfo.Invoke(Instance, Parameters);
-
+        enumHandler.Item1 = (IEnumerable)methodInfo.Invoke(Instance, Parameters);
+        enumHandler.Item2 = enumHandler.Item2 ?? enumHandler.Item1.GetEnumerator();
+        method.Stop = !enumHandler.Item2.MoveNext();
+        var resultValue = enumHandler.Item2.Current;
         method.ReturnValue = new ParameterData(
             typesrc  : method.Signature.Output.Name.ToString(),
-            Value : result
+            Value : resultValue
         );
         return method;
     }
+    private static int count  = 0;  
     public override MethodData OnCall(MethodData method)
     {
+        Console.WriteLine($"Overriden {method.MethodName}");
         var argumentsHash = StringifyAndHash(method.Parameters);
-        if(cache.ContainsKey(argumentsHash)) {
+        if(method.MethodBehaviour is not MethodData.MethodType.Iter && cache.ContainsKey(argumentsHash)) {
             method.ReturnValue = cache[argumentsHash];
         } else {
             switch(method.MethodBehaviour) {
@@ -141,8 +143,7 @@ public class MemoizeAttribute : RewriterAttribute
                     break;
             }
         }
-        cache.Add(argumentsHash, method.ReturnValue);
-        Console.WriteLine(method);
+        cache.TryAdd(argumentsHash, method.ReturnValue);
         return method;
     }
 }

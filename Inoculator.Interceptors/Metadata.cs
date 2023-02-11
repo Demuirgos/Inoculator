@@ -271,6 +271,8 @@ public class MethodData : Printable<MethodData> {
         }
     }
     [JsonIgnore]
+    public bool Stop { get; set; }
+    [JsonIgnore]
     public ClassDecl.Class Generated { get; set; }
     
     public string MkMethodReference(bool isInoculated, string? path = null) {

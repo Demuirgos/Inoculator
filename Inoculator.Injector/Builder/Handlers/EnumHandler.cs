@@ -226,7 +226,7 @@ public static class EnumRewriter {
                 {{{GetNextLabel(ref labelIdx, jumptable, "JUMPDEST1")}}}: nop
                 .try {
                     .try {
-                        {{{InvokeFunction(stateMachineFullName, returnType, ref labelIdx, rewriterClass, isToBeRewritten)}}}
+                        {{{InvokeFunction(stateMachineFullName, returnType, ref labelIdx, rewriterClass, isToBeRewritten, jumptable)}}}
                         {{{String.Join("\n",
                             interceptorsClasses?.Select(
                                 (attrClassName, i) => $@"
@@ -314,7 +314,7 @@ public static class EnumRewriter {
         };
     }
 
-    private static string InvokeFunction(string stateMachineFullName, TypeData returnType, ref int labelIdx, string? rewriterClass, bool rewrite) {
+    private static string InvokeFunction(string stateMachineFullName, TypeData returnType, ref int labelIdx, string? rewriterClass, bool rewrite, Dictionary<string, string> jumptable) {
         static string ToGenericArity1(TypeData type) => type.IsVoid ? String.Empty : type.IsGeneric ? $"`1<!{type.PureName}>" : $"`1<{type.Name}>";
         
         if(!rewrite) {
@@ -339,6 +339,7 @@ public static class EnumRewriter {
         } else {
             string callCode = $"callvirt instance class [Inoculator.Interceptors]Inoculator.Builder.MethodData class {rewriterClass}::OnCall(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)";
             return $$$"""
+
                 {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
                 {{{GetNextLabel(ref labelIdx)}}}: dup
                 {{{GetNextLabel(ref labelIdx)}}}: ldfld class {{{rewriterClass}}} {{{stateMachineFullName}}}::'<inoculated>__Rewriter'
@@ -346,6 +347,36 @@ public static class EnumRewriter {
                 {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
                 {{{GetNextLabel(ref labelIdx)}}}: {{{callCode}}}
                 {{{GetNextLabel(ref labelIdx)}}}: stfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                
+                
+                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                {{{GetNextLabel(ref labelIdx)}}}: dup
+                {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                {{{GetNextLabel(ref labelIdx)}}}: callvirt instance class [Inoculator.Interceptors]Inoculator.Builder.ParameterData [Inoculator.Interceptors]Inoculator.Builder.MethodData::get_ReturnValue()
+                {{{GetNextLabel(ref labelIdx)}}}: callvirt instance object [Inoculator.Interceptors]Inoculator.Builder.ParameterData::get_Value()
+                {{{GetNextLabel(ref labelIdx)}}}: {{{(returnType.IsReferenceType ? $"castclass {returnType.Name}" : $"unbox.any {returnType.ToProperName}")}}}
+                {{{GetNextLabel(ref labelIdx)}}}: stfld {{{(returnType.IsGeneric ? $"!{returnType.PureName}" : returnType.Name)}}} {{{stateMachineFullName}}}::'<>2__current'
+                
+                
+                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                {{{GetNextLabel(ref labelIdx)}}}: callvirt instance bool [Inoculator.Interceptors]Inoculator.Builder.MethodData::get_Stop()
+                {{{GetNextLabel(ref labelIdx)}}}: brtrue.s ***SKIP***
+
+                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.1
+                {{{GetNextLabel(ref labelIdx)}}}: stfld int32 {{{stateMachineFullName}}}::'<>1__state'
+                {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.1
+                {{{GetNextLabel(ref labelIdx)}}}: stloc.0
+                {{{GetNextLabel(ref labelIdx)}}}: br.s ***NEXT***
+                {{{GetNextLabel(ref labelIdx, jumptable, "SKIP")}}}: nop
+                
+                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.m1
+                {{{GetNextLabel(ref labelIdx)}}}: stfld int32 {{{stateMachineFullName}}}::'<>1__state'
+                {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.0
+                {{{GetNextLabel(ref labelIdx)}}}: stloc.0
+                {{{GetNextLabel(ref labelIdx, jumptable, "NEXT")}}}: nop
             """;
         }
     }
