@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
@@ -44,9 +45,11 @@ public class TypeData : Printable<TypeData> {
         Typed, Void, VarArg
     }
 
-
     [JsonIgnore]
     public TypeDecl.Type Code { get; set; }
+
+    [JsonIgnore]
+    public Type TypeInstance {get; set;}
 
     public TypeData(TypeDecl.Type source) => Code = source;
 
@@ -69,17 +72,27 @@ public class TypeData : Printable<TypeData> {
         }
         return fullName.Trim();
     }
+
+    [JsonIgnore]
     public String Name => FilteredName(false, false);
     public String PureName => FilteredName(true, true);
+
+    [JsonIgnore]
     public TypeBehaviour Behaviour => IsValueType ? TypeBehaviour.ValueType : TypeBehaviour.ReferenceType;
     public bool IsReferenceType => Behaviour is TypeBehaviour.ReferenceType;
+    [JsonIgnore]
     public TypeNature Nature => Code.Components.Types.Values.Any(comp => comp is TypeDecl.ReferenceSuffix) ? TypeNature.Pointer : TypeNature.Value;
     public bool IsByRef => Nature is TypeNature.Pointer;
+    [JsonIgnore]
     public TypeDegree GenericOrder => Code.Components.Types.Values.Any(comp => comp is TypeDecl.GenericTypeParameter) ? TypeDegree.One : TypeDegree.Zero;
     public bool IsGeneric => GenericOrder is TypeDegree.One;
+    [JsonIgnore]
     public string ToProperName => ToProperNamedType(PureName);
+    [JsonIgnore]
     public TypeValue ValueKind => Name == "void" ? TypeValue.Void : TypeValue.Typed;
+    [JsonIgnore]
     public bool IsVoid => ValueKind is TypeValue.Void;
+    [JsonIgnore]
     private bool IsValueType {
         get {
             String[] _primitives = new String[] { "bool", "char", "float32", "float64", "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "native" };
@@ -170,6 +183,17 @@ public class TypeData : Printable<TypeData> {
         return ret;
     }
 }
+
+public class ParameterData : Printable<ParameterData> {
+    public ParameterData(Object value, Type type, string name = null) 
+        => (Name, TypeInstance, Value) = (name, type, value);
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault | JsonIgnoreCondition.WhenWritingNull)]
+    public String? Name {get; init; }
+    [JsonIgnore] public Type TypeInstance { get; init; }
+    public Object Value { get; set; }
+}
+
 public class MethodData : Printable<MethodData> {
     public enum MethodType {
         Async, Sync, Iter
@@ -181,29 +205,38 @@ public class MethodData : Printable<MethodData> {
 
     public Object EmbededResource { get; set; }
     public MethodData(MethodDecl.Method source) => Code = source;
-    public MethodData(string sourceCode) => Code = Dove.Core.Parser.Parse<MethodDecl.Method>(sourceCode);
-    public ClassDecl.Prefix ClassReference {get; set;}
+
+    public MethodData(string sourceCode, string classRefHeader, string path) {
+        ClassReference = Dove.Core.Parser.Parse<ClassDecl.Prefix>(classRefHeader);    
+        Code = Dove.Core.Parser.Parse<MethodDecl.Method>(sourceCode);
+        ReferencePath = path.Replace("/", "+");
+    }
+
+    
+    public string ReferencePath {get; init;}
     public string MethodName => Code.Header.Name.ToString();
     public String Name(bool isFull) => $"{Code.Header.Name}{(isFull ? $"<Code.Header.TypeParameters.ToString().Trim()>" : string.Empty)}";
-    public string MangledName(bool isFull) => $"'<>__{Name(false)}__Inoculated'{(isFull ? $"<Code.Header.TypeParameters.ToString().Trim()>" : string.Empty)}";
+    public string MangledName(bool isFull) => $"'<{TypeSignature.Replace(" ", String.Empty)}>__{Name(false)}__Inoculated'{(isFull ? $"<Code.Header.TypeParameters.ToString().Trim()>" : string.Empty)}";
     
 
     public string TypeSignature => $"({string.Join(", ", Signature.Input.Select(item => item.Name.ToString().Replace(" ", String.Empty)))}) -> {Signature.Output.Code}";
-    public string[] TypeParameters => Code.Header?.TypeParameters?
+    public string[]? TypeParameters => Code.Header?.TypeParameters?
         .Parameters.Values
         .Select(x => x.Id.ToString())
-        .ToArray() ?? new string[0];
-    public Object?[] Parameters { get; set; }
-    public ExceptionData ExceptionRef => Exception is null ? null : new ExceptionData(Exception);
-    public Object? ReturnValue { get; set; }
+        .ToArray() ?? null;
 
+    public ParameterData?[] Parameters { get; set; }
+    public ExceptionData ExceptionRef => Exception is null ? null : new ExceptionData(Exception);
+    public ParameterData? ReturnValue { get; set; }
+
+    [JsonIgnore]
+    public ClassDecl.Prefix ClassReference {get; init;}
     [JsonIgnore]
     public (TypeData[] Input, TypeData Output)  Signature 
         => (Code.Header.Parameters.Parameters.Values.Length > 0 
                 ? Code.Header.Parameters.Parameters.Values.Select(x => new TypeData(x)).ToArray()
                 : new[] { new TypeData("void") },
             new TypeData(Code.Header.Type));
-
     [JsonIgnore]
     public MethodType MethodBehaviour =>
         Code.Body.Items.Values.
@@ -225,42 +258,18 @@ public class MethodData : Printable<MethodData> {
     [JsonIgnore]
     public MethodInfo ReflectionInfo {
         get {
-            switch(MethodBehaviour) {
-                case MethodType.Sync:
-                    var assemblyName = Assembly.GetCallingAssembly().GetName().Name;
-                    Console.WriteLine(assemblyName);
-                    Console.WriteLine(ClassReference.Id);
-                    var type = Type.GetType($"{assemblyName}.{ClassReference.Id}");
-                    var methodinfo = type.GetMethod(MangledName(true), IsStatic ? BindingFlags.Static: BindingFlags.Instance);  
-                    Console.WriteLine(methodinfo is null ? "null" : methodinfo.Name);
-                    return methodinfo;
-                default:
-                    throw new Exception("Invalid method call type");
-            }
+            Assembly? assembly = Assembly.GetCallingAssembly();
+            Type? type = assembly.GetType(ReferencePath);
+            var functionName = String.Empty;
+            if(MethodBehaviour is MethodType.Sync)
+                functionName = $"{MangledName(false)[1..^1]}";
+            else functionName = $"<>__{Name(false)}_old";
+            var methodinfo = type.GetMethod(functionName); 
+            return methodinfo;
         }
     }
     [JsonIgnore]
+    public bool Stop { get; set; }
+    [JsonIgnore]
     public ClassDecl.Class Generated { get; set; }
-    public string MkMethodReference(bool isInoculated, string? path = null) {
-        var builder = new StringBuilder();
-        if(MethodCall is MethodData.CallType.Instance)
-            builder.Append("instance");
-        builder.Append(Signature.Output.Code);
-        if(ClassReference is not null) {
-            builder.Append(" ");
-            builder.Append(path ?? ClassReference.Id.ToString());
-            builder.Append("::");
-        }
-        builder.Append(isInoculated ? MangledName(false) : Name(false));
-        if(TypeParameters.Length > 0) {
-            builder.Append("<");
-            builder.Append(string.Join(", ", Code.Header.TypeParameters.Parameters.Values.Select(param => $"!!{param.Id}")));
-            builder.Append(">");
-        }
-        builder.Append("(");
-        builder.Append(string.Join(", ", Code.Header.Parameters.Parameters.Values.Select(x => x.ToString())));
-        builder.Append(")");
-        return builder.ToString();
-    }
-
 }

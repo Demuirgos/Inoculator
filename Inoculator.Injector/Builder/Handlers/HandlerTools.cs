@@ -84,12 +84,39 @@ public static class HandlerTools {
         """);
         }   
         builder.Append($$$"""
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} dup
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} callvirt instance class [System.Runtime]System.Type [System.Runtime]System.Object::GetType()
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldstr "<>this"
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} newobj instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(object,class [System.Runtime]System.Type,string)
             {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} stelem.ref
         """);
 
         return builder.ToString();
 
     }
+
+    public static string ExtractReturnValue(TypeData Output, ref int labelIdx, bool includeLabels = true) {
+        StringBuilder builder = new StringBuilder();
+        builder.Append($$$"""
+            {{{(
+                Output.IsVoid
+                    ? $@"{GetNextLabel(ref labelIdx)}: ldnull"
+                    : $@"{GetNextLabel(ref labelIdx)}: ldloc.s result
+                        {(  Output.IsReferenceType ? String.Empty
+                            : $@"{GetNextLabel(ref labelIdx)}: box {Output.ToProperName}"
+                        )}"
+            )}}}
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} dup
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} callvirt instance class [System.Runtime]System.Type [System.Runtime]System.Object::GetType()
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldnull
+            {{{GetNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(object,class [System.Runtime]System.Type,string)
+            {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_ReturnValue(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData)
+        """);
+
+        return builder.ToString();
+
+    }
+
     public static string ExtractArgument(ParameterDecl.Parameter parameter, ref int labelIdx, int paramIdx = 0, bool includeLabels = true) {
         StringBuilder builder = new StringBuilder();
         if(parameter is not ParameterDecl.DefaultParameter param) {
@@ -107,10 +134,36 @@ public static class HandlerTools {
             {{{( typeData.IsReferenceType ? String.Empty 
                     : $"{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)} box {(typeData.IsGeneric ? typeData.FilteredName(true, false) : typeData.ToProperName)}"
             )}}}
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} dup
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} callvirt instance class [System.Runtime]System.Type [System.Runtime]System.Object::GetType()
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldstr "{{{parameter.AsDefaultParameter()?.Id}}}"
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} newobj instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(object,class [System.Runtime]System.Type,string)
             {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} stelem.ref
             """;
 
         builder.Append(ilcode);
+        return builder.ToString();
+    }
+
+    public static string MkMethodReference(this MethodData @this,bool isInoculated, string? path = null) {
+        var builder = new StringBuilder();
+        if(@this.MethodCall is MethodData.CallType.Instance)
+            builder.Append("instance");
+        builder.Append(@this.Signature.Output.Code);
+        if(@this.ClassReference is not null) {
+            builder.Append(" ");
+            builder.Append(path ?? @this.ClassReference.Id.ToString());
+            builder.Append("::");
+        }
+        builder.Append(isInoculated ? @this.MangledName(false) : @this.Name(false));
+        if(@this.TypeParameters?.Length > 0) {
+            builder.Append("<");
+            builder.Append(string.Join(", ", @this.Code.Header.TypeParameters.Parameters.Values.Select(param => $"!!{param.Id}")));
+            builder.Append(">");
+        }
+        builder.Append("(");
+        builder.Append(string.Join(", ", @this.Code.Header.Parameters.Parameters.Values.Select(x => x.ToString())));
+        builder.Append(")");
         return builder.ToString();
     }
 
@@ -128,8 +181,9 @@ public static class HandlerTools {
 
         var ilcode = typeData.IsVoid ? string.Empty  : $$$"""
             {{{GetNextLabel(ref labelIdx)}}}: ldloc.s metadata
-            {{{GetNextLabel(ref labelIdx)}}}: callvirt instance object[] [Inoculator.Interceptors]Inoculator.Builder.MethodData::get_Parameters()
+            {{{GetNextLabel(ref labelIdx)}}}: callvirt instance class [Inoculator.Interceptors]Inoculator.Builder.ParameterData[] [Inoculator.Interceptors]Inoculator.Builder.MethodData::get_Parameters()
             {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.s {{{paramIdx}}}
+            {{{GetNextLabel(ref labelIdx)}}}: ldelem.ref
             {{{LoadArgument(param, ref labelIdx)}}}
             {{{(!typeData.IsByRef ? string.Empty
                     : $"{GetNextLabel(ref labelIdx)}: {GetCILIndirectLoadOpcode(typeData).load}" 
@@ -137,7 +191,8 @@ public static class HandlerTools {
             {{{( typeData.IsReferenceType ? String.Empty 
                     : $"{GetNextLabel(ref labelIdx)}: box {(typeData.IsGeneric ? typeData.FilteredName(true, false) : typeData.ToProperName)}"
             )}}}
-            {{{GetNextLabel(ref labelIdx)}}}: stelem.ref
+            
+            {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::set_Value(object)
             """;
 
         builder.Append(ilcode);
