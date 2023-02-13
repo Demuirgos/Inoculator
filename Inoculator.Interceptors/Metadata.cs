@@ -256,20 +256,18 @@ public class MethodData : Printable<MethodData> {
     [JsonIgnore]
     public MethodDecl.Method Code { get; set; }
     [JsonIgnore]
-    public MethodInfo ReflectionInfo {
-        get {
-            Assembly? assembly = Assembly.GetCallingAssembly();
-            Type? type = assembly.GetType(ReferencePath);
-            var functionName = String.Empty;
-            if(MethodBehaviour is MethodType.Sync)
-                functionName = $"{MangledName(false)[1..^1]}";
-            else functionName = $"<>__{Name(false)}_old";
-            var methodinfo = type.GetMethod(functionName); 
-            return methodinfo;
-        }
-    }
-    [JsonIgnore]
     public bool Stop { get; set; }
     [JsonIgnore]
     public ClassDecl.Class Generated { get; set; }
+
+    public MethodInfo ReflectionInfo<TAssemblyMarker>() {
+        Assembly? assembly = typeof(TAssemblyMarker).Assembly;
+        Type? type = assembly.GetType(ReferencePath);
+        var functionName = String.Empty;
+        if(MethodBehaviour is MethodType.Sync)
+            functionName = $"{MangledName(false)[1..^1]}";
+        else functionName = $"<>__{Name(false)}_old";
+        var methodinfo = type.GetMethod(functionName); 
+        return methodinfo;
+    }
 }

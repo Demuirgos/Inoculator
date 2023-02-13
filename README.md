@@ -22,19 +22,36 @@ public class ElapsedTimeAttribute : InterceptorAttribute
     public override void OnExit(MethodData method)
         => Console.WriteLine($"Method {method.Name(false)} took {watch.ElapsedMilliseconds}ms");
 }
+
+public class DurationAttribute : RewriterAttribute
+{
+    private Stopwatch watch = new();
+    Engine<Program.Entry> engine = new();
+    public override MethodData OnCall(MethodData method)
+    {
+        watch.Start();
+        engine.Invoke(method);
+        watch.Stop();
+        Console.WriteLine($"Method {method.MethodName} took {watch.ElapsedMilliseconds}ms (rewriter)");
+        return method;
+    }
+}
 ```
 * Flag function to be injected with code : 
 ```csharp
-async static Task Main(string[] args) {
-            // Gen region
-    _ = SumIntervalIsEven(7, 23, out _);
-    foreach(var kvp in CallCountAttribute.CallCounter) {
-        Console.WriteLine($"{kvp.Key}: called {kvp.Value}: times");
-    }
-}
-
+async static Task Main(string[] args)  => _ = SumIntervalIsEven(7, 23, out _);
 
 [ElapsedTime, LogEntrency, CallCount]
+public static bool SumIntervalIsEven(int start, int end, out int r) {
+    int result = 0;
+    for (int j = start; j < end; j++) {
+        result += j;
+    }
+    r = result;
+    return r % 2 == 0;
+}
+
+[Duration, LogEntrency, CallCount]
 public static bool SumIntervalIsEven(int start, int end, out int r) {
     int result = 0;
     for (int j = start; j < end; j++) {
@@ -72,6 +89,4 @@ After: {
   ],
   "ReturnValue": true
 }
-
-SumIntervalIsEven: called 1: times
 ```

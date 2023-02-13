@@ -33,6 +33,6 @@ public class ElapsedTimeAttribute : InterceptorAttribute
     public override void OnExit(MethodData method)
     {
         watch.Stop();
-        Console.WriteLine($"Method {method.Name(false)} took {watch.ElapsedMilliseconds}ms");
+        Console.WriteLine($"Method {method.Name(false)} took {watch.ElapsedMilliseconds}ms (interceptor)");
     }
 }

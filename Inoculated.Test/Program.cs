@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections;
 namespace Program {
-    class Program : Printable<Program> {
+    class Entry : Printable<Entry> {
         public string Name {get; set;} = "Program";
         async static Task Main(string[] args) {
             var (start, end) = (0, 23);
