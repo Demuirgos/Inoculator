@@ -46,6 +46,20 @@ public class UpdateStaticClassAttribute<T> : InterceptorAttribute
     }
 }
 
+public class DurationAttribute : RewriterAttribute
+{
+    private Stopwatch watch = new();
+    Engine<Program.Entry> engine = new();
+    public override MethodData OnCall(MethodData method)
+    {
+        watch.Start();
+        engine.Invoke(method);
+        watch.Stop();
+        Console.WriteLine($"Method {method.MethodName} took {watch.ElapsedMilliseconds}ms (rewriter)");
+        return method;
+    }
+}
+
 
 public class MemoizeAttribute : RewriterAttribute
 {
