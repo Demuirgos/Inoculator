@@ -30,7 +30,14 @@ public class Engine<TAssemblyMarker>
                 Instance = method.Parameters[0].Value;
                 Parameters = method.Parameters.Skip(1).Select(p => p.Value).ToArray();
             }
+            
             (ReturnValue, bool Stop) = HandleMethodInvocation(method.ReflectionInfo<TAssemblyMarker>(), Instance, Parameters);
+            
+            for (int i = 0; i < Parameters.Length; i++)
+            {
+                method.Parameters[i + (method.IsStatic ? 0 : 1)].Value = Parameters[i];
+            }
+            
             method.Stop = Stop;
             method.ReturnValue = new ParameterData(
                 value : ReturnValue,

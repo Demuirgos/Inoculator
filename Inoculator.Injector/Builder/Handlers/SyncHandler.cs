@@ -180,6 +180,7 @@ public static class SyncRewriter {
                         "
                 )}}}
                 {{{GetNextLabel(ref labelIdx)}}}: stloc.s result
+                {{{ReflectRefArguments(metadata.Code.Header.Parameters, metadata.IsStatic, ref labelIdx)}}}
             """;
         }
     }

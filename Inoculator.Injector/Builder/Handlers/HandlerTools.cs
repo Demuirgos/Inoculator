@@ -69,6 +69,17 @@ public static class HandlerTools {
         return builder.ToString();
     }
 
+    public static string ReflectRefArguments(ParameterDecl.Parameter.Collection parameter, bool isStatic, ref int labelIdx) {
+        StringBuilder builder = new StringBuilder();
+        int startingIdx = isStatic ? 0 : 1;
+
+        builder.AppendLine($"");
+        foreach(ParameterDecl.DefaultParameter param in parameter.Parameters.Values.OfType<ParameterDecl.DefaultParameter>()){
+            builder.AppendLine(ReflectRefArgument(param, ref labelIdx, startingIdx++));
+        }
+        return builder.ToString();
+    }
+
     public static string ExtractThisArgument(ClassDecl.Prefix ClassHeader, ref int labelIdx, bool includeLabels = true) {
         StringBuilder builder = new StringBuilder();
         var IsValueType = ClassHeader.Implements is not null && ClassHeader.Implements.Types.ToString(string.Empty).Contains("System.ValueType");
@@ -148,7 +159,7 @@ public static class HandlerTools {
     public static string MkMethodReference(this MethodData @this,bool isInoculated, string? path = null) {
         var builder = new StringBuilder();
         if(@this.MethodCall is MethodData.CallType.Instance)
-            builder.Append("instance");
+            builder.Append("instance ");
         builder.Append(@this.Signature.Output.Code);
         if(@this.ClassReference is not null) {
             builder.Append(" ");
@@ -185,14 +196,39 @@ public static class HandlerTools {
             {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.s {{{paramIdx}}}
             {{{GetNextLabel(ref labelIdx)}}}: ldelem.ref
             {{{LoadArgument(param, ref labelIdx)}}}
-            {{{(!typeData.IsByRef ? string.Empty
-                    : $"{GetNextLabel(ref labelIdx)}: {GetCILIndirectLoadOpcode(typeData).load}" 
-            )}}}
+            {{{GetNextLabel(ref labelIdx)}}}: {{{GetCILIndirectLoadOpcode(typeData).load}}}
             {{{( typeData.IsReferenceType ? String.Empty 
                     : $"{GetNextLabel(ref labelIdx)}: box {(typeData.IsGeneric ? typeData.FilteredName(true, false) : typeData.ToProperName)}"
             )}}}
             
             {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::set_Value(object)
+            """;
+
+        builder.Append(ilcode);
+        return builder.ToString();
+    }
+
+    public static string ReflectRefArgument(ParameterDecl.Parameter parameter, ref int labelIdx, int paramIdx = 0) {
+        StringBuilder builder = new StringBuilder();
+        if(parameter is not ParameterDecl.DefaultParameter param) {
+            throw new Exception("Unknown parameter type");
+        }
+        
+        var typeData = new TypeData(parameter);
+
+        if(!typeData.IsByRef) {
+            return string.Empty;
+        }
+
+        var ilcode = typeData.IsVoid ? string.Empty  : $$$"""
+            {{{LoadArgument(param, ref labelIdx)}}}
+            {{{GetNextLabel(ref labelIdx)}}}: ldloc.s metadata
+            {{{GetNextLabel(ref labelIdx)}}}: callvirt instance class [Inoculator.Interceptors]Inoculator.Builder.ParameterData[] [Inoculator.Interceptors]Inoculator.Builder.MethodData::get_Parameters()
+            {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.s {{{paramIdx}}}
+            {{{GetNextLabel(ref labelIdx)}}}: ldelem.ref
+            {{{GetNextLabel(ref labelIdx)}}}: callvirt instance object [Inoculator.Interceptors]Inoculator.Builder.ParameterData::get_Value()
+            {{{GetNextLabel(ref labelIdx)}}}: {{{(typeData.IsReferenceType ? $"castclass {typeData.Name}" : $"unbox.any {typeData.ToProperName}")}}}
+            {{{GetNextLabel(ref labelIdx)}}}: {{{GetCILIndirectLoadOpcode(typeData).set}}}
             """;
 
         builder.Append(ilcode);
