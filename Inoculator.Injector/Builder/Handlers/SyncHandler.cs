@@ -17,7 +17,10 @@ public static class SyncRewriter {
 
         var n_method = newMethod as Success<MethodDecl.Method, Exception>;
 
-        var renamedMethod = Reader.Parse<MethodDecl.Method>(metadata.Code.ToString().Replace(metadata.Name(false), metadata.MangledName(false)));
+        var renamedMethod = Reader.Parse<MethodDecl.Method>(metadata.Code.ToString()
+            .Replace($"::{metadata.Name(false)}", $"::{metadata.MangledName(false)}")
+            .Replace($" {metadata.Name(false)}", $" {metadata.MangledName(false)}")
+        );
         return renamedMethod switch
         {
             Error<MethodDecl.Method, Exception> e_method
