@@ -222,7 +222,7 @@ public static class AsyncRewriter {
 
                 {{{GetNextLabel(ref labelIdx, jumptable, "JUMPDEST1")}}}: nop
 
-                {{{InvokeFunction(stateMachineFullName, returnType, ref labelIdx, rewriterClass, isToBeRewritten)}}}
+                {{{InvokeFunction(stateMachineFullName, returnType, ref labelIdx, rewriterClass, isToBeRewritten, jumptable)}}}
 
                 {{{GetNextLabel(ref labelIdx, jumptable, "SUCCESS")}}}: nop
                 {{{String.Join("\n",
@@ -305,7 +305,7 @@ public static class AsyncRewriter {
         return HandleMoveNext;
     }
 
-    private static string InvokeFunction(string stateMachineFullName, TypeData returnType, ref int labelIdx, string? rewriterClass, bool rewrite) {
+    private static string InvokeFunction(string stateMachineFullName, TypeData returnType, ref int labelIdx, string? rewriterClass, bool rewrite, Dictionary<string, string> jumptable) {
         static string ToGenericArity1(TypeData type) => type.IsVoid ? String.Empty : type.IsGeneric ? $"`1<!{type.PureName}>" : $"`1<{type.Name}>";
         
         if(!rewrite) {
@@ -352,31 +352,65 @@ public static class AsyncRewriter {
         } else {
             string callCode = $"callvirt instance class [Inoculator.Interceptors]Inoculator.Builder.MethodData class {rewriterClass}::OnCall(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)";
             return $$$"""
-                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
-                {{{GetNextLabel(ref labelIdx)}}}: dup
-                {{{GetNextLabel(ref labelIdx)}}}: ldfld class {{{rewriterClass}}} {{{stateMachineFullName}}}::'<inoculated>__Rewriter'
-                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
-                {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
-                {{{GetNextLabel(ref labelIdx)}}}: {{{callCode}}}
-                {{{GetNextLabel(ref labelIdx)}}}: stfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
-                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                .try 
+                {
+                    {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                    {{{GetNextLabel(ref labelIdx)}}}: dup
+                    {{{GetNextLabel(ref labelIdx)}}}: ldfld class {{{rewriterClass}}} {{{stateMachineFullName}}}::'<inoculated>__Rewriter'
+                    {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                    {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                    {{{GetNextLabel(ref labelIdx)}}}: {{{callCode}}}
+                    {{{GetNextLabel(ref labelIdx)}}}: stfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+
+                    {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                    {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                    {{{GetNextLabel(ref labelIdx)}}}: callvirt instance class [System.Runtime]System.Exception [Inoculator.Interceptors]Inoculator.Builder.MethodData::get_Exception()
+                    {{{GetNextLabel(ref labelIdx)}}}: dup
+                    {{{GetNextLabel(ref labelIdx)}}}: stloc.0
+                    {{{GetNextLabel(ref labelIdx)}}}: brtrue.s ***INNER_FAILURE***
+
+                    {{{(
+                        returnType.IsVoid
+                            ? String.Empty
+                            : $@"
+                                {GetNextLabel(ref labelIdx)}: ldarg.0
+                                {GetNextLabel(ref labelIdx)}: ldflda valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1<{returnType.Name}> {stateMachineFullName}::'<>t__builder'
+                                {GetNextLabel(ref labelIdx)}: ldarg.0
+                                {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
+                                {GetNextLabel(ref labelIdx)}: callvirt instance class [Inoculator.Interceptors]Inoculator.Builder.ParameterData [Inoculator.Interceptors]Inoculator.Builder.MethodData::get_ReturnValue()
+                                {GetNextLabel(ref labelIdx)}: callvirt instance object [Inoculator.Interceptors]Inoculator.Builder.ParameterData::get_Value()
+                                {GetNextLabel(ref labelIdx)}: {(returnType.IsReferenceType ? $"castclass {returnType.Name}" : $"unbox.any {returnType.ToProperName}")}
+                            "
+                    )}}}
+                    {{{GetNextLabel(ref labelIdx)}}}: call instance void valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1<{{{returnType.Name}}}>::SetResult(!0)
+                    {{{GetNextLabel(ref labelIdx, jumptable, "INNER_FAILURE")}}}: nop
+                    {{{GetNextLabel(ref labelIdx)}}}: leave.s ***OUTSIDE***
+                } 
+                catch [System.Runtime]System.Exception 
+                {
+                    {{{GetNextLabel(ref labelIdx)}}}: stloc.0
+
+                    {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                    {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                    {{{GetNextLabel(ref labelIdx)}}}: ldloc.0
+                    {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_Exception(class [System.Runtime]System.Exception)
+                    
+                    {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                    {{{GetNextLabel(ref labelIdx)}}}: ldflda valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1<{{{returnType.Name}}}> {{{stateMachineFullName}}}::'<>t__builder'
+                    {{{GetNextLabel(ref labelIdx)}}}: ldloc.0
+                    {{{GetNextLabel(ref labelIdx)}}}: call instance void valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1<{{{returnType.Name}}}>::SetException(class [System.Runtime]System.Exception)
+                    {{{GetNextLabel(ref labelIdx)}}}: leave.s ***OUTSIDE***
+                }
+                {{{GetNextLabel(ref labelIdx, jumptable, "OUTSIDE")}}}: ldarg.0
                 {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.s -2
                 {{{GetNextLabel(ref labelIdx)}}}: stfld int32 {{{stateMachineFullName}}}::'<>1__state'
 
-                {{{(
-                    returnType.IsVoid
-                        ? String.Empty
-                        : $@"
-                            {GetNextLabel(ref labelIdx)}: ldarg.0
-                            {GetNextLabel(ref labelIdx)}: ldflda valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1<{returnType.Name}> {stateMachineFullName}::'<>t__builder'
-                            {GetNextLabel(ref labelIdx)}: ldarg.0
-                            {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
-                            {GetNextLabel(ref labelIdx)}: callvirt instance class [Inoculator.Interceptors]Inoculator.Builder.ParameterData [Inoculator.Interceptors]Inoculator.Builder.MethodData::get_ReturnValue()
-                            {GetNextLabel(ref labelIdx)}: callvirt instance object [Inoculator.Interceptors]Inoculator.Builder.ParameterData::get_Value()
-                            {GetNextLabel(ref labelIdx)}: {(returnType.IsReferenceType ? $"castclass {returnType.Name}" : $"unbox.any {returnType.ToProperName}")}
-                        "
-                )}}}
-                {{{GetNextLabel(ref labelIdx)}}}: call instance void valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1<{{{returnType.Name}}}>::SetResult(!0)
+                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                {{{GetNextLabel(ref labelIdx)}}}: callvirt instance class [System.Runtime]System.Exception [Inoculator.Interceptors]Inoculator.Builder.MethodData::get_Exception()
+                {{{GetNextLabel(ref labelIdx)}}}: dup
+                {{{GetNextLabel(ref labelIdx)}}}: stloc.0
+                {{{GetNextLabel(ref labelIdx)}}}: brtrue.s ***FAILURE***
             """;
         }
     }

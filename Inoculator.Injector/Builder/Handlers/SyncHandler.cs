@@ -103,7 +103,7 @@ public static class SyncRewriter {
         {{{ExtractArguments(metadata, ref labelIdx, metadata.IsStatic)}}}
         {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_Parameters(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData[])
 
-        {{{CallMethodOnInterceptors(metadata.ClassReference.Id.ToString(), interceptorsClasses, "OnEntry", true, ref labelIdx)}}}
+        {{{CallMethodOnInterceptors(metadata.ClassReference.Id.ToString(), interceptorsClasses, "OnEntry", true, ref labelIdx, false)}}}
         .try
         {
             .try

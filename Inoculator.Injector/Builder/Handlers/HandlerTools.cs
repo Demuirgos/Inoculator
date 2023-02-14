@@ -8,10 +8,10 @@ public static class HandlerTools {
         return label;
     }
 
-    public static string CallMethodOnInterceptors(string classContainer, string[] interceptorsClass, string methodName, bool isSyncMode, ref int labelIdx) 
+    public static string CallMethodOnInterceptors(string classContainer, string[] interceptorsClass, string methodName, bool isSyncMode, ref int labelIdx, bool inverse = true) 
     {
         StringBuilder builder = new StringBuilder();
-        foreach (var interceptorClass in interceptorsClass)
+        foreach (var interceptorClass in (inverse ? interceptorsClass.Reverse() : interceptorsClass))
         {
             builder.Append(CallMethodOnInterceptor(classContainer, interceptorClass, methodName, isSyncMode, ref labelIdx));
         }
