@@ -12,7 +12,7 @@ using static Inoculator.Builder.HandlerTools;
 namespace Inoculator.Builder;
 
 public static class EnumRewriter {
-    public static Result<(ClassDecl.Class[], MethodDecl.Method[]), Exception> Rewrite(ClassDecl.Class classRef, MethodData metadata, string[] interceptors, string rewriter, IEnumerable<string> path)
+    public static Result<(ClassDecl.Class[], MethodDecl.Method[]), Exception> Rewrite(ClassDecl.Class classRef, MethodData metadata, InterceptorData[] interceptors, IEnumerable<string> path)
     {
         bool isContainedInStruct = classRef.Header.Extends.Type.ToString() == "[System.Runtime] System.ValueType";
         var typeContainer = metadata.Code.Header.Type.Components.Types.Values.First() as TypeDecl.CustomTypeReference;
@@ -24,17 +24,17 @@ public static class EnumRewriter {
             .Replace(classRef.Header.Id.ToString(), oldClassMangledName)
             .Replace(metadata.Code.Header.Name.ToString(), $"'<>__{metadata.Name(false)}_old'")
         );
-        var MoveNextHandler = GetMoveNextHandler(itemType, classRef, path, isContainedInStruct, interceptors, rewriter);
-        var newClassRef = InjectInoculationFields(classRef, MoveNextHandler, interceptors, rewriter);
-        metadata = RewriteInceptionPoint(classRef, metadata, interceptors, rewriter, path, isContainedInStruct);
+        var MoveNextHandler = GetMoveNextHandler(itemType, classRef, path, isContainedInStruct, interceptors);
+        var newClassRef = InjectInoculationFields(classRef, MoveNextHandler, interceptors);
+        metadata = RewriteInceptionPoint(classRef, metadata, interceptors, path, isContainedInStruct);
 
         return Success<(ClassDecl.Class[], MethodDecl.Method[]), Exception>.From((new Class[] { oldClassRef, newClassRef }, new Method[] { oldMethodInstance, metadata.Code }));
     }
 
-    private static MethodData RewriteInceptionPoint(Class classRef, MethodData metadata, string[] interceptorsClasses, string rewriterClass, IEnumerable<string> path, bool isReleaseMode)
+    private static MethodData RewriteInceptionPoint(Class classRef, MethodData metadata, InterceptorData[] interceptorsClasses, IEnumerable<string> path, bool isReleaseMode)
     {
         int labelIdx = 0;
-        bool isToBeRrwritten = !String.IsNullOrEmpty(rewriterClass);
+        bool isToBeRewritten = interceptorsClasses.Any(i => i.IsRewriter);
 
         var stateMachineFullNameBuilder = new StringBuilder()
             .Append(isReleaseMode ? " valuetype " : " class ")
@@ -99,17 +99,10 @@ public static class EnumRewriter {
                                             interceptorsClasses.Select(
                                                     (attrClassName, i) => $"""
                                             {GetNextLabel(ref labelIdx)}: dup
-                                            {GetNextLabel(ref labelIdx)}: newobj instance void class {attrClassName}::.ctor()
-                                            {GetNextLabel(ref labelIdx)}: stfld class {attrClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName)}
+                                            {GetNextLabel(ref labelIdx)}: newobj instance void class {attrClassName.ClassName}::.ctor()
+                                            {GetNextLabel(ref labelIdx)}: stfld class {attrClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName.ClassName)}
                                             """
                                         ))}}}
-                                        {{{(
-                                            !isToBeRrwritten ? String.Empty :  $"""
-                                            {GetNextLabel(ref labelIdx)}: dup
-                                            {GetNextLabel(ref labelIdx)}: newobj instance void class {rewriterClass}::.ctor()
-                                            {GetNextLabel(ref labelIdx)}: stfld class {rewriterClass} {stateMachineFullName}::'<inoculated>__Rewriter'
-                                            """
-                                        )}}}
                                         {{{GetNextLabel(ref labelIdx)}}}: ret
                                         """;
                                             var res = Parse<MethodDecl.Member.Collection>(injectionCode);
@@ -130,18 +123,15 @@ public static class EnumRewriter {
         return metadata;
     }
 
-    private static ClassDecl.Class InjectInoculationFields(Class classRef, Func<ClassDecl.MethodDefinition, ClassDecl.MethodDefinition[]> MoveNextHandler, string[] interceptorsClasses, string rewriterClass)
+    private static ClassDecl.Class InjectInoculationFields(Class classRef, Func<ClassDecl.MethodDefinition, ClassDecl.MethodDefinition[]> MoveNextHandler, InterceptorData[] interceptorsClasses)
     {
-        bool isToBeRewritten = !String.IsNullOrEmpty(rewriterClass);
+        bool isToBeRewritten = interceptorsClasses.Any(i => i.IsRewriter);
 
         List<string> members = new();
         if(interceptorsClasses.Length > 0 ) {
-            members.AddRange(interceptorsClasses.Select((attr, i) => $".field public class {attr} {GenerateInterceptorName(attr)}"));
+            members.AddRange(interceptorsClasses.Select((attr, i) => $".field public class {attr.ClassName} {GenerateInterceptorName(attr.ClassName)}"));
         }
         members.Add($".field public class [Inoculator.Interceptors]Inoculator.Builder.MethodData '<inoculated>__Metadata'");
-        if(isToBeRewritten) {
-            members.Add($".field public class {rewriterClass} '<inoculated>__Rewriter'");
-        }
 
         classRef = classRef with
         {
@@ -168,9 +158,9 @@ public static class EnumRewriter {
         return classRef;
     }
 
-    private static Func<ClassDecl.MethodDefinition, ClassDecl.MethodDefinition[]> GetMoveNextHandler(TypeData returnType, Class classRef, IEnumerable<string> path, bool isContainedInStruct, string[] interceptorsClasses, string rewriterClass) {
+    private static Func<ClassDecl.MethodDefinition, ClassDecl.MethodDefinition[]> GetMoveNextHandler(TypeData returnType, Class classRef, IEnumerable<string> path, bool isContainedInStruct, InterceptorData[] modifierClasses) {
         return (MethodDefinition methodDef) => {
-            bool isToBeRewritten = !String.IsNullOrEmpty(rewriterClass);
+            bool isToBeRewritten = modifierClasses.Any(i => i.IsRewriter);
             int labelIdx = 0;
             Dictionary<string, string> jumptable = new();
 
@@ -214,27 +204,27 @@ public static class EnumRewriter {
 
 
                 {{{String.Join("\n", 
-                    interceptorsClasses?.Select(
+                    modifierClasses?.Where(m => m.IsInterceptor).Select(
                         (attrClassName, i) => $@"
                         {GetNextLabel(ref labelIdx)}: ldarg.0
-                        {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName)}
+                        {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName.ClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName.ClassName)}
                         {GetNextLabel(ref labelIdx)}: ldarg.0
                         {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
-                        {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName}::OnEntry(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"
+                        {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName.ClassName}::OnEntry(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"
                 ))}}}
 
                 {{{GetNextLabel(ref labelIdx, jumptable, "JUMPDEST1")}}}: nop
                 .try {
                     .try {
-                        {{{InvokeFunction(stateMachineFullName, returnType, ref labelIdx, rewriterClass, isToBeRewritten, jumptable)}}}
+                        {{{InvokeFunction(stateMachineFullName, returnType, ref labelIdx, modifierClasses.FirstOrDefault(m => m.IsRewriter)?.ClassName, isToBeRewritten, jumptable)}}}
                         {{{String.Join("\n",
-                            interceptorsClasses?.Select(
+                            modifierClasses?.Where(m => m.IsInterceptor).Select(
                                 (attrClassName, i) => $@"
                                 {GetNextLabel(ref labelIdx)}: ldarg.0
-                                {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName)}
+                                {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName.ClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName.ClassName)}
                                 {GetNextLabel(ref labelIdx)}: ldarg.0
                                 {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
-                                {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName}::OnSuccess(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"
+                                {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName.ClassName}::OnSuccess(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"
                         ))}}}
                         {{{GetNextLabel(ref labelIdx)}}}: leave.s ***END***
                     } catch [System.Runtime]System.Exception
@@ -245,13 +235,13 @@ public static class EnumRewriter {
                         {{{GetNextLabel(ref labelIdx)}}}: ldloc.s e
                         {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_Exception(class [System.Runtime]System.Exception)
                         {{{String.Join("\n",
-                            interceptorsClasses?.Select(
+                            modifierClasses?.Where(m => m.IsInterceptor).Select(
                                 (attrClassName, i) => $@"
                                 {GetNextLabel(ref labelIdx)}: ldarg.0
-                                {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName)}
+                                {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName.ClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName.ClassName)}
                                 {GetNextLabel(ref labelIdx)}: ldarg.0
                                 {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
-                                {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName}::OnException(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"
+                                {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName.ClassName}::OnException(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"
                         ))}}}
                         {{{GetNextLabel(ref labelIdx)}}}: ldloc.s e
                         {{{GetNextLabel(ref labelIdx)}}}: throw
@@ -264,13 +254,13 @@ public static class EnumRewriter {
                     {{{GetNextLabel(ref labelIdx)}}}: bne.un.s ***JUMPDEST2***
 
                     {{{String.Join("\n",
-                        interceptorsClasses?.Select(
+                        modifierClasses?.Where(m => m.IsInterceptor).Select(
                             (attrClassName, i) => $@"
                             {GetNextLabel(ref labelIdx)}: ldarg.0
-                            {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName)}
+                            {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName.ClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName.ClassName)}
                             {GetNextLabel(ref labelIdx)}: ldarg.0
                             {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
-                            {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName}::OnExit(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"
+                            {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName.ClassName}::OnExit(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"
                     ))}}}
                     {{{GetNextLabel(ref labelIdx, jumptable, "JUMPDEST2")}}}: endfinally
                 }

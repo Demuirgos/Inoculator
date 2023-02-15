@@ -18,9 +18,8 @@ public class Weaver {
                 => Error<string, Exception>.From(error.Message)
         }; 
 
-    public static Result<IL_Unit, Exception> Modify(string path, IL_Unit assembly) {
-        var targetRewritersAttributes = Searcher.SearchForRewriters(path, assembly);
-        var targetInterceptorsAttributes = Searcher.SearchForInterceptors(path, assembly);
+    public static Result<IL_Unit, Exception> Modify(string currentPath, IL_Unit assembly) {
+        var targetModifiersAttributes = Searcher.SearchForModifiers(currentPath);
         Declaration[] HandleDeclaration(Declaration declaration) {
             switch(declaration) {
                 case ClassDecl.Class type:
@@ -78,9 +77,9 @@ public class Weaver {
                 ClassReference = parent.Header
             };
 
-            if(!metadata.Code.IsConstructor && Searcher.IsMarked(metadata.Code, targetInterceptorsAttributes, targetRewritersAttributes, out string[] interceptors, out string rewriter)) {
+            if(!metadata.Code.IsConstructor && Searcher.IsMarked(metadata.Code, targetModifiersAttributes, out InterceptorData[] modifiers)) {
                 if(metadata.MethodBehaviour is MethodData.MethodType.Sync) {
-                    var result = Wrapper.ReplaceNameWith(metadata, interceptors, rewriter, parent, path);
+                    var result = Wrapper.ReplaceNameWith(metadata, modifiers, parent, path);
                     if(result is Success<(ClassDecl.Class[], MethodDecl.Method[]), Exception> success) {
                         return success.Value;
                     } else if(result is Error<(ClassDecl.Class[], MethodDecl.Method[]), Exception> failure) {
@@ -92,7 +91,7 @@ public class Weaver {
                         .Select(x => x.Value)
                         .Where(x => x.Header.Id.ToString().StartsWith($"'<{metadata.Name(false)}>"))
                         .FirstOrDefault();
-                    var result = Wrapper.ReplaceNameWith(metadata, interceptors, rewriter, generatedStateMachineClass, path);
+                    var result = Wrapper.ReplaceNameWith(metadata, modifiers, generatedStateMachineClass, path);
                     if(result is Success<(ClassDecl.Class[], MethodDecl.Method[]), Exception> success) {
                         return success.Value;
                     } else if(result is Error<(ClassDecl.Class[], MethodDecl.Method[]), Exception> failure) {

@@ -19,6 +19,23 @@ public class DateAttribute : InterceptorAttribute
     }
 }
 
+public class DateAndTimeAttribute : DateAttribute
+{
+    private Stopwatch watch = new Stopwatch();
+    public override void OnEntry(MethodData method)
+    {
+        base.OnEntry(method);
+        watch.Start();
+    }
+
+    public override void OnExit(MethodData method)
+    {
+        watch.Stop();
+        base.OnExit(method);
+        Console.WriteLine($"Method {method.MethodName} took {watch.ElapsedMilliseconds}ms");
+    }
+}
+
 public class CallCountAttribute : InterceptorAttribute
 {
     public static Dictionary<string, int> CallCounter = new Dictionary<string, int>();

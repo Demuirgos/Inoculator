@@ -27,6 +27,7 @@ public abstract class IntermediateIOBase<TOutput> {
             string inner_error = process.StandardError.ReadToEnd();
             return Error<TOutput, Exception>.From(new Exception($"ildasm failed with exit code: {process.ExitCode}\n{inner_error}"));
         }
+        process.Dispose();
         return Success<TOutput, Exception>.From(default);
     }
 

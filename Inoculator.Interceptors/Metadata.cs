@@ -184,6 +184,12 @@ public class TypeData : Printable<TypeData> {
     }
 }
 
+public class InterceptorData : Printable<InterceptorData> {
+    public string ClassName { get; set; }
+    public bool IsInterceptor { get; set; }
+    public bool IsRewriter { get; set; }
+}
+
 public class ParameterData : Printable<ParameterData> {
     public ParameterData(Object value, Type type, string name = null) 
         => (Name, TypeInstance, Value) = (name, type, value);

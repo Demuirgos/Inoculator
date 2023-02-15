@@ -2,18 +2,40 @@ using System.Collections;
 using System.Reflection;
 using Inoculator.Builder;
 namespace Inoculator.Attributes;
+public interface IRewriter
+{
+    MethodData OnCall(MethodData method);
+}
+
+public interface IInterceptor
+{
+    void OnEntry(MethodData method);
+    void OnException(MethodData method);
+    void OnSuccess(MethodData method);
+    void OnExit(MethodData method);
+}
 
 [AttributeUsage(AttributeTargets.Method)]
-public abstract class RewriterAttribute : System.Attribute
+public abstract class RewriterAttribute : System.Attribute, IRewriter
 {
     public abstract MethodData OnCall(MethodData method);
 }
 
+
 [AttributeUsage(AttributeTargets.Method)]
-public class InterceptorAttribute : System.Attribute
+public class InterceptorAttribute : System.Attribute, IInterceptor
 {
     public virtual void OnEntry(MethodData method) {}
     public virtual void OnException(MethodData method) {}
+    public virtual void OnSuccess(MethodData method) {}
+    public virtual void OnExit(MethodData method) {}
+}
+
+public abstract class InterpreterAttribute : System.Attribute, IInterceptor, IRewriter
+{
+    public virtual void OnEntry(MethodData method) {}
+    public virtual void OnException(MethodData method) {}
+    public abstract MethodData OnCall(MethodData method);
     public virtual void OnSuccess(MethodData method) {}
     public virtual void OnExit(MethodData method) {}
 }

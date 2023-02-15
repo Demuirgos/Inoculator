@@ -36,3 +36,24 @@ public class ElapsedTimeAttribute : InterceptorAttribute
         Console.WriteLine($"Method {method.Name(false)} took {watch.ElapsedMilliseconds}ms (interceptor)");
     }
 }
+
+
+public class DurationLoggerAttribute<TAssemblyMarker> : InterpreterAttribute
+{
+    private Stopwatch watch = new();
+    private Engine<TAssemblyMarker> engine = new();
+    public override MethodData OnCall(MethodData method)
+    {
+        return engine.Invoke(method);
+    }
+    public override void OnEntry(MethodData method)
+    {
+        watch.Start();
+    }
+
+    public override void OnExit(MethodData method)
+    {
+        watch.Stop();
+        Console.WriteLine($"Method {method.Name(false)} took {watch.ElapsedMilliseconds}ms (interceptor)");
+    }
+}

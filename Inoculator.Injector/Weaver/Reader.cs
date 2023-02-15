@@ -40,6 +40,8 @@ public partial class Reader : IntermediateIOBase<IL_Unit> {
     protected override ProcessStartInfo MakeProcess(string? ildasmPath, string targetFile) {
         File.Create(TempFilePath).Dispose();
         this.TargetFile = targetFile;
+        // duplicate the target file
+        File.Copy(targetFile, $"{targetFile}.temp", true);
         var ildasmPsi = new ProcessStartInfo
         {
             UseShellExecute = false,

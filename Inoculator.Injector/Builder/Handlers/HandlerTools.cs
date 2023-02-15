@@ -8,12 +8,26 @@ public static class HandlerTools {
         return label;
     }
 
-    public static string CallMethodOnInterceptors(string classContainer, string[] interceptorsClass, string methodName, bool isSyncMode, ref int labelIdx, bool inverse = true) 
+    public static string CallMethodOnInterceptors(string classContainer, InterceptorData[] modifierClasses, string methodName, bool isSyncMode, ref int labelIdx, bool inverse = true) 
     {
+        var interceptorsClass = modifierClasses.Where(m => m.IsInterceptor);
+        if(inverse) interceptorsClass = interceptorsClass.Reverse();
         StringBuilder builder = new StringBuilder();
-        foreach (var interceptorClass in (inverse ? interceptorsClass.Reverse() : interceptorsClass))
+        foreach (var interceptorClass in interceptorsClass)
         {
-            builder.Append(CallMethodOnInterceptor(classContainer, interceptorClass, methodName, isSyncMode, ref labelIdx));
+            builder.Append(CallMethodOnInterceptor(classContainer, interceptorClass.ClassName, methodName, isSyncMode, ref labelIdx));
+        }
+        return builder.ToString();
+    }
+
+    public static string CallMethodOnInterceptorsSM(string classContainer, InterceptorData[] modifierClasses, string methodName, bool isSyncMode, ref int labelIdx, bool inverse = true) 
+    {
+        var interceptorsClass = modifierClasses.Where(m => m.IsInterceptor);
+        if(inverse) interceptorsClass = interceptorsClass.Reverse();
+        StringBuilder builder = new StringBuilder();
+        foreach (var interceptorClass in interceptorsClass)
+        {
+            builder.Append(CallMethodOnInterceptorSM(classContainer, interceptorClass.ClassName, methodName, isSyncMode, ref labelIdx));
         }
         return builder.ToString();
     }
@@ -21,6 +35,19 @@ public static class HandlerTools {
     public static string GenerateInterceptorName(string className) => $"'<inoculated>interceptor__{Math.Abs(className.GetHashCode()) % 1000:X3}'"; 
 
     public static string CallMethodOnInterceptor(string classContainer, string interceptorClass, string methodName, bool isSyncMode, ref int labelIdx) {
+        string piping = isSyncMode 
+            ? $@"{GetNextLabel(ref labelIdx)}: ldloc.s {GenerateInterceptorName(interceptorClass)}
+                 {GetNextLabel(ref labelIdx)}: ldloc.s metadata"
+            : $@"{GetNextLabel(ref labelIdx)}: ldarg.0
+                 {GetNextLabel(ref labelIdx)}: ldfld class {interceptorClass} {classContainer}::{GenerateInterceptorName(interceptorClass)}
+                 {GetNextLabel(ref labelIdx)}: ldarg.0
+                 {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {classContainer}::'<inoculated>__Metadata'";
+        
+        string callCode = $"{GetNextLabel(ref labelIdx)}: callvirt instance void class {interceptorClass}::{methodName}(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)";
+        return $"{piping}\n{callCode}";
+    }
+
+     public static string CallMethodOnInterceptorSM(string classContainer, string interceptorClass, string methodName, bool isSyncMode, ref int labelIdx) {
         string piping = isSyncMode 
             ? $@"{GetNextLabel(ref labelIdx)}: ldloc.s {GenerateInterceptorName(interceptorClass)}
                  {GetNextLabel(ref labelIdx)}: ldloc.s metadata"

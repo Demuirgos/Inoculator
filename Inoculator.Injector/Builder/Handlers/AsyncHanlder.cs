@@ -14,7 +14,7 @@ using static Inoculator.Builder.HandlerTools;
 namespace Inoculator.Builder;
 
 public static class AsyncRewriter {
-    public static Result<(ClassDecl.Class[], MethodDecl.Method[]), Exception> Rewrite(ClassDecl.Class classRef, MethodData metadata, string[] interceptors, string rewriter, IEnumerable<string> path)
+    public static Result<(ClassDecl.Class[], MethodDecl.Method[]), Exception> Rewrite(ClassDecl.Class classRef, MethodData metadata, InterceptorData[] interceptors, IEnumerable<string> path)
     {
         bool isReleaseMode = classRef.Header.Extends.Type.ToString() == "[System.Runtime] System.ValueType";
         var typeContainer = metadata.Code.Header.Type.Components.Types.Values.First() as TypeDecl.CustomTypeReference;
@@ -26,17 +26,17 @@ public static class AsyncRewriter {
             .Replace(classRef.Header.Id.ToString(), oldClassMangledName)
             .Replace(metadata.Code.Header.Name.ToString(), $"'<>__{metadata.Code.Header.Name}_old'")
         );
-        var MoveNextHandler = GetNextMethodHandler(itemType, classRef, path, isReleaseMode, interceptors, rewriter);
-        var newClassRef = InjectInoculationFields(classRef, interceptors, rewriter, MoveNextHandler);
-        metadata = RewriteInceptionPoint(classRef, metadata, interceptors, rewriter, path, isReleaseMode);
+        var MoveNextHandler = GetNextMethodHandler(itemType, classRef, path, isReleaseMode, interceptors);
+        var newClassRef = InjectInoculationFields(classRef, interceptors, MoveNextHandler);
+        metadata = RewriteInceptionPoint(classRef, metadata, interceptors, path, isReleaseMode);
 
         return Success<(ClassDecl.Class[], MethodDecl.Method[]), Exception>.From((new Class[] { oldClassRef, newClassRef }, new Method[] { oldMethodInstance, metadata.Code }));
     }
 
-    private static MethodData RewriteInceptionPoint(Class classRef, MethodData metadata, string[] interceptorsClasses, string rewriter, IEnumerable<string> path, bool isReleaseMode)
+    private static MethodData RewriteInceptionPoint(Class classRef, MethodData metadata, InterceptorData[] interceptorsClasses, IEnumerable<string> path, bool isReleaseMode)
     {
         int labelIdx = 0;
-        bool isToBeRewritten = !String.IsNullOrEmpty(rewriter);
+        bool isToBeRewritten = interceptorsClasses.Any(i => i.IsRewriter);
 
         bool isStatic = metadata.MethodCall is MethodData.CallType.Static;
         int argumentsCount = metadata.IsStatic 
@@ -90,15 +90,9 @@ public static class AsyncRewriter {
                 interceptorsClasses.Select(
                     (attrClassName, i) => $@"
                         {loadLocalStateMachine}
-                        newobj instance void class {attrClassName}::.ctor()
-                        stfld class {attrClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName)}"
+                        newobj instance void class {attrClassName.ClassName}::.ctor()
+                        stfld class {attrClassName.ClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName.ClassName)}"
             ))}}}
-            {{{(
-                !isToBeRewritten ? String.Empty : $@"
-                    {loadLocalStateMachine}
-                    newobj instance void class {rewriter}::.ctor()
-                    stfld class {rewriter} {stateMachineFullName}::'<inoculated>__Rewriter'" 
-            )}}}
             """;
         
         var injectionCodeCast = Parse<InstructionDecl.Instruction.Block>(injectionCode);
@@ -123,18 +117,15 @@ public static class AsyncRewriter {
         return metadata;
     }
 
-    private static ClassDecl.Class InjectInoculationFields(Class classRef, string[] interceptorsClasses, string rewriterClass, Func<MethodDefinition, MethodDefinition[]> MoveNextHandler)
+    private static ClassDecl.Class InjectInoculationFields(Class classRef, InterceptorData[] interceptorsClasses, Func<MethodDefinition, MethodDefinition[]> MoveNextHandler)
     {
-        bool isToBeRewritten = !String.IsNullOrEmpty(rewriterClass);
+        bool isToBeRewritten = interceptorsClasses.Any(interceptor => interceptor.IsRewriter);
 
         List<string> members = new();
         if(interceptorsClasses.Length > 0 ) {
-            members.AddRange(interceptorsClasses.Select((attr, i) => $".field public class {attr} {GenerateInterceptorName(attr)}"));
+            members.AddRange(interceptorsClasses.Select((attr, i) => $".field public class {attr.ClassName} {GenerateInterceptorName(attr.ClassName)}"));
         }
         members.Add($".field public class [Inoculator.Interceptors]Inoculator.Builder.MethodData '<inoculated>__Metadata'");
-        if(isToBeRewritten) {
-            members.Add($".field public class {rewriterClass} '<inoculated>__Rewriter'");
-        }
 
         classRef = classRef with
         {
@@ -161,11 +152,11 @@ public static class AsyncRewriter {
         return classRef;
     }
 
-    private static Func<ClassDecl.MethodDefinition, ClassDecl.MethodDefinition[]> GetNextMethodHandler(TypeData returnType, Class classRef, IEnumerable<string> path, bool isReleaseMode, string[] interceptorClasses, string rewriterClass)
+    private static Func<ClassDecl.MethodDefinition, ClassDecl.MethodDefinition[]> GetNextMethodHandler(TypeData returnType, Class classRef, IEnumerable<string> path, bool isReleaseMode, InterceptorData[] modifierClasses)
     {
         int labelIdx = 0;
         Dictionary<string, string> jumptable = new();
-        bool isToBeRewritten = !String.IsNullOrEmpty(rewriterClass);
+        bool isToBeRewritten = modifierClasses.Any(m => m.IsRewriter);
 
         var stateMachineFullNameBuilder = new StringBuilder()
             .Append(isReleaseMode ? " valuetype " : " class ")
@@ -211,10 +202,10 @@ public static class AsyncRewriter {
 
 
                 {{{String.Join("\n",
-                    interceptorClasses?.Select(
+                    modifierClasses?.Where(m => m.IsInterceptor).Select(
                         (attrClassName, i) => $@"
                         {GetNextLabel(ref labelIdx)}: ldarg.0
-                        {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName)}
+                        {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName.ClassName)}
                         {GetNextLabel(ref labelIdx)}: ldarg.0
                         {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
                         {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName}::OnEntry(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"
@@ -222,29 +213,29 @@ public static class AsyncRewriter {
 
                 {{{GetNextLabel(ref labelIdx, jumptable, "JUMPDEST1")}}}: nop
 
-                {{{InvokeFunction(stateMachineFullName, returnType, ref labelIdx, rewriterClass, isToBeRewritten, jumptable)}}}
+                {{{InvokeFunction(stateMachineFullName, returnType, ref labelIdx, modifierClasses.FirstOrDefault(m => m.IsRewriter)?.ClassName, isToBeRewritten, jumptable)}}}
 
                 {{{GetNextLabel(ref labelIdx, jumptable, "SUCCESS")}}}: nop
                 {{{String.Join("\n",
-                    interceptorClasses?.Select(
+                    modifierClasses?.Where(m => m.IsInterceptor).Select(
                         (attrClassName, i) => $@"
                         {GetNextLabel(ref labelIdx)}: ldarg.0
-                        {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName)}
+                        {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName.ClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName.ClassName)}
                         {GetNextLabel(ref labelIdx)}: ldarg.0
                         {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
-                        {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName}::OnSuccess(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"
+                        {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName.ClassName}::OnSuccess(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"
                 ))}}}
                 {{{GetNextLabel(ref labelIdx)}}}: br.s ***EXIT***
 
                 {{{GetNextLabel(ref labelIdx, jumptable, "FAILURE")}}}: nop
                 {{{String.Join("\n",
-                    interceptorClasses?.Select(
+                    modifierClasses?.Where(m => m.IsInterceptor).Select(
                         (attrClassName, i) => $@"
                         {GetNextLabel(ref labelIdx)}: ldarg.0
-                        {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName)}
+                        {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName.ClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName.ClassName)}
                         {GetNextLabel(ref labelIdx)}: ldarg.0
                         {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
-                        {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName}::OnException(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"
+                        {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName.ClassName}::OnException(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"
                 ))}}}
                 {{{GetNextLabel(ref labelIdx)}}}: br.s ***EXIT***
 
@@ -253,13 +244,13 @@ public static class AsyncRewriter {
                 {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.s -2
                 {{{GetNextLabel(ref labelIdx)}}}: bne.un.s ***JUMPDEST2***
                 {{{String.Join("\n",
-                    interceptorClasses?.Select(
+                    modifierClasses?.Where(m => m.IsInterceptor).Select(
                         (attrClassName, i) => $@"
                         {GetNextLabel(ref labelIdx)}: ldarg.0
-                        {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName)}
+                        {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName.ClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName.ClassName)}
                         {GetNextLabel(ref labelIdx)}: ldarg.0
                         {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
-                        {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName}::OnExit(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"
+                        {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName.ClassName}::OnExit(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"
                 ))}}}
 
                 {{{GetNextLabel(ref labelIdx, jumptable, "JUMPDEST2")}}}: nop
@@ -356,7 +347,7 @@ public static class AsyncRewriter {
                 {
                     {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
                     {{{GetNextLabel(ref labelIdx)}}}: dup
-                    {{{GetNextLabel(ref labelIdx)}}}: ldfld class {{{rewriterClass}}} {{{stateMachineFullName}}}::'<inoculated>__Rewriter'
+                    {{{GetNextLabel(ref labelIdx)}}}: ldfld class {{{rewriterClass}}} {{{stateMachineFullName}}}::{{{GenerateInterceptorName(rewriterClass)}}}
                     {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
                     {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
                     {{{GetNextLabel(ref labelIdx)}}}: {{{callCode}}}

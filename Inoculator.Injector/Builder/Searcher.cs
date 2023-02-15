@@ -1,5 +1,6 @@
 using System.Extensions;
 using System.Reflection;
+using System.Runtime.Loader;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -32,72 +33,45 @@ public static class Searcher {
         return toplevel.Where(x => predicate?.Invoke(x) ?? true).ToList();
     }
 
-    public static bool IsMarked(MethodDecl.Method method, List<string> interceptors, List<string> rewriters, out string[] foundInterceptors, out string foundRewriter) {
+    public static bool IsMarked(MethodDecl.Method method, List<InterceptorData> modifiers, out InterceptorData[] foundFlags) {
         var attrs = method.Body.Items
             .Values.OfType<MethodDecl.CustomAttributeItem>()
             .Select(attr => attr.Value.AttributeCtor.Spec.ToString().Trim());
-        foundInterceptors = attrs.Where(attr => interceptors.Any(id => attr.Contains(id)))
-            .Select(fullname => fullname.StartsWith("class") ? fullname.Substring(6) : fullname)
+        foundFlags = attrs.Select(attr => (attr, modifiers.Where(flag => attr.Contains(flag.ClassName)).FirstOrDefault()))
+            .Where(pair => pair.Item2 != null)
+            .Select(pair => {
+                pair.Item2.ClassName = pair.Item1.StartsWith("class") ? pair.Item1.Substring(6) : pair.Item1;
+                return pair.Item2;
+            })
             .ToArray();
-        var foundRewriters = attrs.Where(attr => rewriters.Any(id => attr.Contains(id)))
-            .Select(fullname => fullname.StartsWith("class") ? fullname.Substring(6) : fullname);
-        foundRewriter = foundRewriters.FirstOrDefault();
-        return foundInterceptors.Length > 0 || foundRewriters.Count() == 1;
+
+        if(foundFlags.Count(interceptor => interceptor.IsRewriter) > 1) {
+            throw new Exception("Multiple rewriters found on method " + method.Header.Name.ToString());
+        }
+        return foundFlags.Count(interceptor => interceptor.IsInterceptor) > 0 || foundFlags.Count(interceptor => interceptor.IsRewriter) == 1;
     }
-    public static List<string>  SearchForInterceptors(Declaration.Collection ilfile)
+
+    public static List<InterceptorData> SearchForModifiers(string currentPath)
     {
-        var toplevel = ilfile
-            .Declarations.Values
-            .OfType<ClassDecl.Class>()
-            .Where(type => {
-                var inheritedType = new String(type.Header.Extends?.Type.ToString().Where(c => !Char.IsWhiteSpace(c)).ToArray());
-                return inheritedType == "[Inoculator.Injector]Inoculator.Attributes.InterceptorAttribute";
-            });
-        return toplevel.Select(x => x.Header.Id.ToString()).ToList();
-    }
-    public static List<string> SearchForInterceptors(string currentPath, Declaration.Collection ilfile)
-    {
-        IEnumerable<string> handlePath(string path) {
-            if(!path.EndsWith(currentPath)) {
+        var ctx = new AssemblyLoadContext("Inoculator.Temporary.Rewriters", true);
+        try {
+            return Directory.GetFiles(Directory.GetCurrentDirectory(), "*.dll").SelectMany(path => {
+                bool isCurrentPath = path.EndsWith(currentPath);
+                path = isCurrentPath ? $"{path}.temp" : path;
                 var assembly = Assembly.LoadFrom(path);
                 var types = assembly.GetTypes();
-                var interceptors = types.Where(x => x.IsSubclassOf(typeof(InterceptorAttribute)));
-                return interceptors.Select(x => $"[{Path.GetFileNameWithoutExtension(path)}] {x.FullName}"); // hack : space between file ref and name 
-            } else {
-                var toplevel = ilfile
-                    .Declarations.Values
-                    .OfType<ClassDecl.Class>()
-                    .Where(type => {
-                        var inheritedType = new String(type.Header.Extends?.Type.ToString().Where(c => !Char.IsWhiteSpace(c)).ToArray());
-                        return inheritedType == "[Inoculator.Interceptors]Inoculator.Attributes.InterceptorAttribute";
-                    });
-                return toplevel.Select(x => x.Header.Id.ToString().Trim());
-            }
+                var interceptors = types.Where(x => (x.IsAssignableTo(typeof(IRewriter)) || x.IsAssignableTo(typeof(IInterceptor))) && x.IsSubclassOf(typeof(System.Attribute)));
+                return interceptors.Select(typedata => new { 
+                    Name = isCurrentPath ? typedata.FullName : $"[{Path.GetFileNameWithoutExtension(path)}] {typedata.FullName}",
+                    Type = typedata
+                }).Select(result => new InterceptorData {
+                    ClassName = result.Name,
+                    IsInterceptor = result.Type.IsAssignableTo(typeof(IInterceptor)),
+                    IsRewriter = result.Type.IsAssignableTo(typeof(IRewriter))
+                }).ToList();
+            }).ToList();
+        } finally {
+            ctx.Unload();
         }
-
-        return Directory.GetFiles(Directory.GetCurrentDirectory(), "*.dll").SelectMany(handlePath).ToList();
-    }
-
-    public static List<string> SearchForRewriters(string currentPath, Declaration.Collection ilfile)
-    {
-        IEnumerable<string> handlePath(string path) {
-            if(!path.EndsWith(currentPath)) {
-                var assembly = Assembly.LoadFrom(path);
-                var types = assembly.GetTypes();
-                var interceptors = types.Where(x => x.IsSubclassOf(typeof(RewriterAttribute)));
-                return interceptors.Select(x => $"[{Path.GetFileNameWithoutExtension(path)}] {x.FullName}"); // hack : space between file ref and name 
-            } else {
-                var toplevel = ilfile
-                    .Declarations.Values
-                    .OfType<ClassDecl.Class>()
-                    .Where(type => {
-                        var inheritedType = new String(type.Header.Extends?.Type.ToString().Where(c => !Char.IsWhiteSpace(c)).ToArray());
-                        return inheritedType == "[Inoculator.Interceptors]Inoculator.Attributes.RewriterAttribute";
-                    });
-                return toplevel.Select(x => x.Header.Id.ToString().Trim());
-            }
-        }
-
-        return Directory.GetFiles(Directory.GetCurrentDirectory(), "*.dll").SelectMany(handlePath).ToList();
     }
 }
