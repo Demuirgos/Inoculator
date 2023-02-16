@@ -357,6 +357,14 @@ public static class HandlerTools {
         //!includeLabels ? hook : hook.Replace("\n", $"\n{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}");
     } 
 
+    public static string GetCleanedString(string str) {
+        return str.Replace("\\", "\\\\")
+                    .Replace("\"","'")
+                    .Replace("\r", "\\r")
+                    .Replace("\n", "\\n")
+                    .Replace("\t", "\\t");
+    } 
+
     public static class AttributeResolver {
             public static object? GetAttributeInstance(Type attrType, MethodInfo methodInfo){
                 var attrs = methodInfo.CustomAttributes;

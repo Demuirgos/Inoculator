@@ -70,8 +70,8 @@ public static class EnumRewriter {
                                         {
                                             var injectionCode = $$$"""
                                         {{{GetNextLabel(ref labelIdx)}}}: dup
-                                        {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{metadata.Code.ToString().Replace("\n", " ")}}}"
-                                        {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{metadata.ClassReference.ToString().Replace("\n", " ")}}}"
+                                        {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{GetCleanedString(metadata.Code.ToString())}}}"
+                                        {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{GetCleanedString(metadata.ClassReference.ToString())}}}"
                                         {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{String.Join("/", path)}}}"
                                         {{{GetNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::.ctor(string, string, string)
 

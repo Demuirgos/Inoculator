@@ -72,8 +72,8 @@ public static class SyncRewriter {
                 {GetAttributeInstance(metadata, functionFullPath, attrClassName, ref labelIdx)}
                 {GetNextLabel(ref labelIdx)}: stloc.s {i}"
         ))}}}
-        {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{new string(metadata.Code.ToString().ToCharArray().Select(c => c != '\n' ? c : ' ').ToArray())}}}"
-        {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{new string(metadata.ClassReference.ToString().ToCharArray().Select(c => c != '\n' ? c : ' ').ToArray())}}}"
+        {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{GetCleanedString(metadata.Code.ToString())}}}"
+        {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{GetCleanedString(metadata.ClassReference.ToString())}}}"
         {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{String.Join("/", path)}}}"
         {{{GetNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::.ctor(string, string,string)
         {{{GetNextLabel(ref labelIdx)}}}: stloc.s metadata
@@ -131,6 +131,7 @@ public static class SyncRewriter {
             builder.Replace($"***{label}***", idx.ToString());
         }
         var result = builder.ToString();
+        Console.WriteLine(result);
         return Reader.Parse<MethodDecl.Method>(result);
     }
 

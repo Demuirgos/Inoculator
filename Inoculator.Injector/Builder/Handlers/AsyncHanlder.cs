@@ -63,8 +63,8 @@ public static class AsyncRewriter {
 
         string injectionCode = $$$"""
             {{{loadLocalStateMachine}}}
-            ldstr "{{{metadata.Code.ToString().Replace("\n", " ")}}}"
-            ldstr "{{{metadata.ClassReference.ToString().Replace("\n", " ")}}}"
+            ldstr "{{{GetCleanedString(metadata.Code.ToString())}}}"
+            ldstr "{{{GetCleanedString(metadata.ClassReference.ToString())}}}"
             ldstr "{{{String.Join("/", path)}}}"
             newobj instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::.ctor(string, string, string)
             dup
