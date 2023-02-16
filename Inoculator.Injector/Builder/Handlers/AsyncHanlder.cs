@@ -26,7 +26,7 @@ public static class AsyncRewriter {
             .Replace(classRef.Header.Id.ToString(), oldClassMangledName)
             .Replace(metadata.Code.Header.Name.ToString(), $"'<>__{metadata.Code.Header.Name}_old'")
         );
-        var MoveNextHandler = GetNextMethodHandler(itemType, classRef, path, isReleaseMode, interceptors);
+        var MoveNextHandler = GetNextMethodHandler(metadata, itemType, classRef, path, isReleaseMode, interceptors);
         var newClassRef = InjectInoculationFields(classRef, interceptors, MoveNextHandler);
         metadata = RewriteInceptionPoint(classRef, metadata, interceptors, path, isReleaseMode);
 
@@ -43,21 +43,9 @@ public static class AsyncRewriter {
             ? metadata.Code.Header.Parameters.Parameters.Values.Length 
             : metadata.Code.Header.Parameters.Parameters.Values.Length + 1;
 
-        var stateMachineFullNameBuilder = new StringBuilder()
-            .Append(isReleaseMode ? " valuetype " : " class ")
-            .Append($"{String.Join("/", path)}")
-            .Append($"/{classRef.Header.Id}");
-        if (classRef.Header.TypeParameters?.Parameters.Values.Length > 0)
-        {
-            var classTypeParametersCount    = classRef.Header.TypeParameters.Parameters.Values.Length;
-            var functionTypeParametersCount = metadata.Code.Header.TypeParameters?.Parameters.Values.Length ?? 0;
-            var classTPs   = classRef.Header.TypeParameters.Parameters.Values.Take(classTypeParametersCount - functionTypeParametersCount).Select(p => $"!{p}");
-            var methodTPs  = classRef.Header.TypeParameters.Parameters.Values.TakeLast(functionTypeParametersCount).Select(p => $"!!{p}");
-            stateMachineFullNameBuilder.Append("<")
-                .Append( String.Join(",", classTPs.Union(methodTPs)))
-                .Append(">");
-        }
-        var stateMachineFullName = stateMachineFullNameBuilder.ToString();
+        var stateMachineFullName = StringifyPath(metadata, classRef.Header, path, isReleaseMode, 2);
+        var inoculationSightName = StringifyPath(metadata, classRef.Header, path, isReleaseMode, 0);
+
 
         string loadLocalStateMachine = isReleaseMode ? "ldloca.s    V_0" : "ldloc.s    V_0";
 
@@ -90,7 +78,7 @@ public static class AsyncRewriter {
                 interceptorsClasses.Select(
                     (attrClassName, i) => $@"
                         {loadLocalStateMachine}
-                        newobj instance void class {attrClassName.ClassName}::.ctor()
+                        {GetAttributeInstance(metadata, inoculationSightName, attrClassName, ref labelIdx, false)}
                         stfld class {attrClassName.ClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName.ClassName)}"
             ))}}}
             """;
@@ -152,23 +140,13 @@ public static class AsyncRewriter {
         return classRef;
     }
 
-    private static Func<ClassDecl.MethodDefinition, ClassDecl.MethodDefinition[]> GetNextMethodHandler(TypeData returnType, Class classRef, IEnumerable<string> path, bool isReleaseMode, InterceptorData[] modifierClasses)
+    private static Func<ClassDecl.MethodDefinition, ClassDecl.MethodDefinition[]> GetNextMethodHandler(MethodData metadata, TypeData returnType, Class classRef, IEnumerable<string> path, bool isReleaseMode, InterceptorData[] modifierClasses)
     {
         int labelIdx = 0;
         Dictionary<string, string> jumptable = new();
         bool isToBeRewritten = modifierClasses.Any(m => m.IsRewriter);
 
-        var stateMachineFullNameBuilder = new StringBuilder()
-            .Append(isReleaseMode ? " valuetype " : " class ")
-            .Append($"{String.Join("/", path)}")
-            .Append($"/{classRef.Header.Id}");
-        if (classRef.Header.TypeParameters?.Parameters.Values.Length > 0)
-        {
-            stateMachineFullNameBuilder.Append("<")
-                .Append(String.Join(", ", classRef.Header.TypeParameters.Parameters.Values.Select(p => $"!{p}")))
-                .Append(">");
-        }
-        var stateMachineFullName = stateMachineFullNameBuilder.ToString();
+        var stateMachineFullName = StringifyPath(metadata, classRef.Header, path, isReleaseMode, 1);
 
         ClassDecl.MethodDefinition[] HandleMoveNext(ClassDecl.MethodDefinition methodDef)
         {

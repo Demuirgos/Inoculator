@@ -36,6 +36,20 @@ public class DateAndTimeAttribute : DateAttribute
     }
 }
 
+public class WireAttribute : RewriterAttribute
+{
+    public WireAttribute(object returnValue) => ReturnValue = returnValue;
+    object? ReturnValue;
+    public override MethodData OnCall(MethodData method)
+    {
+        method.ReturnValue = new ParameterData(
+            type : method.Signature.Output.TypeInstance,
+            value : ReturnValue
+        );
+        return method;
+    }
+}
+
 public class CallCountAttribute : InterceptorAttribute
 {
     public static Dictionary<string, int> CallCounter = new Dictionary<string, int>();

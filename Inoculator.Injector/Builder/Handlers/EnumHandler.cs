@@ -24,7 +24,7 @@ public static class EnumRewriter {
             .Replace(classRef.Header.Id.ToString(), oldClassMangledName)
             .Replace(metadata.Code.Header.Name.ToString(), $"'<>__{metadata.Name(false)}_old'")
         );
-        var MoveNextHandler = GetMoveNextHandler(itemType, classRef, path, isContainedInStruct, interceptors);
+        var MoveNextHandler = GetMoveNextHandler(metadata, itemType, classRef, path, isContainedInStruct, interceptors);
         var newClassRef = InjectInoculationFields(classRef, MoveNextHandler, interceptors);
         metadata = RewriteInceptionPoint(classRef, metadata, interceptors, path, isContainedInStruct);
 
@@ -35,22 +35,9 @@ public static class EnumRewriter {
     {
         int labelIdx = 0;
         bool isToBeRewritten = interceptorsClasses.Any(i => i.IsRewriter);
+        var stateMachineFullName = StringifyPath(metadata, classRef.Header, path, isReleaseMode, 2);
+        var inoculationSightName = StringifyPath(metadata, classRef.Header, path, isReleaseMode, 0);
 
-        var stateMachineFullNameBuilder = new StringBuilder()
-            .Append(isReleaseMode ? " valuetype " : " class ")
-            .Append($"{String.Join("/", path)}")
-            .Append($"/{classRef.Header.Id}");
-        if (classRef.Header.TypeParameters?.Parameters.Values.Length > 0)
-        {
-            var classTypeParametersCount = classRef.Header.TypeParameters.Parameters.Values.Length;
-            var functionTypeParametersCount = metadata.Code.Header.TypeParameters?.Parameters.Values.Length ?? 0;
-            var classTPs = classRef.Header.TypeParameters.Parameters.Values.Take(classTypeParametersCount - functionTypeParametersCount).Select(p => $"!{p}");
-            var methodTPs = classRef.Header.TypeParameters.Parameters.Values.TakeLast(functionTypeParametersCount).Select(p => $"!!{p}");
-            stateMachineFullNameBuilder.Append("<")
-                .Append( String.Join(",", classTPs.Union(methodTPs)))
-                .Append(">");
-        }
-        var stateMachineFullName = stateMachineFullNameBuilder.ToString();
         int argumentsCount = metadata.IsStatic 
             ? metadata.Code.Header.Parameters.Parameters.Values.Length 
             : metadata.Code.Header.Parameters.Parameters.Values.Length + 1;
@@ -99,7 +86,7 @@ public static class EnumRewriter {
                                             interceptorsClasses.Select(
                                                     (attrClassName, i) => $"""
                                             {GetNextLabel(ref labelIdx)}: dup
-                                            {GetNextLabel(ref labelIdx)}: newobj instance void class {attrClassName.ClassName}::.ctor()
+                                            {GetAttributeInstance(metadata, inoculationSightName, attrClassName, ref labelIdx)}
                                             {GetNextLabel(ref labelIdx)}: stfld class {attrClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName.ClassName)}
                                             """
                                         ))}}}
@@ -158,23 +145,13 @@ public static class EnumRewriter {
         return classRef;
     }
 
-    private static Func<ClassDecl.MethodDefinition, ClassDecl.MethodDefinition[]> GetMoveNextHandler(TypeData returnType, Class classRef, IEnumerable<string> path, bool isContainedInStruct, InterceptorData[] modifierClasses) {
+    private static Func<ClassDecl.MethodDefinition, ClassDecl.MethodDefinition[]> GetMoveNextHandler(MethodData metadata, TypeData returnType, Class classRef, IEnumerable<string> path, bool isContainedInStruct, InterceptorData[] modifierClasses) {
         return (MethodDefinition methodDef) => {
             bool isToBeRewritten = modifierClasses.Any(i => i.IsRewriter);
             int labelIdx = 0;
             Dictionary<string, string> jumptable = new();
 
-            var stateMachineFullNameBuilder = new StringBuilder()
-                .Append(isContainedInStruct ? " valuetype " : " class ")
-                .Append($"{String.Join("/", path)}")
-                .Append($"/{classRef.Header.Id}");
-            if (classRef.Header.TypeParameters?.Parameters.Values.Length > 0)
-            {
-                stateMachineFullNameBuilder.Append("<")
-                    .Append(String.Join(", ", classRef.Header.TypeParameters.Parameters.Values.Select(p => $"!{p}")))
-                    .Append(">");
-            }
-            var stateMachineFullName = stateMachineFullNameBuilder.ToString();
+            var stateMachineFullName = StringifyPath(metadata, classRef.Header, path, isContainedInStruct, 1);
 
             if(methodDef.Value.Header.Name.ToString() != "MoveNext") return new [] { methodDef };
             var method = methodDef.Value;

@@ -5,11 +5,11 @@ namespace Program {
         public string Name {get; set;} = "Program";
         async static Task Main(string[] args) {
             _ = Utils.SumUpTo(10);
-            _ = Utils.Factorial(10);
+           // _ = Utils.Factorial(10);
         }
         
         class Utils {
-            [DateAndTime, LogEntrency]
+            [LogEntrency, Wire(23), DateAndTime]
             public static int SumUpTo(int lim) => (lim + 1) * lim / 2;
 
             [LogEntrency, DurationLogger<Entry>]

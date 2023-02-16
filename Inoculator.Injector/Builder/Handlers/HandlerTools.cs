@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text;
 
 namespace Inoculator.Builder;
@@ -298,4 +299,70 @@ public static class HandlerTools {
             _ => ("ldind.ref", "stind.ref")
         };
     }
+
+    public static string StringifyPath(MethodData metadata, ClassDecl.Prefix classRef, IEnumerable<string> path, bool isStruct, int ForStateMachine = 0) {
+        var pathList = path?.ToList(); 
+        bool isContainedInStruct = classRef.Extends.Type.ToString() == "[System.Runtime] System.ValueType";
+        var functionFullPathBuilder = new StringBuilder()
+            .Append(isStruct ? " valuetype " : " class ")
+            .Append($"{String.Join("/", path)}");
+
+        if(ForStateMachine > 0) {
+            functionFullPathBuilder.Append($"/{classRef.Id}");
+        }
+
+        if (classRef.TypeParameters?.Parameters.Values.Length > 0)
+        {
+            if(ForStateMachine > 0) {
+                if(ForStateMachine == 1) {
+                    functionFullPathBuilder.Append("<")
+                        .Append(String.Join(", ", classRef.TypeParameters.Parameters.Values.Select(p => $"!{p}")))
+                        .Append(">");
+                } else {
+                    var classTypeParametersCount = classRef.TypeParameters.Parameters.Values.Length;
+                    var functionTypeParametersCount = metadata.Code.Header.TypeParameters?.Parameters.Values.Length ?? 0;
+                    var classTPs = classRef.TypeParameters.Parameters.Values.Take(classTypeParametersCount - functionTypeParametersCount).Select(p => $"!{p}");
+                    var methodTPs = classRef.TypeParameters.Parameters.Values.TakeLast(functionTypeParametersCount).Select(p => $"!!{p}");
+                    functionFullPathBuilder.Append("<")
+                        .Append( String.Join(",", classTPs.Union(methodTPs)))
+                        .Append(">");
+                }
+            } else {
+                functionFullPathBuilder.Append("<")
+                    .Append(String.Join(", ", classRef.TypeParameters.Parameters.Values.Select(p => $"!{p}")))
+                    .Append(">");
+
+            }
+        }
+        var functionFullPath = functionFullPathBuilder.ToString();
+        return functionFullPath;
+    }
+
+    public static string GetAttributeInstance(MethodData function, string classPath, InterceptorData attribute, ref int labelIdx, bool includeLabels = true) {
+        var attributeRef = attribute.ClassName.Contains('<') ? attribute.ClassName[..attribute.ClassName.IndexOf('<')] : attribute.ClassName;
+
+        var hook = $$$"""
+            ldtoken {{{attributeRef}}}
+            call class [System.Runtime]System.Type [System.Runtime]System.Type::GetTypeFromHandle(valuetype [System.Runtime]System.RuntimeTypeHandle)
+            ldtoken {{{classPath}}}
+            call class [System.Runtime]System.Type [System.Runtime]System.Type::GetTypeFromHandle(valuetype [System.Runtime]System.RuntimeTypeHandle)
+            callvirt instance string [System.Runtime]System.Type::get_FullName()
+            call class [System.Runtime]System.Type [System.Runtime]System.Type::GetType(string)
+            ldstr "{{{function.Name(false)}}}"
+            callvirt instance class [System.Runtime]System.Reflection.MethodInfo [System.Runtime]System.Type::GetMethod(string)
+            call object [Inoculator.Injector]Inoculator.Builder.HandlerTools/AttributeResolver::GetAttributeInstance(class [System.Runtime]System.Type, class [System.Runtime]System.Reflection.MethodInfo)
+            castclass class {{{attribute.ClassName}}}
+        """;
+        return hook;
+        //!includeLabels ? hook : hook.Replace("\n", $"\n{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}");
+    } 
+
+    public static class AttributeResolver {
+            public static object? GetAttributeInstance(Type attrType, MethodInfo methodInfo){
+                var attrs = methodInfo.CustomAttributes;
+                var attr = attrs.Where(attr => attr.AttributeType.GUID == attrType.GUID).FirstOrDefault();
+                return attr?.Constructor.Invoke(attr.ConstructorArguments.Select(arg => arg.Value).ToArray());
+            }
+        }
+
 }

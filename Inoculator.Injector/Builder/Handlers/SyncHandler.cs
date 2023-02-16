@@ -36,16 +36,7 @@ public static class SyncRewriter {
 
         var pathList = path?.ToList(); 
         bool isContainedInStruct = classRef.Extends.Type.ToString() == "[System.Runtime] System.ValueType";
-        var functionFullPathBuilder = new StringBuilder()
-            .Append(isContainedInStruct ? " valuetype " : " class ")
-            .Append($"{String.Join("/", path)}");
-        if (classRef.TypeParameters?.Parameters.Values.Length > 0)
-        {
-            functionFullPathBuilder.Append("<")
-                .Append(String.Join(", ", classRef.TypeParameters.Parameters.Values.Select(p => $"!{p}")))
-                .Append(">");
-        }
-        var functionFullPath = functionFullPathBuilder.ToString();
+        var functionFullPath = StringifyPath(metadata, classRef, path, isContainedInStruct, 0);
 
         StringBuilder builder = new();
         Dictionary<string, string> jumptable = new();
@@ -78,7 +69,7 @@ public static class SyncRewriter {
         {{{String.Join("\n", 
             modifierClasses?.Select(
                 (attrClassName, i) => $@"
-                {GetNextLabel(ref labelIdx)}: newobj instance void class {attrClassName.ClassName}::.ctor()
+                {GetAttributeInstance(metadata, functionFullPath, attrClassName, ref labelIdx)}
                 {GetNextLabel(ref labelIdx)}: stloc.s {i}"
         ))}}}
         {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{new string(metadata.Code.ToString().ToCharArray().Select(c => c != '\n' ? c : ' ').ToArray())}}}"
