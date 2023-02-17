@@ -14,6 +14,8 @@ public static class Wrapper {
     public static Result<(ClassDecl.Class[], MethodDecl.Method[]), Exception> ReplaceNameWith(MethodData metadata, InterceptorData[] modifiers, ClassDecl.Class classRef = null, IEnumerable<string> path = null) {
         switch (metadata.MethodBehaviour)
         {
+            case MethodData.MethodType.AsyncIter:
+                return AsyncEnumRewriter.Rewrite(classRef, metadata, modifiers, path);
             case MethodData.MethodType.Sync:
                 return SyncRewriter.Rewrite(classRef, metadata, modifiers, path);
             case MethodData.MethodType.Iter:

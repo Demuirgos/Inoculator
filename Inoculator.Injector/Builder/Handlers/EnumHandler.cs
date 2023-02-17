@@ -22,7 +22,7 @@ public static class EnumRewriter {
         var oldClassRef = Parse<Class>(classRef.ToString().Replace(classRef.Header.Id.ToString(), oldClassMangledName));
         var oldMethodInstance = Parse<Method>(metadata.Code.ToString()
             .Replace(classRef.Header.Id.ToString(), oldClassMangledName)
-            .Replace(metadata.Code.Header.Name.ToString(), $"'<>__{metadata.Name(false)}_old'")
+            .Replace(metadata.Code.Header.Name.ToString(), metadata.MangledName(false))
         );
         var MoveNextHandler = GetMoveNextHandler(metadata, itemType, classRef, path, isContainedInStruct, interceptors);
         var newClassRef = InjectInoculationFields(classRef, MoveNextHandler, interceptors);
@@ -87,7 +87,7 @@ public static class EnumRewriter {
                                                     (attrClassName, i) => $"""
                                             {GetNextLabel(ref labelIdx)}: dup
                                             {GetAttributeInstance(metadata, inoculationSightName, attrClassName, ref labelIdx)}
-                                            {GetNextLabel(ref labelIdx)}: stfld class {attrClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName.ClassName)}
+                                            {GetNextLabel(ref labelIdx)}: stfld class {attrClassName.ClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName.ClassName)}
                                             """
                                         ))}}}
                                         {{{GetNextLabel(ref labelIdx)}}}: ret
@@ -169,7 +169,6 @@ public static class EnumRewriter {
                 builder.AppendLine(member.ToString());
             }
 
-            
             builder.AppendLine($".maxstack 8");
 
             builder.AppendLine($".locals init (bool, class [System.Runtime]System.Exception e)");            
@@ -265,6 +264,10 @@ public static class EnumRewriter {
                         Items = new ARRAY<MethodDecl.Member>(
                             methodDef.Value.Body
                                 .Items.Values.Where(member => member is not MethodDecl.OverrideMethodItem)
+                                .Select(member => {
+                                    var instructionLine = member.ToString().Replace("::" + metadata.Name(false), "::" + metadata.MangledName(false));
+                                    return Parse<MethodDecl.Member>(instructionLine);
+                                })
                                 .ToArray()
                         ) {
                             Options = new ARRAY<MethodDecl.Member>.ArrayOptions() {
@@ -308,7 +311,7 @@ public static class EnumRewriter {
 
                 {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
                 {{{GetNextLabel(ref labelIdx)}}}: dup
-                {{{GetNextLabel(ref labelIdx)}}}: ldfld class {{{rewriterClass}}} {{{stateMachineFullName}}}::'<inoculated>__Rewriter'
+                {{{GetNextLabel(ref labelIdx)}}}: ldfld class {{{rewriterClass}}} {{{stateMachineFullName}}}::{{{GenerateInterceptorName(rewriterClass)}}}
                 {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
                 {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
                 {{{GetNextLabel(ref labelIdx)}}}: {{{callCode}}}

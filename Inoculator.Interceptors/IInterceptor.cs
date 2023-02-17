@@ -76,8 +76,14 @@ public class Engine<TAssemblyMarker>
 
     public class AsyncHandler : HandlerBase {
         public (object, bool) HandleMethodInvocation(MethodInfo method, object instance, object[] parameters)  {
-            var result = (Task)method.Invoke(instance, parameters);
-            result.Wait();
+            var result = method.Invoke(instance, parameters);
+            if(result is Task casted_result) 
+                casted_result.Wait(); 
+            else if(result is ValueTask casted_result2) 
+                casted_result2.AsTask().Wait(); 
+            else 
+                throw new Exception("Invalid async method");
+
             var resultProperty = result.GetType().GetProperty("Result");
             return (resultProperty.GetValue(result), true);
         }

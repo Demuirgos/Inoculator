@@ -4,22 +4,38 @@ namespace Program {
     class Entry : Printable<Entry> {
         public string Name {get; set;} = "Program";
         async static Task Main(string[] args) {
-            _ = Utils.SumUpTo(10);
-           _ = Utils.Factorial(10);
+            try {
+                Console.WriteLine(await Utils.Factorial(10));
+            } catch (Exception e) {
+                Console.WriteLine(e.Message + " " + e.StackTrace);
+            }
+            foreach (var value in Utils.Fibbonacci(10))
+            {
+                    Console.WriteLine(value);
+            }
         }
         
         class Utils {
-            [LogEntrency, Wire(23), DateAndTime]
+            [LogEntrency]
             public static int SumUpTo(int lim) => (lim + 1) * lim / 2;
-            static int random = 3;
-            [LogEntrency, Retry(10)]
-            public static int Factorial(int value) {
-                if(random != 0) {
-                    random--;
+            [Retry<Entry>(10)]
+            public static IEnumerable<int> Fibbonacci(int value) {
+                int a = 0, b = 1;
+                for (int i = 0; i < value; i++) {
+                    yield return a;
+                    int temp = a;
+                    a = b;
+                    b = temp + b;
+                }
+            } 
+            static int random = 0;
+            [Retry<Entry>(10)]
+            public static async Task<int> Factorial(int value) {
+                if(random++ == 3) {
                     throw new Exception("Random exception");
                 }
-                return value <= 0 ? 1 : value * Factorial(value - 1);
-            }
+                return value <= 0 ? 1 : value * (await Factorial(value - 1));
+            } 
         }
     }
 }

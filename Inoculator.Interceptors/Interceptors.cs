@@ -22,6 +22,40 @@ public class LogEntrencyAttribute : InterceptorAttribute
     }
 }
 
+public class CallCountAttribute : InterceptorAttribute
+{
+    public static Dictionary<string, int> CallCounter = new Dictionary<string, int>();
+    public override void OnEntry(MethodData method)
+    {
+        if(!CallCounter.ContainsKey(method.MethodName))
+            CallCounter.Add(method.MethodName, 0);
+        CallCounter[method.MethodName]++;
+    }
+}
+
+public class RetryAttribute<TMarker> : RewriterAttribute
+{
+    public RetryAttribute(int retries) => Retries = retries;
+    Engine<TMarker> engine = new();
+    int Retries;
+    public override MethodData OnCall(MethodData method)
+    {
+        bool functionIsDone = false;
+        while(!functionIsDone && Retries > 0) {
+            try {
+                method = engine.Invoke(method);
+                functionIsDone = method.Stop;
+                break;
+            } catch (Exception) {
+                Retries--;
+                if(Retries == 0) throw;
+                Console.WriteLine($"Retrying {method.MethodName} {Retries} times");
+            }
+        }
+        return method;
+    }
+}
+
 public class ElapsedTimeAttribute : InterceptorAttribute
 {
     private Stopwatch watch = new();

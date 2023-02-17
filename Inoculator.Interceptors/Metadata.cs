@@ -202,7 +202,7 @@ public class ParameterData : Printable<ParameterData> {
 
 public class MethodData : Printable<MethodData> {
     public enum MethodType {
-        Async, Sync, Iter
+        Async, Sync, Iter, AsyncIter 
     }
 
     public enum CallType {
@@ -252,7 +252,11 @@ public class MethodData : Printable<MethodData> {
                 Code.Body.Items.Values
                     .OfType<MethodDecl.CustomAttributeItem>()
                     .Any(a => a.Value.AttributeCtor.Spec.ToString() == "[System.Runtime] System.Runtime.CompilerServices.IteratorStateMachineAttribute")
-                ? MethodType.Iter  : MethodType.Sync;
+                ? MethodType.Iter  : 
+                    Code.Body.Items.Values
+                        .OfType<MethodDecl.CustomAttributeItem>()
+                        .Any(a => a.Value.AttributeCtor.Spec.ToString() == "[System.Runtime] System.Runtime.CompilerServices.AsyncIteratorStateMachineAttribute")
+                    ? MethodType.AsyncIter : MethodType.Sync;
     [JsonIgnore]
     public CallType MethodCall => Code.Header.Convention is null || Code.Header.MethodAttributes.Attributes.Values.Any(a => a is AttributeDecl.MethodSimpleAttribute { Name: "static" }) ? CallType.Static : CallType.Instance;
     [JsonIgnore]
@@ -269,10 +273,7 @@ public class MethodData : Printable<MethodData> {
     public MethodInfo ReflectionInfo<TAssemblyMarker>() {
         Assembly? assembly = typeof(TAssemblyMarker).Assembly;
         Type? type = assembly.GetType(ReferencePath);
-        var functionName = String.Empty;
-        if(MethodBehaviour is MethodType.Sync)
-            functionName = $"{MangledName(false)[1..^1]}";
-        else functionName = $"<>__{Name(false)}_old";
+        var functionName = $"{MangledName(false)[1..^1]}";
         var methodinfo = type.GetMethod(functionName); 
         return methodinfo;
     }

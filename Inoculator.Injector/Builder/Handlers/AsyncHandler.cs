@@ -18,15 +18,16 @@ public static class AsyncRewriter {
     {
         bool isReleaseMode = classRef.Header.Extends.Type.ToString() == "[System.Runtime] System.ValueType";
         var typeContainer = metadata.Code.Header.Type.Components.Types.Values.First() as TypeDecl.CustomTypeReference;
-        var itemType = new TypeData(typeContainer.Reference.GenericTypes?.Types.Values.FirstOrDefault()?.ToString() ?? "void");
-
         var oldClassMangledName= $"'<>__{Math.Abs(classRef.Header.Id.GetHashCode())}_old'";
-        var oldClassRef = Parse<Class>(classRef.ToString().Replace(classRef.Header.Id.ToString(), oldClassMangledName));
+        var oldClassRef = Parse<Class>(classRef.ToString()
+            .Replace(classRef.Header.Id.ToString(), oldClassMangledName)
+            .Replace(metadata.Code.Header.Name.ToString(), metadata.MangledName(false))
+        );
         var oldMethodInstance = Parse<Method>(metadata.Code.ToString()
             .Replace(classRef.Header.Id.ToString(), oldClassMangledName)
-            .Replace(metadata.Code.Header.Name.ToString(), $"'<>__{metadata.Code.Header.Name}_old'")
+            .Replace(metadata.Code.Header.Name.ToString(), metadata.MangledName(false))
         );
-        var MoveNextHandler = GetNextMethodHandler(metadata, itemType, classRef, path, isReleaseMode, interceptors);
+        var MoveNextHandler = GetNextMethodHandler(metadata, typeContainer, classRef, path, isReleaseMode, interceptors);
         var newClassRef = InjectInoculationFields(classRef, interceptors, MoveNextHandler);
         metadata = RewriteInceptionPoint(classRef, metadata, interceptors, path, isReleaseMode);
 
@@ -51,6 +52,10 @@ public static class AsyncRewriter {
 
         bool isWithinAStruct = metadata.ClassReference.Extends.Type.ToString() == "[System.Runtime] System.ValueType";
         
+        string CustomAttributes = String.Join("\n", metadata.Code.Body.Items.Values.OfType<MethodDecl.CustomAttributeItem>()
+            .Select(i => i.ToString()));
+
+
         string stackClause = ".maxstack 16";
         var LocalsClause = metadata.Code.Body.Items.Values.OfType<MethodDecl.LocalsItem>().FirstOrDefault();
 
@@ -88,6 +93,7 @@ public static class AsyncRewriter {
         newInstructions.AddRange(oldInstructions.Skip(isReleaseMode ? 0 : 2));
 
         string newBody = $$$"""
+            {{{CustomAttributes}}}
             {{{stackClause}}}
             {{{LocalsClause}}}
             {{{
@@ -140,7 +146,7 @@ public static class AsyncRewriter {
         return classRef;
     }
 
-    private static Func<ClassDecl.MethodDefinition, ClassDecl.MethodDefinition[]> GetNextMethodHandler(MethodData metadata, TypeData returnType, Class classRef, IEnumerable<string> path, bool isReleaseMode, InterceptorData[] modifierClasses)
+    private static Func<ClassDecl.MethodDefinition, ClassDecl.MethodDefinition[]> GetNextMethodHandler(MethodData metadata, TypeDecl.CustomTypeReference typeContainer, Class classRef, IEnumerable<string> path, bool isReleaseMode, InterceptorData[] modifierClasses)
     {
         int labelIdx = 0;
         Dictionary<string, string> jumptable = new();
@@ -166,10 +172,17 @@ public static class AsyncRewriter {
                 builder.AppendLine(member.ToString());
             }
 
+            static string ToGenericArity1(TypeData type) => type.IsVoid ? String.Empty : type.IsGeneric ? $"`1<!{type.PureName}>" : $"`1<{type.Name}>";
+            var returnType = new TypeData(typeContainer.Reference.GenericTypes?.Types.Values.FirstOrDefault()?.ToString() ?? "void");
+            string TaskVariantType = typeContainer.Reference.Name.ToString().StartsWith("System.Threading.Tasks.ValueTask") ? "ValueTask" : "Task";
 
+            string builderClassName = typeContainer.Reference.Name.ToString().StartsWith("System.Threading.Tasks.ValueTask") 
+                ? "AsyncValueTaskMethodBuilder"
+                : "AsyncTaskMethodBuilder"; 
+                
             builder.AppendLine($$$"""
                 .maxstack 8
-                .locals init (class [System.Runtime]System.Exception e)
+                .locals init (class [System.Runtime]System.Exception e, valuetype [System.Runtime]System.Threading.Tasks.ValueTask{{{ToGenericArity1(returnType)}}} ltask, class [System.Runtime]System.Threading.Tasks.Task{{{ToGenericArity1(returnType)}}} ttask)
             """);
 
             builder.Append($$$"""
@@ -183,15 +196,15 @@ public static class AsyncRewriter {
                     modifierClasses?.Where(m => m.IsInterceptor).Select(
                         (attrClassName, i) => $@"
                         {GetNextLabel(ref labelIdx)}: ldarg.0
-                        {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName.ClassName)}
+                        {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName.ClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName.ClassName)}
                         {GetNextLabel(ref labelIdx)}: ldarg.0
                         {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
-                        {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName}::OnEntry(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"
+                        {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName.ClassName}::OnEntry(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"
                 ))}}}
 
                 {{{GetNextLabel(ref labelIdx, jumptable, "JUMPDEST1")}}}: nop
 
-                {{{InvokeFunction(stateMachineFullName, returnType, ref labelIdx, modifierClasses.FirstOrDefault(m => m.IsRewriter)?.ClassName, isToBeRewritten, jumptable)}}}
+                {{{InvokeFunction(stateMachineFullName, typeContainer, ref labelIdx, modifierClasses.FirstOrDefault(m => m.IsRewriter)?.ClassName, isToBeRewritten, jumptable)}}}
 
                 {{{GetNextLabel(ref labelIdx, jumptable, "SUCCESS")}}}: nop
                 {{{String.Join("\n",
@@ -250,11 +263,16 @@ public static class AsyncRewriter {
                     {
                         Name = Parse<MethodName>("MoveNext__inoculated")
                     },
+
                     Body = methodDef.Value.Body with
                     {
                         Items = new ARRAY<MethodDecl.Member>(
                             methodDef.Value.Body
                                 .Items.Values.Where(member => member is not MethodDecl.OverrideMethodItem)
+                                .Select(member => {
+                                    var instructionLine = member.ToString().Replace("::" + metadata.Name(false), "::" + metadata.MangledName(false));
+                                    return Parse<MethodDecl.Member>(instructionLine);
+                                })
                                 .ToArray()
                         )
                         {
@@ -274,25 +292,48 @@ public static class AsyncRewriter {
         return HandleMoveNext;
     }
 
-    private static string InvokeFunction(string stateMachineFullName, TypeData returnType, ref int labelIdx, string? rewriterClass, bool rewrite, Dictionary<string, string> jumptable) {
+    private static string InvokeFunction(string stateMachineFullName, TypeDecl.CustomTypeReference typeContainer, ref int labelIdx, string? rewriterClass, bool rewrite, Dictionary<string, string> jumptable) {
         static string ToGenericArity1(TypeData type) => type.IsVoid ? String.Empty : type.IsGeneric ? $"`1<!{type.PureName}>" : $"`1<{type.Name}>";
+        var returnType = new TypeData(typeContainer.Reference.GenericTypes?.Types.Values.FirstOrDefault()?.ToString() ?? "void");
         
+        string TaskVariantType(bool includeClassIndication, bool isGeneric) => typeContainer.Reference.Name.ToString().StartsWith("System.Threading.Tasks.ValueTask") 
+            ? $"{(includeClassIndication ? "valuetype" : string.Empty)} [System.Runtime] System.Threading.Tasks.ValueTask{(isGeneric ? "`1<!0>" : string.Empty)}"
+            : $"{(includeClassIndication ? "class" : string.Empty)} [System.Runtime] System.Threading.Tasks.Task{(isGeneric ? "`1<!0>" : string.Empty)}";
+        
+        string builderClassName = typeContainer.Reference.Name.ToString().StartsWith("System.Threading.Tasks.ValueTask") 
+            ? $"valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncValueTaskMethodBuilder{ToGenericArity1(returnType)}"
+            : $"valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{ToGenericArity1(returnType)}"; 
+
         if(!rewrite) {
             return $$$"""
                 {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
                 {{{GetNextLabel(ref labelIdx)}}}: call instance void {{{stateMachineFullName}}}::MoveNext__inoculated()
 
                 {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
-                {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
-                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
-                {{{GetNextLabel(ref labelIdx)}}}: ldflda valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{{{ToGenericArity1(returnType)}}} {{{stateMachineFullName}}}::'<>t__builder'
-                {{{GetNextLabel(ref labelIdx)}}}: call instance class [System.Runtime]System.Threading.Tasks.Task{{{(String.IsNullOrEmpty(ToGenericArity1(returnType)) ? string.Empty : "`1<!0> valuetype")}}} [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{{{ToGenericArity1(returnType)}}}::get_Task()
+                {{{GetNextLabel(ref labelIdx)}}}: ldflda {{{builderClassName}}} {{{stateMachineFullName}}}::'<>t__builder'
+                {{{GetNextLabel(ref labelIdx)}}}: call instance {{{TaskVariantType(true, !returnType.IsVoid)}}} {{{builderClassName}}}::get_Task()
+                {{{(
+                    TaskVariantType(true, false).StartsWith("class") 
+                    ? $@" 
+                        {GetNextLabel(ref labelIdx)}: stloc.s ttask
+                    "
+                    : $@"
+                        {GetNextLabel(ref labelIdx)}: stloc.s ltask
+                        {GetNextLabel(ref labelIdx)}: ldloca.s ltask
+                        {GetNextLabel(ref labelIdx)}: call instance class [System.Runtime]System.Threading.Tasks.Task{(returnType.IsVoid ? string.Empty : "`1<!0>")} valuetype [System.Runtime]System.Threading.Tasks.ValueTask{ToGenericArity1(returnType)}::AsTask()
+                        {GetNextLabel(ref labelIdx)}: stloc.s ttask
+                    "
+                )}}}
+                {{{GetNextLabel(ref labelIdx)}}}: ldloc.s ttask
                 {{{GetNextLabel(ref labelIdx)}}}: call instance class [System.Runtime]System.AggregateException [System.Runtime]System.Threading.Tasks.Task::get_Exception()
-                {{{GetNextLabel(ref labelIdx)}}}: dup
-                {{{GetNextLabel(ref labelIdx)}}}: stloc.0
+                {{{GetNextLabel(ref labelIdx)}}}: stloc.s e
+
+                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
+                {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                {{{GetNextLabel(ref labelIdx)}}}: ldloc.s e
                 {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_Exception(class [System.Runtime]System.Exception)
 
-                {{{GetNextLabel(ref labelIdx)}}}: ldloc.0
+                {{{GetNextLabel(ref labelIdx)}}}: ldloc.s e
                 {{{GetNextLabel(ref labelIdx)}}}: brtrue.s ***FAILURE***
 
                 {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
@@ -303,9 +344,7 @@ public static class AsyncRewriter {
                         {GetNextLabel(ref labelIdx)}: ldnull
                         {GetNextLabel(ref labelIdx)}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_ReturnValue(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData)"
                     : $@"
-                        {GetNextLabel(ref labelIdx)}: ldarg.0
-                        {GetNextLabel(ref labelIdx)}: ldflda valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{ToGenericArity1(returnType)} {stateMachineFullName}::'<>t__builder'
-                        {GetNextLabel(ref labelIdx)}: call instance class [System.Runtime]System.Threading.Tasks.Task`1<!0> valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder{ToGenericArity1(returnType)}::get_Task()
+                        {GetNextLabel(ref labelIdx)}: ldloc.s ttask
                         {GetNextLabel(ref labelIdx)}: callvirt instance !0 class [System.Runtime]System.Threading.Tasks.Task{ToGenericArity1(returnType)}::get_Result()
                         {(
                             returnType.IsReferenceType ? string.Empty
@@ -343,7 +382,7 @@ public static class AsyncRewriter {
                             ? String.Empty
                             : $@"
                                 {GetNextLabel(ref labelIdx)}: ldarg.0
-                                {GetNextLabel(ref labelIdx)}: ldflda valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1<{returnType.Name}> {stateMachineFullName}::'<>t__builder'
+                                {GetNextLabel(ref labelIdx)}: ldflda {builderClassName} {stateMachineFullName}::'<>t__builder'
                                 {GetNextLabel(ref labelIdx)}: ldarg.0
                                 {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
                                 {GetNextLabel(ref labelIdx)}: callvirt instance class [Inoculator.Interceptors]Inoculator.Builder.ParameterData [Inoculator.Interceptors]Inoculator.Builder.MethodData::get_ReturnValue()
@@ -351,7 +390,7 @@ public static class AsyncRewriter {
                                 {GetNextLabel(ref labelIdx)}: {(returnType.IsReferenceType ? $"castclass {returnType.Name}" : $"unbox.any {returnType.ToProperName}")}
                             "
                     )}}}
-                    {{{GetNextLabel(ref labelIdx)}}}: call instance void valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1<{{{returnType.Name}}}>::SetResult(!0)
+                    {{{GetNextLabel(ref labelIdx)}}}: call instance void {{{builderClassName}}}::SetResult(!0)
                     {{{GetNextLabel(ref labelIdx, jumptable, "INNER_FAILURE")}}}: nop
                     {{{GetNextLabel(ref labelIdx)}}}: leave.s ***OUTSIDE***
                 } 
@@ -365,9 +404,9 @@ public static class AsyncRewriter {
                     {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_Exception(class [System.Runtime]System.Exception)
                     
                     {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
-                    {{{GetNextLabel(ref labelIdx)}}}: ldflda valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1<{{{returnType.Name}}}> {{{stateMachineFullName}}}::'<>t__builder'
+                    {{{GetNextLabel(ref labelIdx)}}}: ldflda {{{builderClassName}}} {{{stateMachineFullName}}}::'<>t__builder'
                     {{{GetNextLabel(ref labelIdx)}}}: ldloc.0
-                    {{{GetNextLabel(ref labelIdx)}}}: call instance void valuetype [System.Runtime]System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1<{{{returnType.Name}}}>::SetException(class [System.Runtime]System.Exception)
+                    {{{GetNextLabel(ref labelIdx)}}}: call instance void {{{builderClassName}}}::SetException(class [System.Runtime]System.Exception)
                     {{{GetNextLabel(ref labelIdx)}}}: leave.s ***OUTSIDE***
                 }
                 {{{GetNextLabel(ref labelIdx, jumptable, "OUTSIDE")}}}: ldarg.0

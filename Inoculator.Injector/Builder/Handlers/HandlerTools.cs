@@ -304,7 +304,7 @@ public static class HandlerTools {
         var pathList = path?.ToList(); 
         bool isContainedInStruct = classRef.Extends.Type.ToString() == "[System.Runtime] System.ValueType";
         var functionFullPathBuilder = new StringBuilder()
-            .Append(isStruct ? " valuetype " : " class ")
+            .Append(isStruct ? "valuetype " : "class ")
             .Append($"{String.Join("/", path)}");
 
         if(ForStateMachine > 0) {
@@ -342,19 +342,17 @@ public static class HandlerTools {
         var attributeRef = attribute.ClassName.Contains('<') ? attribute.ClassName[..attribute.ClassName.IndexOf('<')] : attribute.ClassName;
 
         var hook = $$$"""
-            ldtoken {{{attributeRef}}}
-            call class [System.Runtime]System.Type [System.Runtime]System.Type::GetTypeFromHandle(valuetype [System.Runtime]System.RuntimeTypeHandle)
-            ldtoken {{{classPath}}}
-            call class [System.Runtime]System.Type [System.Runtime]System.Type::GetTypeFromHandle(valuetype [System.Runtime]System.RuntimeTypeHandle)
-            callvirt instance string [System.Runtime]System.Type::get_FullName()
-            call class [System.Runtime]System.Type [System.Runtime]System.Type::GetType(string)
-            ldstr "{{{function.Name(false)}}}"
-            callvirt instance class [System.Runtime]System.Reflection.MethodInfo [System.Runtime]System.Type::GetMethod(string)
-            call object [Inoculator.Injector]Inoculator.Builder.HandlerTools/AttributeResolver::GetAttributeInstance(class [System.Runtime]System.Type, class [System.Runtime]System.Reflection.MethodInfo)
-            castclass class {{{attribute.ClassName}}}
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldtoken {{{attributeRef}}}
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} call class [System.Runtime]System.Type [System.Runtime]System.Type::GetTypeFromHandle(valuetype [System.Runtime]System.RuntimeTypeHandle)
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldtoken {{{classPath[classPath.IndexOf(' ')..]}}}
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} call class [System.Runtime]System.Type [System.Runtime]System.Type::GetTypeFromHandle(valuetype [System.Runtime]System.RuntimeTypeHandle)
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} callvirt instance string [System.Runtime]System.Type::get_FullName()
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} call class [System.Runtime]System.Type [System.Runtime]System.Type::GetType(string)
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldstr "{{{function.Name(false)}}}"
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} callvirt instance class [System.Runtime]System.Reflection.MethodInfo [System.Runtime]System.Type::GetMethod(string)
+            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} call !!0 [Inoculator.Injector]Inoculator.Builder.HandlerTools/AttributeResolver::GetAttributeInstance<class {{{attribute.ClassName}}}>(class [System.Runtime]System.Type, class [System.Runtime]System.Reflection.MethodInfo)
         """;
         return hook;
-        //!includeLabels ? hook : hook.Replace("\n", $"\n{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}");
     } 
 
     public static string GetCleanedString(string str) {
@@ -366,11 +364,19 @@ public static class HandlerTools {
     } 
 
     public static class AttributeResolver {
-            public static object? GetAttributeInstance(Type attrType, MethodInfo methodInfo){
-                var attrs = methodInfo.CustomAttributes;
-                var attr = attrs.Where(attr => attr.AttributeType.GUID == attrType.GUID).FirstOrDefault();
-                return attr?.Constructor.Invoke(attr.ConstructorArguments.Select(arg => arg.Value).ToArray());
+        public static T GetAttributeInstance<T>(Type attrType, MethodInfo methodInfo){
+            var attrs = methodInfo.CustomAttributes;
+            Console.WriteLine($"[AttributeResolver] Looking for {attrType} in {methodInfo} ({attrs.Count()} attributes)");
+            var attr = attrs.Where(attr => attr.AttributeType.GUID == attrType.GUID).FirstOrDefault();
+            if(attr == null) {
+                Console.WriteLine($"[AttributeResolver] Attribute not found");
+                return default;
             }
+            Console.WriteLine($"[AttributeResolver] Attribute found");
+            var instance =  (T)attr?.Constructor.Invoke(attr.ConstructorArguments.Select(arg => arg.Value).ToArray());
+            Console.WriteLine($"[AttributeResolver] Attribute instance: {instance}");
+            return instance;
         }
+    }
 
 }

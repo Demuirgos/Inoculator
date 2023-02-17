@@ -55,14 +55,12 @@ public static class Searcher {
     {
         var ctx = new AssemblyLoadContext("Inoculator.Temporary.Rewriters", true);
         try {
-            return Directory.GetFiles(Directory.GetCurrentDirectory(), "*.dll").SelectMany(path => {
-                bool isCurrentPath = path.EndsWith(currentPath);
-                path = isCurrentPath ? $"{path}.temp" : path;
-                var assembly = Assembly.LoadFrom(path);
+            return Directory.GetFiles(Directory.GetCurrentDirectory(), "*.dll").Where(path => !path.EndsWith(currentPath)).SelectMany(path => {
+                Assembly? assembly = Assembly.LoadFrom(path);
                 var types = assembly.GetTypes();
                 var interceptors = types.Where(x => (x.IsAssignableTo(typeof(IRewriter)) || x.IsAssignableTo(typeof(IInterceptor))) && x.IsSubclassOf(typeof(System.Attribute)));
                 return interceptors.Select(typedata => new { 
-                    Name = isCurrentPath ? typedata.FullName : $"[{Path.GetFileNameWithoutExtension(path)}] {typedata.FullName}",
+                    Name = $"[{Path.GetFileNameWithoutExtension(path)}] {typedata.FullName}",
                     Type = typedata
                 }).Select(result => new InterceptorData {
                     ClassName = result.Name,

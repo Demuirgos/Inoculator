@@ -50,38 +50,6 @@ public class WireAttribute : RewriterAttribute
     }
 }
 
-
-public class RetryAttribute : RewriterAttribute
-{
-    public RetryAttribute(int retries) => Retries = retries;
-    Engine<Program.Entry> engine = new();
-    int Retries;
-    public override MethodData OnCall(MethodData method)
-    {
-        while(Retries-- > 0) {
-            try {
-                Console.WriteLine($"Retrying {method.MethodName} {Retries} times");
-                method = engine.Invoke(method);
-                break;
-            } catch (Exception) {
-                if(Retries == 0) throw;
-            }
-        }
-        return method;
-    }
-}
-
-public class CallCountAttribute : InterceptorAttribute
-{
-    public static Dictionary<string, int> CallCounter = new Dictionary<string, int>();
-    public override void OnEntry(MethodData method)
-    {
-        if(!CallCounter.ContainsKey(method.MethodName))
-            CallCounter.Add(method.MethodName, 0);
-        CallCounter[method.MethodName]++;
-    }
-}
-
 public class UpdateStaticClassAttribute<T> : InterceptorAttribute
 {
     private FieldInfo targetField;

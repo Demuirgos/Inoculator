@@ -131,7 +131,6 @@ public static class SyncRewriter {
             builder.Replace($"***{label}***", idx.ToString());
         }
         var result = builder.ToString();
-        Console.WriteLine(result);
         return Reader.Parse<MethodDecl.Method>(result);
     }
 
