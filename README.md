@@ -20,26 +20,38 @@ public class ElapsedTimeAttribute : InterceptorAttribute
         => watch.Start();
 
     public override void OnExit(MethodData method)
-        => Console.WriteLine($"Method {method.Name(false)} took {watch.ElapsedMilliseconds}ms");
+        => Console.WriteLine($"Method {method.Name(false)} took {watch.Elapsed}");
 }
-
-public class DurationAttribute : RewriterAttribute
+public class RetryAttribute<TMarker> : RewriterAttribute
 {
-    private Stopwatch watch = new();
-    Engine<Program.Entry> engine = new();
+    public RetryAttribute(int retries) => Retries = retries;
+    Engine<TMarker> engine = new();
+    int Retries;
     public override MethodData OnCall(MethodData method)
     {
-        watch.Start();
-        engine.Invoke(method);
-        watch.Stop();
-        Console.WriteLine($"Method {method.MethodName} took {watch.ElapsedMilliseconds}ms (rewriter)");
+        bool functionIsDone = false;
+        while(!method.Stop && Retries >= 0) {
+            try {
+                method = engine.Invoke(method);
+                break;
+            } catch {
+                if(--Retries == 0) throw; 
+                else {
+                    Console.WriteLine($"Retrying {method.Name(false)} : {Retries} left")
+                    engine.Restart();
+                }
+            }
+        }
         return method;
     }
 }
 ```
 * Flag function to be injected with code : 
 ```csharp
-async static Task Main(string[] args)  => _ = SumIntervalIsEven(7, 23, out _);
+async static Task Main(string[] args)  {
+    _ = SumIntervalIsEven(7, 23, out _);
+    GuessNumberSeven(0, 10);
+}
 
 [ElapsedTime, LogEntrency, CallCount]
 public static bool SumIntervalIsEven(int start, int end, out int r) {
@@ -51,14 +63,13 @@ public static bool SumIntervalIsEven(int start, int end, out int r) {
     return r % 2 == 0;
 }
 
-[Duration, LogEntrency, CallCount]
-public static bool SumIntervalIsEven(int start, int end, out int r) {
-    int result = 0;
-    for (int j = start; j < end; j++) {
-        result += j;
+[RetryAttribute<typeof(Main)>(5)]
+public static void GuessNumberSeven(int start, int end) {
+    var random = new Random();
+    if(random.Next(start, end) != 7) {
+        throw new Exception("Wrong guess");
     }
-    r = result;
-    return r % 2 == 0;
+    Console.WriteLine("Congrats Done");
 }
 ```
 * Output :
@@ -89,4 +100,9 @@ After: {
   ],
   "ReturnValue": true
 }
+
+Retrying GuessNumberSeven : 4 left
+Retrying GuessNumberSeven : 3 left
+Retrying GuessNumberSeven : 2 left
+Congrats Done
 ```
