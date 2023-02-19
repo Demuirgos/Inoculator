@@ -3,20 +3,21 @@ using System.Collections;
 namespace Program {
     class Entry : Printable<Entry> {
         public string Name {get; set;} = "Program";
+        public static int RandomExceptionControl = 0;
         async static Task Main(string[] args) {
             try {
                 Console.WriteLine(await Utils.Factorial(10));
+                foreach (var value in Utils.Fibbonacci(10))
+                {
+                    Console.WriteLine(value);
+                }
+
+                await foreach (var value in Utils.Primes(10))
+                {
+                    Console.WriteLine(value);
+                }
             } catch (Exception e) {
                 Console.WriteLine(e.Message + " " + e.StackTrace);
-            }
-            foreach (var value in Utils.Fibbonacci(10))
-            {
-                Console.WriteLine(value);
-            }
-
-            await foreach (var value in Utils.Primes(10))
-            {
-                Console.WriteLine(value);
             }
         }
         
@@ -33,27 +34,20 @@ namespace Program {
                     b = temp + b;
                 }
             } 
-            static int random = 0;
             [Retry<Entry>(10)]
             public static async Task<int> Factorial(int value) {
-                if(random++ == 3) {
-                    throw new Exception("Random exception");
-                }
                 return value <= 0 ? 1 : value * (await Factorial(value - 1));
             } 
 
             static Task<bool> IsPrime(int n) => Task.Run(() => {
                 if(n % 2 == 0) return n == 2;
                 if(n % 3 == 0) return n == 3;
-                if(n == 5) {
-                    throw new Exception("Random exception");
-                }
                 for (int i = 3; i <= Math.Sqrt(n); i+=2) {
                     if (n % i == 0) return false;
                 }
                 return true;
             });
-            
+
             [Retry<Entry>(10)]
             public static async IAsyncEnumerable<int> Primes(int value) {
 

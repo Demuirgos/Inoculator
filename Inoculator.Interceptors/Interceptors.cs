@@ -54,17 +54,16 @@ public class RetryAttribute<TMarker> : RewriterAttribute
     public override MethodData OnCall(MethodData method)
     {
         bool functionIsDone = false;
-        while(!functionIsDone && Retries > 0) {
+        while(!functionIsDone && Retries >= 0) {
             try {
                 method = engine.Invoke(method);
                 functionIsDone = method.Stop;
                 break;
-            } catch (Exception e) {
-                Console.WriteLine($"Exception: {e.Message}");
-                Retries--;
-                if(Retries == 0) throw;
-                Console.WriteLine($"Retrying {method.MethodName} {Retries} times left");
-                engine.Restart();
+            } catch {
+                if(--Retries == 0) throw; 
+                else {
+                    engine.Restart();
+                }
             }
         }
         return method;
@@ -74,12 +73,12 @@ public class RetryAttribute<TMarker> : RewriterAttribute
 public class ElapsedTimeAttribute : InterceptorAttribute
 {
     private Stopwatch watch = new();
-    public override void OnEntry(MethodData method)
+    public override void OnBegin(MethodData method)
     {
         watch.Start();
     }
 
-    public override void OnExit(MethodData method)
+    public override void OnEnd(MethodData method)
     {
         watch.Stop();
         Console.WriteLine($"Method {method.Name(false)} took {watch.ElapsedMilliseconds}ms (interceptor)");

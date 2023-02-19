@@ -224,27 +224,30 @@ public static class AsyncEnumRewriter {
             ldc.i4.1
             stfld bool {{{stateMachineFullName}}}::'<wordarround>__started'
             {{{CallMethodOnInterceptors(stateMachineFullName, config.Interceptors, "OnEntry", false, ref labelIdx)}}}
+            .try
+            {
+                {{{GetNextLabel(ref labelIdx, jumptable, "DEJA-START")}}}: nop
+                {{{InvokeFunction(config, stateMachineFullName, config.typeContainer, ref labelIdx, jumptable)}}}
 
-            {{{GetNextLabel(ref labelIdx, jumptable, "DEJA-START")}}}: nop
-            {{{InvokeFunction(config, stateMachineFullName, config.typeContainer, ref labelIdx, jumptable)}}}
 
+                {{{GetNextLabel(ref labelIdx, jumptable, "SUCCESS")}}}: nop            
+                {{{CallMethodOnInterceptors(stateMachineFullName, config.Interceptors, "OnSuccess", false, ref labelIdx)}}}
+                br.s ***NEXT***
 
-            {{{GetNextLabel(ref labelIdx, jumptable, "SUCCESS")}}}: nop            
-            {{{CallMethodOnInterceptors(stateMachineFullName, config.Interceptors, "OnSuccess", false, ref labelIdx)}}}
-            br.s ***NEXT***
+                {{{GetNextLabel(ref labelIdx, jumptable, "FAILURE")}}}: nop
+                {{{CallMethodOnInterceptors(stateMachineFullName, config.Interceptors, "OnException", false, ref labelIdx)}}}
+                ldloc.s e
+                throw
 
-            {{{GetNextLabel(ref labelIdx, jumptable, "FAILURE")}}}: nop
-            {{{CallMethodOnInterceptors(stateMachineFullName, config.Interceptors, "OnException", false, ref labelIdx)}}}
-            br.s ***EXIT***
-
-            {{{GetNextLabel(ref labelIdx, jumptable, "NEXT")}}}: nop    
-            ldloc.s ttask 
-            callvirt instance !0 class [System.Runtime]System.Threading.Tasks.Task`1<bool>::get_Result()
-            brtrue.s ***RETURN***
-
-            {{{GetNextLabel(ref labelIdx, jumptable, "EXIT")}}}: nop    
-            {{{CallMethodOnInterceptors(stateMachineFullName, config.Interceptors, "OnExit", false, ref labelIdx)}}}
-
+                {{{GetNextLabel(ref labelIdx, jumptable, "NEXT")}}}: nop    
+                ldloc.s ttask 
+                callvirt instance !0 class [System.Runtime]System.Threading.Tasks.Task`1<bool>::get_Result()
+                leave.s ***RETURN***
+            } finally {
+                {{{GetNextLabel(ref labelIdx, jumptable, "EXIT")}}}: nop    
+                {{{CallMethodOnInterceptors(stateMachineFullName, config.Interceptors, "OnExit", false, ref labelIdx)}}}
+                endfinally
+            }
             {{{GetNextLabel(ref labelIdx, jumptable, "RETURN")}}}: nop    
             ldloc.s vtask
             ret
