@@ -9,7 +9,7 @@ public static class HandlerTools {
         return label;
     }
 
-    public static string CallMethodOnInterceptors(string classContainer, InterceptorData[] modifierClasses, string methodName, bool isSyncMode, ref int labelIdx, bool inverse = true) 
+    public static string CallMethodOnInterceptors(string classContainer, IEnumerable<InterceptorData> modifierClasses, string methodName, bool isSyncMode, ref int labelIdx, bool inverse = true) 
     {
         var interceptorsClass = modifierClasses.Where(m => m.IsInterceptor);
         if(inverse) interceptorsClass = interceptorsClass.Reverse();
@@ -37,126 +37,126 @@ public static class HandlerTools {
 
     public static string CallMethodOnInterceptor(string classContainer, string interceptorClass, string methodName, bool isSyncMode, ref int labelIdx) {
         string piping = isSyncMode 
-            ? $@"{GetNextLabel(ref labelIdx)}: ldloc.s {GenerateInterceptorName(interceptorClass)}
-                 {GetNextLabel(ref labelIdx)}: ldloc.s metadata"
-            : $@"{GetNextLabel(ref labelIdx)}: ldarg.0
-                 {GetNextLabel(ref labelIdx)}: ldfld class {interceptorClass} {classContainer}::{GenerateInterceptorName(interceptorClass)}
-                 {GetNextLabel(ref labelIdx)}: ldarg.0
-                 {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {classContainer}::'<inoculated>__Metadata'";
+            ? $@"ldloc.s {GenerateInterceptorName(interceptorClass)}
+                 ldloc.s metadata"
+            : $@"ldarg.0
+                 ldfld class {interceptorClass} {classContainer}::{GenerateInterceptorName(interceptorClass)}
+                 ldarg.0
+                 ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {classContainer}::'<inoculated>__Metadata'";
         
-        string callCode = $"{GetNextLabel(ref labelIdx)}: callvirt instance void class {interceptorClass}::{methodName}(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)";
+        string callCode = $"callvirt instance void class {interceptorClass}::{methodName}(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)";
         return $"{piping}\n{callCode}";
     }
 
      public static string CallMethodOnInterceptorSM(string classContainer, string interceptorClass, string methodName, bool isSyncMode, ref int labelIdx) {
         string piping = isSyncMode 
-            ? $@"{GetNextLabel(ref labelIdx)}: ldloc.s {GenerateInterceptorName(interceptorClass)}
-                 {GetNextLabel(ref labelIdx)}: ldloc.s metadata"
-            : $@"{GetNextLabel(ref labelIdx)}: ldarg.0
-                 {GetNextLabel(ref labelIdx)}: ldfld class {interceptorClass} {classContainer}::{GenerateInterceptorName(interceptorClass)}
-                 {GetNextLabel(ref labelIdx)}: ldarg.0
-                 {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {classContainer}::'<inoculated>__Metadata'";
+            ? $@"ldloc.s {GenerateInterceptorName(interceptorClass)}
+                 ldloc.s metadata"
+            : $@"ldarg.0
+                 ldfld class {interceptorClass} {classContainer}::{GenerateInterceptorName(interceptorClass)}
+                 ldarg.0
+                 ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {classContainer}::'<inoculated>__Metadata'";
         
-        string callCode = $"{GetNextLabel(ref labelIdx)}: callvirt instance void class {interceptorClass}::{methodName}(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)";
+        string callCode = $"callvirt instance void class {interceptorClass}::{methodName}(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)";
         return $"{piping}\n{callCode}";
     }
 
-    public static string LoadArguments(ParameterDecl.Parameter.Collection parameter, ref int labelIdx, bool isStatic, bool includeLabels = true) {
+    public static string LoadArguments(ParameterDecl.Parameter.Collection parameter, bool isStatic) {
         StringBuilder builder = new StringBuilder();
         if(!isStatic) {
-            builder.AppendLine(LoadThisArgument(ref labelIdx, includeLabels));
+            builder.AppendLine(LoadThisArgument());
         }
 
         foreach(ParameterDecl.DefaultParameter param in parameter.Parameters.Values.OfType<ParameterDecl.DefaultParameter>()){
-            builder.AppendLine(LoadArgument(param, ref labelIdx, includeLabels));
+            builder.AppendLine(LoadArgument(param));
         }
         return builder.ToString();
     }
 
-    public static string ExtractArguments(MethodData methodAst, ref int labelIdx, bool isStatic, bool includeLabels = true) {
+    public static string ExtractArguments(MethodData methodAst, bool isStatic) {
         StringBuilder builder = new StringBuilder();
         int startingIdx = isStatic ? 0 : 1;
 
         if(!isStatic) {
-            builder.AppendLine(ExtractThisArgument(methodAst.ClassReference, ref labelIdx, includeLabels));
+            builder.AppendLine(ExtractThisArgument(methodAst.ClassReference));
         }
         foreach(ParameterDecl.DefaultParameter param in methodAst.Code.Header.Parameters.Parameters.Values.OfType<ParameterDecl.DefaultParameter>()){
-            builder.AppendLine(ExtractArgument(param, ref labelIdx, startingIdx++, includeLabels));
+            builder.AppendLine(ExtractArgument(param, startingIdx++));
         }
         return builder.ToString();
     }
 
-    public static string UpdateRefArguments(ParameterDecl.Parameter.Collection parameter, bool isStatic, ref int labelIdx) {
+    public static string UpdateRefArguments(ParameterDecl.Parameter.Collection parameter, bool isStatic) {
         StringBuilder builder = new StringBuilder();
         int startingIdx = isStatic ? 0 : 1;
 
         builder.AppendLine($"");
         foreach(ParameterDecl.DefaultParameter param in parameter.Parameters.Values.OfType<ParameterDecl.DefaultParameter>()){
-            builder.AppendLine(UpdateRefArgument(param, ref labelIdx, startingIdx++));
+            builder.AppendLine(UpdateRefArgument(param, startingIdx++));
         }
         return builder.ToString();
     }
 
-    public static string ReflectRefArguments(ParameterDecl.Parameter.Collection parameter, bool isStatic, ref int labelIdx) {
+    public static string ReflectRefArguments(ParameterDecl.Parameter.Collection parameter, bool isStatic) {
         StringBuilder builder = new StringBuilder();
         int startingIdx = isStatic ? 0 : 1;
 
         builder.AppendLine($"");
         foreach(ParameterDecl.DefaultParameter param in parameter.Parameters.Values.OfType<ParameterDecl.DefaultParameter>()){
-            builder.AppendLine(ReflectRefArgument(param, ref labelIdx, startingIdx++));
+            builder.AppendLine(ReflectRefArgument(param, startingIdx++));
         }
         return builder.ToString();
     }
 
-    public static string ExtractThisArgument(ClassDecl.Prefix ClassHeader, ref int labelIdx, bool includeLabels = true) {
+    public static string ExtractThisArgument(ClassDecl.Prefix ClassHeader) {
         StringBuilder builder = new StringBuilder();
         var IsValueType = ClassHeader.Implements is not null && ClassHeader.Implements.Types.ToString(string.Empty).Contains("System.ValueType");
         builder.Append($$$"""
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} dup
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldc.i4.s 0
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldarg.0
+            dup
+            ldc.i4.s 0
+            ldarg.0
         """);
         if(IsValueType) {
             builder.Append($$$"""
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldobj {ClassHeader.Name}
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} box {ClassHeader.Name}
+            ldobj {ClassHeader.Name}
+            box {ClassHeader.Name}
         """);
         }   
         builder.Append($$$"""
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} dup
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} callvirt instance class [System.Runtime]System.Type [System.Runtime]System.Object::GetType()
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldstr "<>this"
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} newobj instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(object,class [System.Runtime]System.Type,string)
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} stelem.ref
+            dup
+            callvirt instance class [System.Runtime]System.Type [System.Runtime]System.Object::GetType()
+            ldstr "<>this"
+            newobj instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(object,class [System.Runtime]System.Type,string)
+            stelem.ref
         """);
 
         return builder.ToString();
 
     }
 
-    public static string ExtractReturnValue(TypeData Output, ref int labelIdx, bool includeLabels = true) {
+    public static string ExtractReturnValue(TypeData Output, ref int labelIdx) {
         StringBuilder builder = new StringBuilder();
         builder.Append($$$"""
             {{{(
                 Output.IsVoid
-                    ? $@"{GetNextLabel(ref labelIdx)}: ldnull"
-                    : $@"{GetNextLabel(ref labelIdx)}: ldloc.s result
+                    ? $@"ldnull"
+                    : $@"ldloc.s result
                         {(  Output.IsReferenceType ? String.Empty
-                            : $@"{GetNextLabel(ref labelIdx)}: box {Output.ToProperName}"
+                            : $@"box {Output.ToProperName}"
                         )}"
             )}}}
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} dup
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} callvirt instance class [System.Runtime]System.Type [System.Runtime]System.Object::GetType()
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldnull
-            {{{GetNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(object,class [System.Runtime]System.Type,string)
-            {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_ReturnValue(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData)
+            dup
+            callvirt instance class [System.Runtime]System.Type [System.Runtime]System.Object::GetType()
+            ldnull
+            newobj instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(object,class [System.Runtime]System.Type,string)
+            callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_ReturnValue(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData)
         """);
 
         return builder.ToString();
 
     }
 
-    public static string ExtractArgument(ParameterDecl.Parameter parameter, ref int labelIdx, int paramIdx = 0, bool includeLabels = true) {
+    public static string ExtractArgument(ParameterDecl.Parameter parameter, int paramIdx = 0) {
         StringBuilder builder = new StringBuilder();
         if(parameter is not ParameterDecl.DefaultParameter param) {
             throw new Exception("Unknown parameter type");
@@ -164,20 +164,20 @@ public static class HandlerTools {
         
         var typeData = new TypeData(parameter);
         var ilcode = typeData.IsVoid ? string.Empty  : $$$"""
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} dup
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldc.i4.s {{{paramIdx}}}
-            {{{LoadArgument(param, ref labelIdx, includeLabels)}}}
+            dup
+            ldc.i4.s {{{paramIdx}}}
+            {{{LoadArgument(param)}}}
             {{{(!typeData.IsByRef ? string.Empty
-                    : $"{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)} {GetCILIndirectLoadOpcode(typeData).load}" 
+                    : $"{GetCILIndirectLoadOpcode(typeData).load}" 
             )}}}
             {{{( typeData.IsReferenceType ? String.Empty 
-                    : $"{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)} box {(typeData.IsGeneric ? typeData.FilteredName(true, false) : typeData.ToProperName)}"
+                    : $"box {(typeData.IsGeneric ? typeData.FilteredName(true, false) : typeData.ToProperName)}"
             )}}}
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} dup
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} callvirt instance class [System.Runtime]System.Type [System.Runtime]System.Object::GetType()
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldstr "{{{parameter.AsDefaultParameter()?.Id}}}"
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} newobj instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(object,class [System.Runtime]System.Type,string)
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} stelem.ref
+            dup
+            callvirt instance class [System.Runtime]System.Type [System.Runtime]System.Object::GetType()
+            ldstr "{{{parameter.AsDefaultParameter()?.Id}}}"
+            newobj instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(object,class [System.Runtime]System.Type,string)
+            stelem.ref
             """;
 
         builder.Append(ilcode);
@@ -206,7 +206,7 @@ public static class HandlerTools {
         return builder.ToString();
     }
 
-    public static string UpdateRefArgument(ParameterDecl.Parameter parameter, ref int labelIdx, int paramIdx = 0) {
+    public static string UpdateRefArgument(ParameterDecl.Parameter parameter, int paramIdx = 0) {
         StringBuilder builder = new StringBuilder();
         if(parameter is not ParameterDecl.DefaultParameter param) {
             throw new Exception("Unknown parameter type");
@@ -219,24 +219,24 @@ public static class HandlerTools {
         }
 
         var ilcode = typeData.IsVoid ? string.Empty  : $$$"""
-            {{{GetNextLabel(ref labelIdx)}}}: ldloc.s metadata
-            {{{GetNextLabel(ref labelIdx)}}}: callvirt instance class [Inoculator.Interceptors]Inoculator.Builder.ParameterData[] [Inoculator.Interceptors]Inoculator.Builder.MethodData::get_Parameters()
-            {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.s {{{paramIdx}}}
-            {{{GetNextLabel(ref labelIdx)}}}: ldelem.ref
-            {{{LoadArgument(param, ref labelIdx)}}}
-            {{{GetNextLabel(ref labelIdx)}}}: {{{GetCILIndirectLoadOpcode(typeData).load}}}
+            ldloc.s metadata
+            callvirt instance class [Inoculator.Interceptors]Inoculator.Builder.ParameterData[] [Inoculator.Interceptors]Inoculator.Builder.MethodData::get_Parameters()
+            ldc.i4.s {{{paramIdx}}}
+            ldelem.ref
+            {{{LoadArgument(param)}}}
+            {{{GetCILIndirectLoadOpcode(typeData).load}}}
             {{{( typeData.IsReferenceType ? String.Empty 
-                    : $"{GetNextLabel(ref labelIdx)}: box {(typeData.IsGeneric ? typeData.FilteredName(true, false) : typeData.ToProperName)}"
+                    : $"box {(typeData.IsGeneric ? typeData.FilteredName(true, false) : typeData.ToProperName)}"
             )}}}
             
-            {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::set_Value(object)
+            callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.ParameterData::set_Value(object)
             """;
 
         builder.Append(ilcode);
         return builder.ToString();
     }
 
-    public static string ReflectRefArgument(ParameterDecl.Parameter parameter, ref int labelIdx, int paramIdx = 0) {
+    public static string ReflectRefArgument(ParameterDecl.Parameter parameter, int paramIdx = 0) {
         StringBuilder builder = new StringBuilder();
         if(parameter is not ParameterDecl.DefaultParameter param) {
             throw new Exception("Unknown parameter type");
@@ -249,14 +249,14 @@ public static class HandlerTools {
         }
 
         var ilcode = typeData.IsVoid ? string.Empty  : $$$"""
-            {{{LoadArgument(param, ref labelIdx)}}}
-            {{{GetNextLabel(ref labelIdx)}}}: ldloc.s metadata
-            {{{GetNextLabel(ref labelIdx)}}}: callvirt instance class [Inoculator.Interceptors]Inoculator.Builder.ParameterData[] [Inoculator.Interceptors]Inoculator.Builder.MethodData::get_Parameters()
-            {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.s {{{paramIdx}}}
-            {{{GetNextLabel(ref labelIdx)}}}: ldelem.ref
-            {{{GetNextLabel(ref labelIdx)}}}: callvirt instance object [Inoculator.Interceptors]Inoculator.Builder.ParameterData::get_Value()
-            {{{GetNextLabel(ref labelIdx)}}}: {{{(typeData.IsReferenceType ? $"castclass {typeData.Name}" : $"unbox.any {typeData.ToProperName}")}}}
-            {{{GetNextLabel(ref labelIdx)}}}: {{{GetCILIndirectLoadOpcode(typeData).set}}}
+            {{{LoadArgument(param)}}}
+            ldloc.s metadata
+            callvirt instance class [Inoculator.Interceptors]Inoculator.Builder.ParameterData[] [Inoculator.Interceptors]Inoculator.Builder.MethodData::get_Parameters()
+            ldc.i4.s {{{paramIdx}}}
+            ldelem.ref
+            callvirt instance object [Inoculator.Interceptors]Inoculator.Builder.ParameterData::get_Value()
+            {{{(typeData.IsReferenceType ? $"castclass {typeData.Name}" : $"unbox.any {typeData.ToProperName}")}}}
+            {{{GetCILIndirectLoadOpcode(typeData).set}}}
             """;
 
         builder.Append(ilcode);
@@ -265,19 +265,19 @@ public static class HandlerTools {
 
     public static bool HasField(ClassDecl.Class classRef, string fieldName) => classRef.Members.Members.Values.Any(x => x is ClassDecl.FieldDefinition field && field.Value.Id.ToString() == fieldName);
 
-    public static string LoadThisArgument(ref int labelIdx, bool includeLabels = true) {
+    public static string LoadThisArgument() {
         StringBuilder builder = new StringBuilder();
-        var ilcode = $"{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)} ldarg.0";
+        var ilcode = $"ldarg.0";
         builder.Append(ilcode);
         return builder.ToString();
     }
-    public static string LoadArgument(ParameterDecl.Parameter parameter, ref int labelIdx, bool includeLabels = true) {
+    public static string LoadArgument(ParameterDecl.Parameter parameter) {
         StringBuilder builder = new StringBuilder();
         if(parameter is not ParameterDecl.DefaultParameter param) {
             throw new Exception("Unknown parameter type");
         }
         var typeComp = param.TypeDeclaration?.ToString();
-        var ilcode = typeComp is null ? String.Empty : $"{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)} ldarg.s {param.Id}";
+        var ilcode = typeComp is null ? String.Empty : $"ldarg.s {param.Id}";
         builder.Append(ilcode);
         return builder.ToString();
     }
@@ -338,19 +338,19 @@ public static class HandlerTools {
         return functionFullPath;
     }
 
-    public static string GetAttributeInstance(MethodData function, string classPath, InterceptorData attribute, ref int labelIdx, bool includeLabels = true) {
+    public static string GetAttributeInstance(MethodData function, string classPath, InterceptorData attribute) {
         var attributeRef = attribute.ClassName.Contains('<') ? attribute.ClassName[..attribute.ClassName.IndexOf('<')] : attribute.ClassName;
 
         var hook = $$$"""
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldtoken {{{attributeRef}}}
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} call class [System.Runtime]System.Type [System.Runtime]System.Type::GetTypeFromHandle(valuetype [System.Runtime]System.RuntimeTypeHandle)
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldtoken {{{classPath[classPath.IndexOf(' ')..]}}}
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} call class [System.Runtime]System.Type [System.Runtime]System.Type::GetTypeFromHandle(valuetype [System.Runtime]System.RuntimeTypeHandle)
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} callvirt instance string [System.Runtime]System.Type::get_FullName()
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} call class [System.Runtime]System.Type [System.Runtime]System.Type::GetType(string)
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} ldstr "{{{function.Name(false)}}}"
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} callvirt instance class [System.Runtime]System.Reflection.MethodInfo [System.Runtime]System.Type::GetMethod(string)
-            {{{(includeLabels ? $"{GetNextLabel(ref labelIdx)}:" : string.Empty)}}} call !!0 [Inoculator.Injector]Inoculator.Builder.HandlerTools/AttributeResolver::GetAttributeInstance<class {{{attribute.ClassName}}}>(class [System.Runtime]System.Type, class [System.Runtime]System.Reflection.MethodInfo)
+            ldtoken {{{attributeRef}}}
+            call class [System.Runtime]System.Type [System.Runtime]System.Type::GetTypeFromHandle(valuetype [System.Runtime]System.RuntimeTypeHandle)
+            ldtoken {{{classPath[classPath.IndexOf(' ')..]}}}
+            call class [System.Runtime]System.Type [System.Runtime]System.Type::GetTypeFromHandle(valuetype [System.Runtime]System.RuntimeTypeHandle)
+            callvirt instance string [System.Runtime]System.Type::get_FullName()
+            call class [System.Runtime]System.Type [System.Runtime]System.Type::GetType(string)
+            ldstr "{{{function.Name(false)}}}"
+            callvirt instance class [System.Runtime]System.Reflection.MethodInfo [System.Runtime]System.Type::GetMethod(string)
+            call !!0 [Inoculator.Injector]Inoculator.Builder.HandlerTools/AttributeResolver::GetAttributeInstance<class {{{attribute.ClassName}}}>(class [System.Runtime]System.Type, class [System.Runtime]System.Reflection.MethodInfo)
         """;
         return hook;
     } 
@@ -366,15 +366,11 @@ public static class HandlerTools {
     public static class AttributeResolver {
         public static T GetAttributeInstance<T>(Type attrType, MethodInfo methodInfo){
             var attrs = methodInfo.CustomAttributes;
-            Console.WriteLine($"[AttributeResolver] Looking for {attrType} in {methodInfo} ({attrs.Count()} attributes)");
             var attr = attrs.Where(attr => attr.AttributeType.GUID == attrType.GUID).FirstOrDefault();
             if(attr == null) {
-                Console.WriteLine($"[AttributeResolver] Attribute not found");
                 return default;
             }
-            Console.WriteLine($"[AttributeResolver] Attribute found");
             var instance =  (T)attr?.Constructor.Invoke(attr.ConstructorArguments.Select(arg => arg.Value).ToArray());
-            Console.WriteLine($"[AttributeResolver] Attribute instance: {instance}");
             return instance;
         }
     }

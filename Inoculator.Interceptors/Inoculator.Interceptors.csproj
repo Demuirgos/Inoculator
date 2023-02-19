@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dove.Parser" Version="0.1.4.9" />
+    <PackageReference Include="Dove.Parser" Version="0.1.5.1" />
   </ItemGroup>
 
 </Project>

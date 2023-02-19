@@ -69,28 +69,28 @@ public static class EnumRewriter {
                                         if (instruction.Value.Opcode == "ret")
                                         {
                                             var injectionCode = $$$"""
-                                        {{{GetNextLabel(ref labelIdx)}}}: dup
-                                        {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{GetCleanedString(metadata.Code.ToString())}}}"
-                                        {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{GetCleanedString(metadata.ClassReference.ToString())}}}"
-                                        {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{String.Join("/", path)}}}"
-                                        {{{GetNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::.ctor(string, string, string)
+                                        dup
+                                        ldstr "{{{GetCleanedString(metadata.Code.ToString())}}}"
+                                        ldstr "{{{GetCleanedString(metadata.ClassReference.ToString())}}}"
+                                        ldstr "{{{String.Join("/", path)}}}"
+                                        newobj instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::.ctor(string, string, string)
 
-                                        {{{GetNextLabel(ref labelIdx)}}}: dup
-                                        {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.s {{{argumentsCount}}}
-                                        {{{GetNextLabel(ref labelIdx)}}}: newarr [Inoculator.Interceptors]Inoculator.Builder.ParameterData
-                                        {{{ExtractArguments(metadata, ref labelIdx, metadata.IsStatic)}}}
+                                        dup
+                                        ldc.i4.s {{{argumentsCount}}}
+                                        newarr [Inoculator.Interceptors]Inoculator.Builder.ParameterData
+                                        {{{ExtractArguments(metadata, metadata.IsStatic)}}}
 
-                                        {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_Parameters(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData[])
-                                        {{{GetNextLabel(ref labelIdx)}}}: stfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                                        callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_Parameters(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData[])
+                                        stfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
                                         {{{String.Join("\n", 
                                             interceptorsClasses.Select(
                                                     (attrClassName, i) => $"""
-                                            {GetNextLabel(ref labelIdx)}: dup
-                                            {GetAttributeInstance(metadata, inoculationSightName, attrClassName, ref labelIdx)}
-                                            {GetNextLabel(ref labelIdx)}: stfld class {attrClassName.ClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName.ClassName)}
+                                            dup
+                                            {GetAttributeInstance(metadata, inoculationSightName, attrClassName)}
+                                            stfld class {attrClassName.ClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName.ClassName)}
                                             """
                                         ))}}}
-                                        {{{GetNextLabel(ref labelIdx)}}}: ret
+                                        ret
                                         """;
                                             var res = Parse<MethodDecl.Member.Collection>(injectionCode);
                                             return res.Items.Values;
@@ -174,75 +174,43 @@ public static class EnumRewriter {
             builder.AppendLine($".locals init (bool, class [System.Runtime]System.Exception e)");            
 
             builder.Append($$$"""
-                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
-                {{{GetNextLabel(ref labelIdx)}}}: ldfld int32 {{{stateMachineFullName}}}::'<>1__state'
-                {{{GetNextLabel(ref labelIdx)}}}: brtrue.s ***JUMPDEST1***
+                ldarg.0
+                ldfld int32 {{{stateMachineFullName}}}::'<>1__state'
+                brtrue.s ***JUMPDEST1***
 
 
-                {{{String.Join("\n", 
-                    modifierClasses?.Where(m => m.IsInterceptor).Select(
-                        (attrClassName, i) => $@"
-                        {GetNextLabel(ref labelIdx)}: ldarg.0
-                        {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName.ClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName.ClassName)}
-                        {GetNextLabel(ref labelIdx)}: ldarg.0
-                        {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
-                        {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName.ClassName}::OnEntry(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"
-                ))}}}
-
+                {{{CallMethodOnInterceptors(stateMachineFullName, modifierClasses?.Where(m => m.IsInterceptor), "OnEntry", false, ref labelIdx)}}}
                 {{{GetNextLabel(ref labelIdx, jumptable, "JUMPDEST1")}}}: nop
                 .try {
                     .try {
-                        {{{InvokeFunction(stateMachineFullName, returnType, ref labelIdx, modifierClasses.FirstOrDefault(m => m.IsRewriter)?.ClassName, isToBeRewritten, jumptable)}}}
-                        {{{String.Join("\n",
-                            modifierClasses?.Where(m => m.IsInterceptor).Select(
-                                (attrClassName, i) => $@"
-                                {GetNextLabel(ref labelIdx)}: ldarg.0
-                                {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName.ClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName.ClassName)}
-                                {GetNextLabel(ref labelIdx)}: ldarg.0
-                                {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
-                                {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName.ClassName}::OnSuccess(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"
-                        ))}}}
-                        {{{GetNextLabel(ref labelIdx)}}}: leave.s ***END***
+                        {{{CallMethodOnInterceptors(stateMachineFullName, modifierClasses?.Where(m => m.IsInterceptor), "OnBegin", false, ref labelIdx)}}}
+                        {{{InvokeFunction(stateMachineFullName, returnType, ref labelIdx, modifierClasses, jumptable)}}}
+                        {{{CallMethodOnInterceptors(stateMachineFullName, modifierClasses?.Where(m => m.IsInterceptor), "OnSuccess", false, ref labelIdx)}}}
+                        leave.s ***END***
                     } catch [System.Runtime]System.Exception
                     {
-                        {{{GetNextLabel(ref labelIdx)}}}: stloc.s e
-                        {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
-                        {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
-                        {{{GetNextLabel(ref labelIdx)}}}: ldloc.s e
-                        {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_Exception(class [System.Runtime]System.Exception)
-                        {{{String.Join("\n",
-                            modifierClasses?.Where(m => m.IsInterceptor).Select(
-                                (attrClassName, i) => $@"
-                                {GetNextLabel(ref labelIdx)}: ldarg.0
-                                {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName.ClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName.ClassName)}
-                                {GetNextLabel(ref labelIdx)}: ldarg.0
-                                {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
-                                {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName.ClassName}::OnException(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"
-                        ))}}}
-                        {{{GetNextLabel(ref labelIdx)}}}: ldloc.s e
-                        {{{GetNextLabel(ref labelIdx)}}}: throw
+                        stloc.s e
+                        ldarg.0
+                        ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                        ldloc.s e
+                        callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_Exception(class [System.Runtime]System.Exception)
+                        {{{CallMethodOnInterceptors(stateMachineFullName, modifierClasses?.Where(m => m.IsInterceptor), "OnException", false, ref labelIdx)}}}
+                        ldloc.s e
+                        throw
                     } 
                 } finally
                 {
-                    {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
-                    {{{GetNextLabel(ref labelIdx)}}}: ldfld int32 {{{stateMachineFullName}}}::'<>1__state'
-                    {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.m1
-                    {{{GetNextLabel(ref labelIdx)}}}: bne.un.s ***JUMPDEST2***
+                    ldarg.0
+                    ldfld int32 {{{stateMachineFullName}}}::'<>1__state'
+                    ldc.i4.m1
+                    bne.un.s ***JUMPDEST2***
 
-                    {{{String.Join("\n",
-                        modifierClasses?.Where(m => m.IsInterceptor).Select(
-                            (attrClassName, i) => $@"
-                            {GetNextLabel(ref labelIdx)}: ldarg.0
-                            {GetNextLabel(ref labelIdx)}: ldfld class {attrClassName.ClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName.ClassName)}
-                            {GetNextLabel(ref labelIdx)}: ldarg.0
-                            {GetNextLabel(ref labelIdx)}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {stateMachineFullName}::'<inoculated>__Metadata'
-                            {GetNextLabel(ref labelIdx)}: callvirt instance void class {attrClassName.ClassName}::OnExit(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)"
-                    ))}}}
+                    {{{CallMethodOnInterceptors(stateMachineFullName, modifierClasses?.Where(m => m.IsInterceptor), "OnExit", false, ref labelIdx)}}}
                     {{{GetNextLabel(ref labelIdx, jumptable, "JUMPDEST2")}}}: endfinally
                 }
                 {{{GetNextLabel(ref labelIdx, jumptable, "END")}}}: nop
-                {{{GetNextLabel(ref labelIdx)}}}: ldloc.0
-                {{{GetNextLabel(ref labelIdx)}}}: ret
+                ldloc.0
+                ret
             }}
             """);
 
@@ -283,68 +251,72 @@ public static class EnumRewriter {
         };
     }
 
-    private static string InvokeFunction(string stateMachineFullName, TypeData returnType, ref int labelIdx, string? rewriterClass, bool rewrite, Dictionary<string, string> jumptable) {
+    private static string InvokeFunction(string stateMachineFullName, TypeData returnType, ref int labelIdx, InterceptorData[] modifierClasses, Dictionary<string, string> jumptable) {
         static string ToGenericArity1(TypeData type) => type.IsVoid ? String.Empty : type.IsGeneric ? $"`1<!{type.PureName}>" : $"`1<{type.Name}>";
+        string? rewriterClass = modifierClasses?.FirstOrDefault(m => m.IsRewriter)?.ClassName;
+        var rewrite = rewriterClass != null;
+
         if(!rewrite) {
             return $$$"""
-                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
-                {{{GetNextLabel(ref labelIdx)}}}: call instance bool {{{stateMachineFullName}}}::MoveNext__inoculated()
-                {{{GetNextLabel(ref labelIdx)}}}: stloc.0
-                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
-                {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                ldarg.0
+                call instance bool {{{stateMachineFullName}}}::MoveNext__inoculated()
+                stloc.0
+                {{{CallMethodOnInterceptors(stateMachineFullName, modifierClasses?.Where(m => m.IsInterceptor), "OnEnd", false, ref labelIdx)}}}
+                ldarg.0
+                ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
                 
-                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
-                {{{GetNextLabel(ref labelIdx)}}}: ldfld {{{(returnType.IsGeneric ? $"!{returnType.PureName}" : returnType.Name)}}} {{{stateMachineFullName}}}::'<>2__current'
+                ldarg.0
+                ldfld {{{(returnType.IsGeneric ? $"!{returnType.PureName}" : returnType.Name)}}} {{{stateMachineFullName}}}::'<>2__current'
                 {{{(
                     returnType.IsReferenceType ? String.Empty
-                    : $@"{GetNextLabel(ref labelIdx)}: box {(returnType.IsGeneric ? $"!{returnType.PureName}" : returnType.Name)}"
+                    : $@"box {(returnType.IsGeneric ? $"!{returnType.PureName}" : returnType.Name)}"
                 )}}}
-                {{{GetNextLabel(ref labelIdx)}}}: dup
-                {{{GetNextLabel(ref labelIdx)}}}: callvirt instance class [System.Runtime]System.Type [System.Runtime]System.Object::GetType()
-                {{{GetNextLabel(ref labelIdx)}}}: ldnull
-                {{{GetNextLabel(ref labelIdx)}}}: newobj instance void class [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(object,class [System.Runtime]System.Type,string)
-                {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_ReturnValue(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData)
+                dup
+                callvirt instance class [System.Runtime]System.Type [System.Runtime]System.Object::GetType()
+                ldnull
+                newobj instance void class [Inoculator.Interceptors]Inoculator.Builder.ParameterData::.ctor(object,class [System.Runtime]System.Type,string)
+                callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_ReturnValue(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData)
             """;
         } else {
             string callCode = $"callvirt instance class [Inoculator.Interceptors]Inoculator.Builder.MethodData class {rewriterClass}::OnCall(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)";
             return $$$"""
 
-                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
-                {{{GetNextLabel(ref labelIdx)}}}: dup
-                {{{GetNextLabel(ref labelIdx)}}}: ldfld class {{{rewriterClass}}} {{{stateMachineFullName}}}::{{{GenerateInterceptorName(rewriterClass)}}}
-                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
-                {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
-                {{{GetNextLabel(ref labelIdx)}}}: {{{callCode}}}
-                {{{GetNextLabel(ref labelIdx)}}}: stfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                ldarg.0
+                dup
+                ldfld class {{{rewriterClass}}} {{{stateMachineFullName}}}::{{{GenerateInterceptorName(rewriterClass)}}}
+                ldarg.0
+                ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                {{{callCode}}}
+                stfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                {{{CallMethodOnInterceptors(stateMachineFullName, modifierClasses?.Where(m => m.IsInterceptor), "OnEnd", false, ref labelIdx)}}}
+                
+                ldarg.0
+                dup
+                ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                callvirt instance class [Inoculator.Interceptors]Inoculator.Builder.ParameterData [Inoculator.Interceptors]Inoculator.Builder.MethodData::get_ReturnValue()
+                callvirt instance object [Inoculator.Interceptors]Inoculator.Builder.ParameterData::get_Value()
+                {{{(returnType.IsReferenceType ? $"castclass {returnType.Name}" : $"unbox.any {returnType.ToProperName}")}}}
+                stfld {{{(returnType.IsGeneric ? $"!{returnType.PureName}" : returnType.Name)}}} {{{stateMachineFullName}}}::'<>2__current'
                 
                 
-                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
-                {{{GetNextLabel(ref labelIdx)}}}: dup
-                {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
-                {{{GetNextLabel(ref labelIdx)}}}: callvirt instance class [Inoculator.Interceptors]Inoculator.Builder.ParameterData [Inoculator.Interceptors]Inoculator.Builder.MethodData::get_ReturnValue()
-                {{{GetNextLabel(ref labelIdx)}}}: callvirt instance object [Inoculator.Interceptors]Inoculator.Builder.ParameterData::get_Value()
-                {{{GetNextLabel(ref labelIdx)}}}: {{{(returnType.IsReferenceType ? $"castclass {returnType.Name}" : $"unbox.any {returnType.ToProperName}")}}}
-                {{{GetNextLabel(ref labelIdx)}}}: stfld {{{(returnType.IsGeneric ? $"!{returnType.PureName}" : returnType.Name)}}} {{{stateMachineFullName}}}::'<>2__current'
-                
-                
-                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
-                {{{GetNextLabel(ref labelIdx)}}}: ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
-                {{{GetNextLabel(ref labelIdx)}}}: callvirt instance bool [Inoculator.Interceptors]Inoculator.Builder.MethodData::get_Stop()
-                {{{GetNextLabel(ref labelIdx)}}}: brtrue.s ***SKIP***
+                ldarg.0
+                ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                callvirt instance bool [Inoculator.Interceptors]Inoculator.Builder.MethodData::get_Stop()
+                brtrue.s ***SKIP***
 
-                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
-                {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.1
-                {{{GetNextLabel(ref labelIdx)}}}: stfld int32 {{{stateMachineFullName}}}::'<>1__state'
-                {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.1
-                {{{GetNextLabel(ref labelIdx)}}}: stloc.0
-                {{{GetNextLabel(ref labelIdx)}}}: br.s ***NEXT***
+                ldarg.0
+                ldc.i4.1
+                stfld int32 {{{stateMachineFullName}}}::'<>1__state'
+                ldc.i4.1
+                stloc.0
+                br.s ***NEXT***
                 {{{GetNextLabel(ref labelIdx, jumptable, "SKIP")}}}: nop
                 
-                {{{GetNextLabel(ref labelIdx)}}}: ldarg.0
-                {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.m1
-                {{{GetNextLabel(ref labelIdx)}}}: stfld int32 {{{stateMachineFullName}}}::'<>1__state'
-                {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.0
-                {{{GetNextLabel(ref labelIdx)}}}: stloc.0
+                ldarg.0
+                ldc.i4.m1
+                stfld int32 {{{stateMachineFullName}}}::'<>1__state'
+                ldc.i4.0
+                stloc.0
                 {{{GetNextLabel(ref labelIdx, jumptable, "NEXT")}}}: nop
             """;
         }

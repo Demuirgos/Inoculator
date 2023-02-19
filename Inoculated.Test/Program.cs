@@ -11,7 +11,13 @@ namespace Program {
             }
             foreach (var value in Utils.Fibbonacci(10))
             {
-                    Console.WriteLine(value);
+                Console.WriteLine(value);
+            }
+
+            
+            await foreach (var value in Utils.Primes(10))
+            {
+                Console.WriteLine(value);
             }
         }
         
@@ -35,6 +41,22 @@ namespace Program {
                     throw new Exception("Random exception");
                 }
                 return value <= 0 ? 1 : value * (await Factorial(value - 1));
+            } 
+
+            static Task<bool> IsPrime(int n) => Task.Run(() => {
+                if(n % 2 == 0) return n == 2;
+                for (int i = 3; i <= Math.Sqrt(n); i+=2) {
+                    if (n % i == 0) return false;
+                }
+                return true;
+            });
+            [LogEntrency]
+            public static async IAsyncEnumerable<int> Primes(int value) {
+
+                yield return 2;
+                for (int i = 3; i < value; i+=2) {
+                    if(await IsPrime(i)) yield return i;
+                }
             } 
         }
     }

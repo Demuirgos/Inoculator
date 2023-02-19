@@ -18,6 +18,13 @@ public interface IInterceptor
 [AttributeUsage(AttributeTargets.Method)]
 public abstract class RewriterAttribute : System.Attribute, IRewriter
 {
+    /// <summary>
+    /// Called Inplace in Call Sight
+    /// This replaces the method call with the return value of this method.
+    /// It gets full metadata of the function before execution
+    /// and Sets the metadata of the function after execution
+    /// relies on the user to set the return value and exception
+    /// </summary>
     public abstract MethodData OnCall(MethodData method);
 }
 
@@ -25,9 +32,47 @@ public abstract class RewriterAttribute : System.Attribute, IRewriter
 [AttributeUsage(AttributeTargets.Method)]
 public class InterceptorAttribute : System.Attribute, IInterceptor
 {
+    /// <summary>
+    /// Called before the method is executed.
+    /// This is called before the method is called at the beginning of the method.
+    /// It gets full metadata of the function before execution
+    /// It is suitable for setting up the environment for the method.
+    /// </summary>
+
     public virtual void OnEntry(MethodData method) {}
+
+    /// <summary>
+    /// Called Before method Call.
+    /// This is called before the method is called, but exactly before the method is called.
+    /// </summary>
+    public virtual void OnBegin(MethodData method) {}
+
+    /// <summary>
+    /// Called After method Call.
+    /// This is called after the method is called, but before the method returns.
+    /// It doesn't Update the return value. nor does it update the exception. 
+    /// </summary>
+    public virtual void OnEnd(MethodData method) {}
+    
+    /// <summary>
+    /// Called when the method throws an exception.
+    /// This is called after the method is called when function faults and throws an exception.
+    /// It gets the exception
+    /// </summary>
     public virtual void OnException(MethodData method) {}
+
+    /// <summary>
+    /// Called when the method returns successfully.
+    /// This is called after the method is called when function returns successfully.
+    /// It gets the return value
+    /// </summary>
     public virtual void OnSuccess(MethodData method) {}
+
+    /// <summary>
+    /// Called after the method is executed.
+    /// This is called after the method is called at the end of the method.
+    /// It gets full metadata of the function after execution
+    /// </summary>
     public virtual void OnExit(MethodData method) {}
 }
 

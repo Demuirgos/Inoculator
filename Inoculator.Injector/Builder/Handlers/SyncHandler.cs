@@ -69,60 +69,62 @@ public static class SyncRewriter {
         {{{String.Join("\n", 
             modifierClasses?.Select(
                 (attrClassName, i) => $@"
-                {GetAttributeInstance(metadata, functionFullPath, attrClassName, ref labelIdx)}
-                {GetNextLabel(ref labelIdx)}: stloc.s {i}"
+                {GetAttributeInstance(metadata, functionFullPath, attrClassName)}
+                stloc.s {i}"
         ))}}}
-        {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{GetCleanedString(metadata.Code.ToString())}}}"
-        {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{GetCleanedString(metadata.ClassReference.ToString())}}}"
-        {{{GetNextLabel(ref labelIdx)}}}: ldstr "{{{String.Join("/", path)}}}"
-        {{{GetNextLabel(ref labelIdx)}}}: newobj instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::.ctor(string, string,string)
-        {{{GetNextLabel(ref labelIdx)}}}: stloc.s metadata
+        ldstr "{{{GetCleanedString(metadata.Code.ToString())}}}"
+        ldstr "{{{GetCleanedString(metadata.ClassReference.ToString())}}}"
+        ldstr "{{{String.Join("/", path)}}}"
+        newobj instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::.ctor(string, string,string)
+        stloc.s metadata
 
         
-        {{{GetNextLabel(ref labelIdx)}}}: ldloc.s metadata
-        {{{GetNextLabel(ref labelIdx)}}}: ldc.i4.{{{argumentsCount}}}
-        {{{GetNextLabel(ref labelIdx)}}}: newarr [Inoculator.Interceptors]Inoculator.Builder.ParameterData
+        ldloc.s metadata
+        ldc.i4.{{{argumentsCount}}}
+        newarr [Inoculator.Interceptors]Inoculator.Builder.ParameterData
         
-        {{{ExtractArguments(metadata, ref labelIdx, metadata.IsStatic)}}}
-        {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_Parameters(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData[])
+        {{{ExtractArguments(metadata, metadata.IsStatic)}}}
+        callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_Parameters(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData[])
 
         {{{CallMethodOnInterceptors(metadata.ClassReference.Id.ToString(), modifierClasses, "OnEntry", true, ref labelIdx, false)}}}
         .try
         {
             .try
             {
+                {{{CallMethodOnInterceptors(metadata.ClassReference.Id.ToString(), modifierClasses, "OnBegin", true, ref labelIdx, false)}}}
                 {{{InvokeFunction(functionFullPath, metadata, ref labelIdx, modifierClasses, isToBeRewritten)}}}
                 {{{CallMethodOnInterceptors(metadata.ClassReference.Id.ToString(), modifierClasses, "OnSuccess", true, ref labelIdx)}}}
                 {{{(
                     metadata.Signature.Output.IsVoid ? String.Empty
-                    : $@"{GetNextLabel(ref labelIdx)}: ldloc.s result"
+                    : $@"ldloc.s result"
                 )}}}
-                {{{GetNextLabel(ref labelIdx)}}}: leave.s ***END***
+                leave.s ***END***
             } 
             catch [System.Runtime]System.Exception
             {
-                {{{GetNextLabel(ref labelIdx)}}}: stloc.s e
-                {{{GetNextLabel(ref labelIdx)}}}: ldloc.s metadata
-                {{{GetNextLabel(ref labelIdx)}}}: ldloc.s e
-                {{{GetNextLabel(ref labelIdx)}}}: callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_Exception(class [System.Runtime]System.Exception)
+                {{{CallMethodOnInterceptors(metadata.ClassReference.Id.ToString(), modifierClasses, "OnEnd", true, ref labelIdx, false)}}}
+                stloc.s e
+                ldloc.s metadata
+                ldloc.s e
+                callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_Exception(class [System.Runtime]System.Exception)
                 {{{CallMethodOnInterceptors(metadata.ClassReference.Id.ToString(), modifierClasses, "OnException", true, ref labelIdx)}}}
-                {{{GetNextLabel(ref labelIdx)}}}: ldloc.s e
-                {{{GetNextLabel(ref labelIdx)}}}: throw
+                ldloc.s e
+                throw
             } 
         } 
         finally
         {
             {{{CallMethodOnInterceptors(metadata.ClassReference.Id.ToString(), modifierClasses, "OnExit", true, ref labelIdx)}}}
-            {{{GetNextLabel(ref labelIdx)}}}: endfinally
+            endfinally
         } 
 
         {{{GetNextLabel(ref labelIdx, jumptable, "END")}}}: nop
         {{{(
             metadata.Signature.Output.IsVoid 
                 ? String.Empty 
-                : $@"{GetNextLabel(ref labelIdx)}: ldloc.s result"
+                : $@"ldloc.s result"
         )}}}
-        {{{GetNextLabel(ref labelIdx)}}}: ret
+        ret
         }
         """);
 
@@ -137,37 +139,39 @@ public static class SyncRewriter {
     private static string InvokeFunction(string functionPath, MethodData metadata, ref int labelIdx, InterceptorData[] modifierClass, bool rewrite) {
         if(!rewrite) {
             return $$$"""
-                {{{LoadArguments(metadata.Code.Header.Parameters, ref labelIdx, metadata.IsStatic)}}}
-                {{{GetNextLabel(ref labelIdx)}}}: call {{{metadata.MkMethodReference(true, functionPath)}}}
+                {{{LoadArguments(metadata.Code.Header.Parameters, metadata.IsStatic)}}}
+                call {{{metadata.MkMethodReference(true, functionPath)}}}
+                {{{CallMethodOnInterceptors(metadata.ClassReference.Id.ToString(), modifierClass, "OnEnd", true, ref labelIdx, false)}}}
                 {{{(
                     metadata.Signature.Output.IsVoid
                         ? String.Empty
-                        : $@"{GetNextLabel(ref labelIdx)}: stloc.s result"
+                        : $@"stloc.s result"
                 )}}}
-                {{{GetNextLabel(ref labelIdx)}}}: ldloc.s metadata
+                ldloc.s metadata
                 {{{ExtractReturnValue(metadata.Signature.Output, ref labelIdx)}}}
-                {{{UpdateRefArguments(metadata.Code.Header.Parameters, metadata.IsStatic, ref labelIdx)}}}
+                {{{UpdateRefArguments(metadata.Code.Header.Parameters, metadata.IsStatic)}}}
             """;
         } else {
             var rewriterClass = modifierClass.FirstOrDefault(c => c.IsRewriter);
             string callCode = $"callvirt instance class [Inoculator.Interceptors]Inoculator.Builder.MethodData class {rewriterClass.ClassName}::OnCall(class [Inoculator.Interceptors]Inoculator.Builder.MethodData)";
             return $$$"""
-                {{{GetNextLabel(ref labelIdx)}}}: ldloc.s {{{GenerateInterceptorName(rewriterClass.ClassName)}}}
-                {{{GetNextLabel(ref labelIdx)}}}: ldloc.s metadata
-                {{{GetNextLabel(ref labelIdx)}}}: {{{callCode}}}
-                {{{GetNextLabel(ref labelIdx)}}}: stloc.s metadata
-                {{{GetNextLabel(ref labelIdx)}}}: ldloc.s metadata
+                ldloc.s {{{GenerateInterceptorName(rewriterClass.ClassName)}}}
+                ldloc.s metadata
+                {{{callCode}}}
+                stloc.s metadata
+                {{{CallMethodOnInterceptors(metadata.ClassReference.Id.ToString(), modifierClass, "OnEnd", true, ref labelIdx, false)}}}
+                ldloc.s metadata
                 {{{(
                     metadata.Signature.Output.IsVoid
                         ? String.Empty
                         : $@"
-                            {GetNextLabel(ref labelIdx)}: callvirt instance class [Inoculator.Interceptors]Inoculator.Builder.ParameterData [Inoculator.Interceptors]Inoculator.Builder.MethodData::get_ReturnValue()
-                            {GetNextLabel(ref labelIdx)}: callvirt instance object [Inoculator.Interceptors]Inoculator.Builder.ParameterData::get_Value()
-                            {GetNextLabel(ref labelIdx)}: {(metadata.Signature.Output.IsReferenceType ? $"castclass {metadata.Signature.Output.Name}" : $"unbox.any {metadata.Signature.Output.ToProperName}")}
+                            callvirt instance class [Inoculator.Interceptors]Inoculator.Builder.ParameterData [Inoculator.Interceptors]Inoculator.Builder.MethodData::get_ReturnValue()
+                            callvirt instance object [Inoculator.Interceptors]Inoculator.Builder.ParameterData::get_Value()
+                            {(metadata.Signature.Output.IsReferenceType ? $"castclass {metadata.Signature.Output.Name}" : $"unbox.any {metadata.Signature.Output.ToProperName}")}
                         "
                 )}}}
-                {{{GetNextLabel(ref labelIdx)}}}: stloc.s result
-                {{{ReflectRefArguments(metadata.Code.Header.Parameters, metadata.IsStatic, ref labelIdx)}}}
+                stloc.s result
+                {{{ReflectRefArguments(metadata.Code.Header.Parameters, metadata.IsStatic)}}}
             """;
         }
     }

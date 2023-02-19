@@ -8,14 +8,27 @@ public class LogEntrencyAttribute : InterceptorAttribute
     {
         Console.WriteLine($"Before: {method}");
     }
+
+    public override void OnBegin(MethodData method)
+    {
+        Console.WriteLine($"Begin: {method}");
+    }
+
+    public override void OnEnd(MethodData method)
+    {
+        Console.WriteLine($"End: {method}");
+    }
+
     public override void OnException(MethodData method)
     {
         Console.WriteLine($"Failed: {method.Exception.Message}");
     }
+    
     public override void OnSuccess(MethodData method)
     {
         Console.WriteLine($"Success: {method.ReturnValue}");
     }
+
     public override void OnExit(MethodData method)
     {
         Console.WriteLine($"After: {method}");

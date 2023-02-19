@@ -202,7 +202,7 @@ public class ParameterData : Printable<ParameterData> {
 
 public class MethodData : Printable<MethodData> {
     public enum MethodType {
-        Async, Sync, Iter, AsyncIter 
+        Async = 0, Sync = 1, Iter = 2, AsyncIter = 4 
     }
 
     public enum CallType {
