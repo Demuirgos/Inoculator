@@ -148,6 +148,7 @@ public static class AsyncEnumRewriter {
             members.AddRange(config.Interceptors.Select((attr, i) => $".field public class {attr.ClassName} {GenerateInterceptorName(attr.ClassName)}"));
         }
         members.Add($".field public class [Inoculator.Interceptors]Inoculator.Builder.MethodData '<inoculated>__Metadata'");
+        members.Add($".field public bool '<wordarround>__started'");
 
         classRef = classRef with
         {
@@ -177,8 +178,6 @@ public static class AsyncEnumRewriter {
     private static MethodDefinition[] MoveNextHandler(MethodDefinition method, Config config) {
         if(method.Value.Header.Name.Name.EndsWith("MoveNextAsync'")) 
             return UpdateMoveNextAsync(method, config);
-        if(method.Value.Header.Name.Name == "MoveNext") 
-            return UpdateMoveNext(method, config);
         return new [] { method };
     }
 
@@ -211,41 +210,43 @@ public static class AsyncEnumRewriter {
         builder.AppendLine($".maxstack 8");
 
         builder.AppendLine($@"
-                .locals init (bool, class [System.Runtime]System.Exception e, valuetype [System.Runtime]System.Threading.Tasks.ValueTask`1<bool> vtask, class [System.Runtime]System.Threading.Tasks.Task`1<bool> ttask)"
+                .locals init (class [System.Runtime]System.Exception e, valuetype [System.Runtime]System.Threading.Tasks.ValueTask`1<bool> vtask, class [System.Runtime]System.Threading.Tasks.Task`1<bool> ttask)"
             );
-        // builder.Append($$$"""
-        //     {{{CallMethodOnInterceptors(stateMachineFullName, config.Interceptors, "OnEntry", false, ref labelIdx)}}}
-        //     {{{InvokeStepMove(config, stateMachineFullName, config.typeContainer, ref labelIdx, jumptable)}}}
-
-        //     {{{GetNextLabel(ref labelIdx, jumptable, "SUCCESS")}}}: nop
-        //     {{{CallMethodOnInterceptors(stateMachineFullName, config.Interceptors, "OnSuccess", false, ref labelIdx)}}}
-        //     br.s ***EXIT***
-
-        //     {{{GetNextLabel(ref labelIdx, jumptable, "FAILURE")}}}: nop
-        //     {{{CallMethodOnInterceptors(stateMachineFullName, config.Interceptors, "OnException", false, ref labelIdx)}}}
-        //     br.s ***EXIT***
-
-        //     {{{GetNextLabel(ref labelIdx, jumptable, "EXIT")}}}: nop
-        //     {{{CallMethodOnInterceptors(stateMachineFullName, config.Interceptors, "OnExit", false, ref labelIdx)}}}
-        //     ret
-        // }}
-        // """);
 
         builder.Append($$$"""
         
             ldarg.0
-            ldfld int32 {{{stateMachineFullName}}}::'<>1__state'
-            ldc.i4.m1
-            bne.un.s ***DEJA-START***
+            ldfld bool {{{stateMachineFullName}}}::'<wordarround>__started'
+            brtrue.s ***DEJA-START***
 
+
+            ldarg.0
+            ldc.i4.1
+            stfld bool {{{stateMachineFullName}}}::'<wordarround>__started'
             {{{CallMethodOnInterceptors(stateMachineFullName, config.Interceptors, "OnEntry", false, ref labelIdx)}}}
 
-            {{{InvokeStepMove(config, stateMachineFullName, config.typeContainer, ref labelIdx, jumptable)}}}
+            {{{GetNextLabel(ref labelIdx, jumptable, "DEJA-START")}}}: nop
+            {{{InvokeFunction(config, stateMachineFullName, config.typeContainer, ref labelIdx, jumptable)}}}
 
+
+            {{{GetNextLabel(ref labelIdx, jumptable, "SUCCESS")}}}: nop            
+            {{{CallMethodOnInterceptors(stateMachineFullName, config.Interceptors, "OnSuccess", false, ref labelIdx)}}}
+            br.s ***NEXT***
+
+            {{{GetNextLabel(ref labelIdx, jumptable, "FAILURE")}}}: nop
+            {{{CallMethodOnInterceptors(stateMachineFullName, config.Interceptors, "OnException", false, ref labelIdx)}}}
+            br.s ***EXIT***
+
+            {{{GetNextLabel(ref labelIdx, jumptable, "NEXT")}}}: nop    
+            ldloc.s ttask 
+            callvirt instance !0 class [System.Runtime]System.Threading.Tasks.Task`1<bool>::get_Result()
+            brtrue.s ***RETURN***
+
+            {{{GetNextLabel(ref labelIdx, jumptable, "EXIT")}}}: nop    
             {{{CallMethodOnInterceptors(stateMachineFullName, config.Interceptors, "OnExit", false, ref labelIdx)}}}
-                
-            {{{GetNextLabel(ref labelIdx, jumptable, "NOT-DONE")}}}: nop    
-            newobj instance void valuetype [System.Runtime]System.Threading.Tasks.ValueTask`1<bool>::.ctor(!0)
+
+            {{{GetNextLabel(ref labelIdx, jumptable, "RETURN")}}}: nop    
+            ldloc.s vtask
             ret
         }}
         """);
@@ -290,126 +291,26 @@ public static class AsyncEnumRewriter {
         return new[] { newFunction, oldFunction };
     }
 
-    private static MethodDefinition[] UpdateMoveNext(MethodDefinition methodDef, Config config)
-    {
-        // OnBegin
-        // OnEnd
-        // OnSuccess
-        // OnException
-
-        int labelIdx = 0;
-        Dictionary<string, string> jumptable = new();
-        bool isToBeRewritten = config.Interceptors.Any(m => m.IsRewriter);
-
-        var stateMachineFullName = StringifyPath(config.Metadata, config.ClassRef.Header, config.Path, false, 1);
-
-        var method = methodDef.Value;
-        StringBuilder builder = new();
-        builder.AppendLine($".method {method.Header} {{");
-        foreach (var member in method.Body.Items.Values)
-        {
-            if (member is MethodDecl.LabelItem
-                        or MethodDecl.InstructionItem
-                        or MethodDecl.LocalsItem
-                        or MethodDecl.MaxStackItem
-                        or MethodDecl.ExceptionHandlingItem
-                        or MethodDecl.ScopeBlock
-                ) continue;
-            builder.AppendLine(member.ToString());
-        }
-
-        
-        builder.AppendLine($".maxstack 8");
-
-        builder.AppendLine($".locals init (bool, class [System.Runtime]System.Exception e)");          
-        builder.Append($$$"""
-            {{{CallMethodOnInterceptors(stateMachineFullName, config.Interceptors, "OnBegin", false, ref labelIdx)}}}
-            {{{InvokeFunction(config, stateMachineFullName, config.typeContainer, ref labelIdx, config.Interceptors.FirstOrDefault(m => m.IsRewriter)?.ClassName, isToBeRewritten, jumptable)}}}
-
-            {{{GetNextLabel(ref labelIdx, jumptable, "SUCCESS")}}}: nop            
-            {{{CallMethodOnInterceptors(stateMachineFullName, config.Interceptors, "OnSuccess", false, ref labelIdx)}}}
-            br.s ***EXIT***
-
-            {{{GetNextLabel(ref labelIdx, jumptable, "FAILURE")}}}: nop
-            {{{CallMethodOnInterceptors(stateMachineFullName, config.Interceptors, "OnException", false, ref labelIdx)}}}
-            br.s ***EXIT***
-
-            {{{GetNextLabel(ref labelIdx, jumptable, "EXIT")}}}: nop
-            ret
-        }}
-        """);
-
-        foreach (var (label, idx) in jumptable)
-        {
-            builder.Replace($"***{label}***", idx.ToString());
-        }
-        var newFunction = new ClassDecl.MethodDefinition(Parse<MethodDecl.Method>(builder.ToString()));
-
-        var oldFunction = methodDef with
-        {
-            Value = methodDef.Value with
-            {
-                Header = methodDef.Value.Header with
-                {
-                    Name = Parse<MethodName>("MoveNext__inoculated")
-                },
-
-                Body = methodDef.Value.Body with
-                {
-                    Items = new ARRAY<MethodDecl.Member>(
-                        methodDef.Value.Body
-                            .Items.Values.Where(member => member is not MethodDecl.OverrideMethodItem)
-                            .Select(member => {
-                                var instructionLine = member.ToString().Replace("::" + config.Metadata.Name(false), "::" + config.Metadata.MangledName(false));
-                                return Parse<MethodDecl.Member>(instructionLine);
-                            })
-                            .ToArray()
-                    )
-                    {
-                        Options = new ARRAY<MethodDecl.Member>.ArrayOptions()
-                        {
-                            Delimiters = ('\0', '\n', '\0')
-                        }
-                    }
-                }
-            }
-        };
-
-
-        return new[] { newFunction, oldFunction };
-    }
-
-    private static string InvokeStepMove(Config config, string stateMachineFullName, TypeDecl.CustomTypeReference typeContainer, ref int labelIdx, Dictionary<string, string> jumptable) {
+    private static string InvokeFunction(Config config, string stateMachineFullName, TypeDecl.CustomTypeReference typeContainer, ref int labelIdx, Dictionary<string, string> jumptable) {
         static string ToGenericArity1(TypeData type) => type.IsVoid ? String.Empty : type.IsGeneric ? $"`1<!{type.PureName}>" : $"`1<{type.Name}>";
         var returnType = new TypeData(typeContainer.Reference.GenericTypes?.Types.Values.FirstOrDefault()?.ToString() ?? "void");
         string TaskFieldType = $"valuetype [System.Runtime]System.Threading.Tasks.Sources.ManualResetValueTaskSourceCore`1<bool>";
 
-        return $$$"""
-            {{{GetNextLabel(ref labelIdx, jumptable, "DEJA-START")}}}: nop
-            ldarg.0
-            call instance valuetype [System.Runtime]System.Threading.Tasks.ValueTask`1<bool> {{{stateMachineFullName}}}::MoveNextAsync__inoculated()
-            stloc.s vtask
-
-            ldloca.s vtask
-            call instance class [System.Runtime]System.Threading.Tasks.Task`1<!0> valuetype [System.Runtime]System.Threading.Tasks.ValueTask`1<bool>::AsTask()
-            stloc.s ttask
-
-            ldloc.s ttask
-            callvirt instance !0 class [System.Runtime]System.Threading.Tasks.Task`1<bool>::get_Result()
-            dup
-            brtrue.s ***NOT-DONE***
-        """;
-    }
-    private static string InvokeFunction(Config config, string stateMachineFullName, TypeDecl.CustomTypeReference typeContainer, ref int labelIdx, string? rewriterClass, bool rewrite, Dictionary<string, string> jumptable) {
-        static string ToGenericArity1(TypeData type) => type.IsVoid ? String.Empty : type.IsGeneric ? $"`1<!{type.PureName}>" : $"`1<{type.Name}>";
-        var returnType = new TypeData(typeContainer.Reference.GenericTypes?.Types.Values.FirstOrDefault()?.ToString() ?? "void");
-        string TaskFieldType = $"valuetype [System.Runtime]System.Threading.Tasks.Sources.ManualResetValueTaskSourceCore`1<bool>";
+        string? rewriterClass = config.Interceptors.FirstOrDefault(m => m.IsRewriter)?.ClassName;
+        bool rewrite = rewriterClass != null;
 
         if(!rewrite) {
             return $$$"""
+                {{{CallMethodOnInterceptors(stateMachineFullName, config.Interceptors, "OnBegin", false, ref labelIdx)}}}
                 ldarg.0
-                call instance void {{{stateMachineFullName}}}::MoveNext__inoculated()
+                call instance valuetype [System.Runtime]System.Threading.Tasks.ValueTask`1<bool> {{{stateMachineFullName}}}::MoveNextAsync__inoculated()
                 {{{CallMethodOnInterceptors(stateMachineFullName, config.Interceptors, "OnEnd", false, ref labelIdx)}}}
+                stloc.s vtask
+                
+                ldloca.s vtask
+                call instance class [System.Runtime]System.Threading.Tasks.Task`1<!0> valuetype [System.Runtime]System.Threading.Tasks.ValueTask`1<bool>::AsTask()
+                stloc.s ttask
+
 
                 ldarg.0
                 ldflda {{{TaskFieldType}}} {{{stateMachineFullName}}}::'<>v__promiseOfValueOrEnd'
@@ -469,7 +370,7 @@ public static class AsyncEnumRewriter {
                 br.s ***SUCCESS***
         
                 {{{GetNextLabel(ref labelIdx, jumptable, "UNKNOWN")}}}: nop
-                br.s ***EXIT***
+                br.s ***NEXT***
                 
             """;
         } else {
@@ -477,6 +378,7 @@ public static class AsyncEnumRewriter {
             return $$$"""
                 .try 
                 {
+                    {{{CallMethodOnInterceptors(stateMachineFullName, config.Interceptors, "OnBegin", false, ref labelIdx)}}}
                     ldarg.0
                     dup
                     ldfld class {{{rewriterClass}}} {{{stateMachineFullName}}}::{{{GenerateInterceptorName(rewriterClass)}}}
@@ -490,7 +392,7 @@ public static class AsyncEnumRewriter {
                     ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
                     callvirt instance class [System.Runtime]System.Exception [Inoculator.Interceptors]Inoculator.Builder.MethodData::get_Exception()
                     dup
-                    stloc.0
+                    stloc.s e
                     brtrue.s ***INNER_FAILURE***
 
                     ldarg.0
@@ -502,11 +404,18 @@ public static class AsyncEnumRewriter {
                     stfld {{{(returnType.IsGeneric ? $"!{returnType.PureName}" : returnType.Name)}}} {{{stateMachineFullName}}}::'<>2__current'
 
                     {{{GetNextLabel(ref labelIdx, jumptable, "INNER_FAILURE")}}}: nop
+
+
+                    ldarg.0
+                    ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                    callvirt instance bool [Inoculator.Interceptors]Inoculator.Builder.MethodData::get_Stop()
+                    call valuetype [System.Runtime]System.Threading.Tasks.ValueTask`1<!!0> [System.Runtime]System.Threading.Tasks.ValueTask::FromResult<bool>(!!0)
+                    stloc.s vtask
                     leave.s ***OUTSIDE***
                 } 
                 catch [System.Runtime]System.Exception 
                 {
-                    stloc.0
+                    stloc.s e
 
                     ldarg.0
                     ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
@@ -515,7 +424,7 @@ public static class AsyncEnumRewriter {
                     
                     ldarg.0
                     ldflda {{{TaskFieldType}}} {{{stateMachineFullName}}}::'<>v__promiseOfValueOrEnd'
-                    ldloc.0
+                    ldloc.s e
                     call instance void {{{TaskFieldType}}}::SetException(class [System.Runtime]System.Exception)
                     leave.s ***OUTSIDE***
                 }
@@ -527,7 +436,7 @@ public static class AsyncEnumRewriter {
                 ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
                 callvirt instance class [System.Runtime]System.Exception [Inoculator.Interceptors]Inoculator.Builder.MethodData::get_Exception()
                 dup
-                stloc.0
+                stloc.s e
                 brtrue.s ***FAILURE***
                 br.s ***SUCCESS***
             """;

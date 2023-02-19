@@ -179,22 +179,23 @@ public static class EnumRewriter {
                 brtrue.s ***JUMPDEST1***
 
 
-                {{{CallMethodOnInterceptors(stateMachineFullName, modifierClasses?.Where(m => m.IsInterceptor), "OnEntry", false, ref labelIdx)}}}
+                {{{CallMethodOnInterceptors(stateMachineFullName, modifierClasses, "OnEntry", false, ref labelIdx)}}}
                 {{{GetNextLabel(ref labelIdx, jumptable, "JUMPDEST1")}}}: nop
                 .try {
                     .try {
-                        {{{CallMethodOnInterceptors(stateMachineFullName, modifierClasses?.Where(m => m.IsInterceptor), "OnBegin", false, ref labelIdx)}}}
+                        {{{CallMethodOnInterceptors(stateMachineFullName, modifierClasses, "OnBegin", false, ref labelIdx)}}}
                         {{{InvokeFunction(stateMachineFullName, returnType, ref labelIdx, modifierClasses, jumptable)}}}
-                        {{{CallMethodOnInterceptors(stateMachineFullName, modifierClasses?.Where(m => m.IsInterceptor), "OnSuccess", false, ref labelIdx)}}}
+                        {{{CallMethodOnInterceptors(stateMachineFullName, modifierClasses, "OnSuccess", false, ref labelIdx)}}}
                         leave.s ***END***
                     } catch [System.Runtime]System.Exception
                     {
+                        {{{CallMethodOnInterceptors(stateMachineFullName, modifierClasses, "OnEnd", false, ref labelIdx)}}}
                         stloc.s e
                         ldarg.0
                         ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
                         ldloc.s e
                         callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_Exception(class [System.Runtime]System.Exception)
-                        {{{CallMethodOnInterceptors(stateMachineFullName, modifierClasses?.Where(m => m.IsInterceptor), "OnException", false, ref labelIdx)}}}
+                        {{{CallMethodOnInterceptors(stateMachineFullName, modifierClasses, "OnException", false, ref labelIdx)}}}
                         ldloc.s e
                         throw
                     } 
@@ -205,7 +206,7 @@ public static class EnumRewriter {
                     ldc.i4.m1
                     bne.un.s ***JUMPDEST2***
 
-                    {{{CallMethodOnInterceptors(stateMachineFullName, modifierClasses?.Where(m => m.IsInterceptor), "OnExit", false, ref labelIdx)}}}
+                    {{{CallMethodOnInterceptors(stateMachineFullName, modifierClasses, "OnExit", false, ref labelIdx)}}}
                     {{{GetNextLabel(ref labelIdx, jumptable, "JUMPDEST2")}}}: endfinally
                 }
                 {{{GetNextLabel(ref labelIdx, jumptable, "END")}}}: nop
@@ -261,7 +262,7 @@ public static class EnumRewriter {
                 ldarg.0
                 call instance bool {{{stateMachineFullName}}}::MoveNext__inoculated()
                 stloc.0
-                {{{CallMethodOnInterceptors(stateMachineFullName, modifierClasses?.Where(m => m.IsInterceptor), "OnEnd", false, ref labelIdx)}}}
+                {{{CallMethodOnInterceptors(stateMachineFullName, modifierClasses, "OnEnd", false, ref labelIdx)}}}
                 ldarg.0
                 ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
                 
@@ -288,7 +289,7 @@ public static class EnumRewriter {
                 ldfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
                 {{{callCode}}}
                 stfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
-                {{{CallMethodOnInterceptors(stateMachineFullName, modifierClasses?.Where(m => m.IsInterceptor), "OnEnd", false, ref labelIdx)}}}
+                {{{CallMethodOnInterceptors(stateMachineFullName, modifierClasses, "OnEnd", false, ref labelIdx)}}}
                 
                 ldarg.0
                 dup
