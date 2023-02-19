@@ -35,23 +35,25 @@ public static class AsyncEnumRewriter {
 
         var typeContainer = metadata.Code.Header.Type.Components.Types.Values.First() as TypeDecl.CustomTypeReference;
         var oldClassMangledName= $"'<>__{Math.Abs(classRef.Header.Id.GetHashCode())}_old'";
-        File.WriteAllText("AsyncEnum.test", classRef.ToString()
+        File.WriteAllText("AsyncEnum.test1", classRef.ToString()
             .Replace(classRef.Header.Id.ToString(), oldClassMangledName)
             .Replace(metadata.Code.Header.Name.ToString(), metadata.MangledName(false)));
-        var oldClassRef = Parse<Class>(classRef.ToString()
-            .Replace(classRef.Header.Id.ToString(), oldClassMangledName)
-            .Replace(metadata.Code.Header.Name.ToString(), metadata.MangledName(false))
-        );
+        File.WriteAllText("AsyncEnum.test2", classRef.ToString());
+        var oldClassRef = ReplaceSymbols(
+            classRef, new string[] { "::", " " }, metadata.Name(false), metadata.MangledName(false),
+            sourceCode => sourceCode.Replace(classRef.Header.Id.ToString(), oldClassMangledName)
+        ) as Success<ClassDecl.Class, Exception>;
 
-        var oldMethodInstance = Parse<Method>(metadata.Code.ToString()
-            .Replace(classRef.Header.Id.ToString(), oldClassMangledName)
-            .Replace(metadata.Code.Header.Name.ToString(), metadata.MangledName(false))
-        );
-
+        
+        var oldMethodInstance = ReplaceSymbols(
+            metadata.Code, new string[] { "::", " " }, metadata.Code.Header.Name.ToString(), metadata.MangledName(false),
+            sourceCode => sourceCode.Replace(classRef.Header.Id.ToString(), oldClassMangledName)
+        ) as Success<MethodDecl.Method, Exception>;
+        
         var newClassRef = InjectFieldsInClass(classRef, config);
         var newMethodInstance = InjectInitialization(classRef, config);
 
-        return Success<(ClassDecl.Class[], MethodDecl.Method[]), Exception>.From((new Class[] { oldClassRef, newClassRef }, new Method[] { oldMethodInstance, newMethodInstance }));
+        return Success<(ClassDecl.Class[], MethodDecl.Method[]), Exception>.From((new Class[] { oldClassRef.Value, newClassRef }, new Method[] { oldMethodInstance.Value, newMethodInstance }));
     }
 
     private static Method InjectInitialization(Class classRef, Config config)

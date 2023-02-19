@@ -19,19 +19,23 @@ public static class AsyncRewriter {
         bool isReleaseMode = classRef.Header.Extends.Type.ToString() == "[System.Runtime] System.ValueType";
         var typeContainer = metadata.Code.Header.Type.Components.Types.Values.First() as TypeDecl.CustomTypeReference;
         var oldClassMangledName= $"'<>__{Math.Abs(classRef.Header.Id.GetHashCode())}_old'";
-        var oldClassRef = Parse<Class>(classRef.ToString()
-            .Replace(classRef.Header.Id.ToString(), oldClassMangledName)
-            .Replace(metadata.Code.Header.Name.ToString(), metadata.MangledName(false))
-        );
-        var oldMethodInstance = Parse<Method>(metadata.Code.ToString()
-            .Replace(classRef.Header.Id.ToString(), oldClassMangledName)
-            .Replace(metadata.Code.Header.Name.ToString(), metadata.MangledName(false))
-        );
+        
+        var oldClassRef = ReplaceSymbols(
+            classRef, new string[] { "::", " " }, metadata.Name(false), metadata.MangledName(false),
+            sourceCode => sourceCode.Replace(classRef.Header.Id.ToString(), oldClassMangledName)
+        ) as Success<ClassDecl.Class, Exception>;
+
+        
+        var oldMethodInstance = ReplaceSymbols(
+            metadata.Code, new string[] { "::", " " }, metadata.Code.Header.Name.ToString(), metadata.MangledName(false),
+            sourceCode => sourceCode.Replace(classRef.Header.Id.ToString(), oldClassMangledName)
+        ) as Success<MethodDecl.Method, Exception>;
+        
         var MoveNextHandler = GetNextMethodHandler(metadata, typeContainer, classRef, path, isReleaseMode, interceptors);
         var newClassRef = InjectInoculationFields(classRef, interceptors, MoveNextHandler);
         metadata = RewriteInceptionPoint(classRef, metadata, interceptors, path, isReleaseMode);
 
-        return Success<(ClassDecl.Class[], MethodDecl.Method[]), Exception>.From((new Class[] { oldClassRef, newClassRef }, new Method[] { oldMethodInstance, metadata.Code }));
+        return Success<(ClassDecl.Class[], MethodDecl.Method[]), Exception>.From((new Class[] { oldClassRef.Value, newClassRef }, new Method[] { oldMethodInstance.Value, metadata.Code }));
     }
 
     private static MethodData RewriteInceptionPoint(Class classRef, MethodData metadata, InterceptorData[] interceptorsClasses, IEnumerable<string> path, bool isReleaseMode)

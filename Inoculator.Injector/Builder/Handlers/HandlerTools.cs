@@ -1,5 +1,7 @@
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
+using Dove.Core;
 
 namespace Inoculator.Builder;
 public static class HandlerTools {
@@ -362,6 +364,20 @@ public static class HandlerTools {
                     .Replace("\n", "\\n")
                     .Replace("\t", "\\t");
     } 
+
+    public static System.Extensions.Result<T, Exception> ReplaceSymbols<T>(T source, string[] prefixPatterns, string symbol, string replacement, Func<string, string> Modifier = null) where T : IDeclaration<T> {
+        var newSource = source.ToString();
+        if(Modifier != null) {
+            newSource = Modifier(newSource);
+        }
+        foreach(var pattern in prefixPatterns) {
+            newSource = newSource.Replace($"{pattern}{symbol}", $"{pattern}{replacement}");
+        }
+        if(Parser.TryParse(newSource, out T result, out string error)) {
+            return System.Extensions.Success<T, Exception>.From(result);
+        }
+        return System.Extensions.Error<T, Exception>.From(new Exception(error));
+    }
 
     public static class AttributeResolver {
         public static T GetAttributeInstance<T>(Type attrType, MethodInfo methodInfo){
