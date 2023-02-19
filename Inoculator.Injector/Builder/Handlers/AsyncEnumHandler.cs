@@ -411,6 +411,11 @@ public static class AsyncEnumRewriter {
                     callvirt instance bool [Inoculator.Interceptors]Inoculator.Builder.MethodData::get_Stop()
                     call valuetype [System.Runtime]System.Threading.Tasks.ValueTask`1<!!0> [System.Runtime]System.Threading.Tasks.ValueTask::FromResult<bool>(!!0)
                     stloc.s vtask
+
+                    ldloca.s vtask
+                    call instance class [System.Runtime]System.Threading.Tasks.Task`1<!0> valuetype [System.Runtime]System.Threading.Tasks.ValueTask`1<bool>::AsTask()
+                    stloc.s ttask
+                    
                     leave.s ***OUTSIDE***
                 } 
                 catch [System.Runtime]System.Exception 

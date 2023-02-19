@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Linq.Expressions;
 using System.Reflection;
 using Inoculator.Builder;
 namespace Inoculator.Attributes;
@@ -144,6 +145,39 @@ public class Engine<TAssemblyMarker>
             return (resultValue, Stop);
         }
     }
+
+    public class AsyncEnumHandler : HandlerBase {
+        private (System.Threading.CancellationToken ctoken, object Container, object Iterator) enumState;
+        public static object Cast(Type Type, object data)
+        {
+            var DataParam = Expression.Parameter(typeof(object), "data");
+            var Body = Expression.Block(Expression.Convert(Expression.Convert(DataParam, data.GetType()), Type));
+
+            var Run = Expression.Lambda(Body, DataParam).Compile();
+            var ret = Run.DynamicInvoke(data);
+            return ret;
+        }
+
+        public (object, bool) HandleMethodInvocation(MethodInfo method, object instance, object[] parameters)  {
+            var iterator_T = typeof(IAsyncEnumerator<>).MakeGenericType(method.ReturnType.GetGenericArguments()[0]);
+            var iterable_T = method.ReturnType;
+            var getAsyncEnumerator = iterable_T.GetMethod("GetAsyncEnumerator");
+            var moveNextAsync = iterator_T.GetMethod("MoveNextAsync");
+            var currentProperty = iterator_T.GetProperty("Current");
+
+            enumState.ctoken = CancellationToken.None;
+            enumState.Container = Cast(iterable_T, method.Invoke(instance, parameters));
+            enumState.Iterator = enumState.Iterator ?? getAsyncEnumerator.Invoke(enumState.Container, new object[] { enumState.ctoken });
+
+            var moveNextResult = (ValueTask<bool>)moveNextAsync.Invoke(enumState.Iterator, null);
+            moveNextResult.AsTask().Wait();
+            var resultProperty = moveNextResult.GetType().GetProperty("Result");
+
+            var result = resultProperty.GetValue(moveNextResult);
+            var resultValue = currentProperty.GetValue(enumState.Iterator);
+            return (resultValue, (bool)result);
+        }
+    }
     HandlerBase engine = null;
     public MethodData Invoke(MethodData method)
     {
@@ -151,9 +185,13 @@ public class Engine<TAssemblyMarker>
             MethodData.MethodType.Async => new AsyncHandler(),
             MethodData.MethodType.Sync => new SyncHandler(),
             MethodData.MethodType.Iter => new EnumHandler(),
+            MethodData.MethodType.AsyncIter => new AsyncEnumHandler(),
             _ => throw new Exception("Invalid method behaviour")
         }; 
         return engine.Invoke(method);
     }
+
+    public void Restart()
+        => engine = null;
 }
 

@@ -59,10 +59,12 @@ public class RetryAttribute<TMarker> : RewriterAttribute
                 method = engine.Invoke(method);
                 functionIsDone = method.Stop;
                 break;
-            } catch (Exception) {
+            } catch (Exception e) {
+                Console.WriteLine($"Exception: {e.Message}");
                 Retries--;
                 if(Retries == 0) throw;
-                Console.WriteLine($"Retrying {method.MethodName} {Retries} times");
+                Console.WriteLine($"Retrying {method.MethodName} {Retries} times left");
+                engine.Restart();
             }
         }
         return method;

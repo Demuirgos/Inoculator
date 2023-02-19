@@ -14,7 +14,6 @@ namespace Program {
                 Console.WriteLine(value);
             }
 
-            
             await foreach (var value in Utils.Primes(10))
             {
                 Console.WriteLine(value);
@@ -45,12 +44,17 @@ namespace Program {
 
             static Task<bool> IsPrime(int n) => Task.Run(() => {
                 if(n % 2 == 0) return n == 2;
+                if(n % 3 == 0) return n == 3;
+                if(n == 5) {
+                    throw new Exception("Random exception");
+                }
                 for (int i = 3; i <= Math.Sqrt(n); i+=2) {
                     if (n % i == 0) return false;
                 }
                 return true;
             });
-            [LogEntrency]
+            
+            [Retry<Entry>(10)]
             public static async IAsyncEnumerable<int> Primes(int value) {
 
                 yield return 2;
