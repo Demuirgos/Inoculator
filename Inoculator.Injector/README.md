@@ -4,28 +4,30 @@ An IL code Injector using Ilasm and Ildasm (WIP)
 # Strategy (Normal) : 
   ```csharp
 class parentClass {
-    [InterceptorAttr] Output_T FunctionName(Input_T1 input, Input_T2 input, ...) {
+    [InterceptorAttr] 
+    private (Output_T|void) FunctionName(Input_T1 input, Input_T2 input, ...) {
         // body of function
-        return output;
+        return output?;
     } 
 }
 
 // becomes
 class parentClass {
-    private Output_T FunctionName_Old(Input_T1 input, Input_T2 input, ...) {
+    private (Output_T|void) FunctionName_Old(Input_T1 input, Input_T2 input, ...) {
         // body of function
-        return output;
+        return output?;
     }
     
-    public Output_T invoke(Input_T1 input, Input_T2 input) {
+    public (Output_T|void) FunctionName(Input_T1 input, Input_T2 input) {
         var interceptor = new InterceptorAttribute();
         var metadata = new Metadata(Code);
         metadata.Parameters = new object[] { input, input, .. };
         interceptor.OnEntry(metadata);
         try {
-            Output_T result = FunctionName_Old(input, input, ...);
+            (Output_T result =)? FunctionName_Old(input, input, ...);
             metadata.ReturnValue = result;
             interceptor.OnSuccess(metadata);
+	    return result?;
         } catch (Exception e) {
             metadata.Exception = e;
             interceptor.OnException(metadata);
@@ -55,10 +57,10 @@ class parentClass {
 	    // rest of properties and methods and fields ...
 	    private (void|bool) MoveNext_Old(Input_T1 input, Input_T2 input, ...) {
 		// body of function
-		return output;
+		return output?;
 	    }
 	    
-	    private (void|bool) MoveNext_Old(Input_T1 input, Input_T2 input, ...) {
+	    private (void|bool) MoveNext(Input_T1 input, Input_T2 input, ...) {
 		if(state == 0) {
 		    Interceptor_0.OnEntry(Metadata);
 		}
