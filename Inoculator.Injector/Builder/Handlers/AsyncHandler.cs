@@ -8,6 +8,7 @@ using ExtraTools;
 using IdentifierDecl;
 using Inoculator.Core;
 using LabelDecl;
+using LocalDecl;
 using MethodDecl;
 using static Dove.Core.Parser;
 using static Inoculator.Builder.HandlerTools; 
@@ -60,8 +61,20 @@ public static class AsyncRewriter {
             .Select(i => i.ToString()));
 
 
+        
         string stackClause = ".maxstack 16";
-        var LocalsClause = metadata.Code.Body.Items.Values.OfType<MethodDecl.LocalsItem>().FirstOrDefault();
+        var localsDecls = metadata.Code.Body.Items.Values.OfType<MethodDecl.LocalsItem>().FirstOrDefault()?.Signatures?.Values?.Values;
+        var LocalsClause = $$$"""
+            .locals init (
+                {{{(
+                    localsDecls is null ? string.Empty :
+                    String.Join("\n", localsDecls.Select(
+                        Local => $@"{Local.Type} {Local.Id},"
+                    ))
+                )}}}
+                class [System.Runtime]System.Reflection.MethodInfo methodInfo
+            )
+        """;
 
         var oldInstructions = metadata.Code.Body.Items.Values.OfType<MethodDecl.InstructionItem>();
         var newInstructions = new List<MethodDecl.InstructionItem>();
@@ -83,11 +96,14 @@ public static class AsyncRewriter {
 
             callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_Parameters(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData[])
             stfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+            {{{
+                GetReflectiveMethodInstance(metadata, inoculationSightName)
+            }}}
             {{{String.Join("\n",
                 interceptorsClasses.Select(
                     (attrClassName, i) => $@"
                         {loadLocalStateMachine}
-                        {GetAttributeInstance(metadata, inoculationSightName, attrClassName)}
+                        {GetAttributeInstance(attrClassName)}
                         stfld class {attrClassName.ClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName.ClassName)}"
             ))}}}
             """;
@@ -106,7 +122,11 @@ public static class AsyncRewriter {
                     .Aggregate((a, b) => $"{a}\n{b}")
             }}}
         """;
-        _ = TryParse<MethodDecl.Member.Collection>(newBody, out MethodDecl.Member.Collection body, out string err2);
+
+        if(!TryParse<MethodDecl.Member.Collection>(newBody, out MethodDecl.Member.Collection body, out string err2)) {
+            File.WriteAllText("injectionCode.log", newBody);
+            throw new Exception(err2);  
+        }
 
         metadata.Code = metadata.Code with
         {

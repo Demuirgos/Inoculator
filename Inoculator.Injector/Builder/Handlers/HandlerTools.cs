@@ -340,18 +340,24 @@ public static class HandlerTools {
         return functionFullPath;
     }
 
-    public static string GetAttributeInstance(MethodData function, string classPath, InterceptorData attribute) {
-        var attributeRef = attribute.ClassName.Contains('<') ? attribute.ClassName[..attribute.ClassName.IndexOf('<')] : attribute.ClassName;
-
-        var hook = $$$"""
-            ldtoken {{{attributeRef}}}
-            call class [System.Runtime]System.Type [System.Runtime]System.Type::GetTypeFromHandle(valuetype [System.Runtime]System.RuntimeTypeHandle)
+    public static string GetReflectiveMethodInstance(MethodData function, string classPath) {
+        return $$$"""
             ldtoken {{{classPath[classPath.IndexOf(' ')..]}}}
             call class [System.Runtime]System.Type [System.Runtime]System.Type::GetTypeFromHandle(valuetype [System.Runtime]System.RuntimeTypeHandle)
             callvirt instance string [System.Runtime]System.Type::get_FullName()
             call class [System.Runtime]System.Type [System.Runtime]System.Type::GetType(string)
             ldstr "{{{function.Name(false)}}}"
             callvirt instance class [System.Runtime]System.Reflection.MethodInfo [System.Runtime]System.Type::GetMethod(string)
+            stloc.s methodInfo
+        """;
+    }
+
+    public static string GetAttributeInstance(InterceptorData attribute) {
+        var attributeRef = attribute.ClassName.Contains('<') ? attribute.ClassName[..attribute.ClassName.IndexOf('<')] : attribute.ClassName;
+        var hook = $$$"""
+            ldtoken {{{attributeRef}}}
+            call class [System.Runtime]System.Type [System.Runtime]System.Type::GetTypeFromHandle(valuetype [System.Runtime]System.RuntimeTypeHandle)
+            ldloc.s methodInfo
             call !!0 [Inoculator.Injector]Inoculator.Builder.HandlerTools/AttributeResolver::GetAttributeInstance<class {{{attribute.ClassName}}}>(class [System.Runtime]System.Type, class [System.Runtime]System.Reflection.MethodInfo)
         """;
         return hook;

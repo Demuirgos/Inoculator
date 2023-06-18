@@ -61,15 +61,19 @@ public static class SyncRewriter {
                     ? String.Empty
                     : $@" {metadata.Signature.Output.Code} result,"
             )}}}
+            class [System.Runtime]System.Reflection.MethodInfo methodInfo,
             class [System.Runtime]System.Exception e
         )
         """);
 
         builder.Append($$$"""
+        {{{
+            GetReflectiveMethodInstance(metadata, functionFullPath)
+        }}}
         {{{String.Join("\n", 
             modifierClasses?.Select(
                 (attrClassName, i) => $@"
-                {GetAttributeInstance(metadata, functionFullPath, attrClassName)}
+                {GetAttributeInstance(attrClassName)}
                 stloc.s {i}"
         ))}}}
         ldstr "{{{GetCleanedString(metadata.Code.ToString())}}}"

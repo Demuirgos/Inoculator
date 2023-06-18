@@ -35,14 +35,44 @@ public class LogEntrencyAttribute : InterceptorAttribute
     }
 }
 
-public class CallCountAttribute : InterceptorAttribute
+public class IsFlakyTestAttribute<TMarker> : Attribute, IInterceptor, IRewriter
 {
-    public static Dictionary<string, int> CallCounter = new Dictionary<string, int>();
-    public override void OnEntry(MethodData method)
+    private bool IsFlaky;
+    private RetryAttribute<TMarker> retryEngine; 
+
+    private int numberOfFails = 0;
+    public IsFlakyTestAttribute(bool isFlaky, int numOfReruns) => (IsFlaky, retryEngine) = (isFlaky, new RetryAttribute<TMarker>(numOfReruns));  
+
+    public MethodData OnCall(MethodData method)
     {
-        if(!CallCounter.ContainsKey(method.MethodName))
-            CallCounter.Add(method.MethodName, 0);
-        CallCounter[method.MethodName]++;
+        if(IsFlaky) {
+            return retryEngine.OnCall(method);;
+        } else {
+            return method;
+        }
+        throw new NotImplementedException();
+    }
+
+    public void OnEntry(MethodData method)
+    {
+        Console.WriteLine($"Starting method {method.Name(false)}");
+        if(IsFlaky) {
+            Console.WriteLine($"Method {method.Name(false)} is flaky");
+        }
+    }
+
+    public void OnException(MethodData method)
+    {
+        numberOfFails++;
+    }
+
+    public void OnExit(MethodData method)
+    {
+    }
+
+    public void OnSuccess(MethodData method)
+    {
+        Console.WriteLine($"Method {method.Name(false)} passed {retryEngine.Reruns - numberOfFails}/{retryEngine.Reruns} times");
     }
 }
 
@@ -50,7 +80,8 @@ public class RetryAttribute<TMarker> : RewriterAttribute
 {
     public RetryAttribute(int retries) => Retries = retries;
     Engine<TMarker> engine = new();
-    int Retries;
+    public int Retries;
+    public int Reruns;
     public override MethodData OnCall(MethodData method)
     {
         bool functionIsDone = false;
@@ -60,6 +91,8 @@ public class RetryAttribute<TMarker> : RewriterAttribute
                 functionIsDone = method.Stop;
                 break;
             } catch {
+                Reruns++;
+                Console.WriteLine($"Retrying {method.Name(false)}, {Retries} retries left");
                 if(--Retries == 0) throw; 
                 else {
                     engine.Restart();

@@ -37,9 +37,93 @@ public static class EnumRewriter {
         return Success<(ClassDecl.Class[], MethodDecl.Method[]), Exception>.From((new Class[] { oldClassRef.Value, newClassRef }, new Method[] { oldMethodInstance.Value, metadata.Code }));
     }
 
+    private static IEnumerable<MethodDecl.Member> HandleGlueInjection(InterceptorData[] interceptorsClasses,string inoculationSightName, int argumentsCount, string stateMachineFullName, MethodData metadata, IEnumerable<string> path, MethodDecl.Member[] members) {
+        int labelIdx = 0;
+        bool hasLocals = false;
+        MethodDecl.LocalsItem locals = null;
+
+        List<MethodDecl.Member> result = new();
+
+        foreach (var item in members)
+        {
+            if (item is MethodDecl.LabelItem label)
+            {
+                result.Add(
+                    label with {
+                        Value = new CodeLabel(new SimpleName(GetNextLabel(ref labelIdx)))
+                    }
+                );
+            } else if(item is MethodDecl.MaxStackItem stack) {
+                result.Add(
+                    stack with {
+                        Value = new INT(16, 32, false)
+                    }
+                );
+            }
+            else if (item is MethodDecl.LocalsItem ref_locals ) {
+                hasLocals = true;
+                locals = ref_locals;
+            }
+            else if (item is MethodDecl.InstructionItem instruction && instruction.Value.Opcode == "ret")
+            {
+                var injectionCode = $$$"""
+                    dup
+                    ldstr "{{{GetCleanedString(metadata.Code.ToString())}}}"
+                    ldstr "{{{GetCleanedString(metadata.ClassReference.ToString())}}}"
+                    ldstr "{{{String.Join("/", path)}}}"
+                    newobj instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::.ctor(string, string, string)
+
+                    dup
+                    ldc.i4.s {{{argumentsCount}}}
+                    newarr [Inoculator.Interceptors]Inoculator.Builder.ParameterData
+                    {{{ExtractArguments(metadata, metadata.IsStatic)}}}
+
+                    callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_Parameters(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData[])
+                    stfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+                    {{{
+                        GetReflectiveMethodInstance(metadata, inoculationSightName)
+                    }}}
+                    {{{String.Join("\n", 
+                        interceptorsClasses.Select(
+                                (attrClassName, i) => $"""
+                        dup
+                        {GetAttributeInstance(attrClassName)}
+                        stfld class {attrClassName.ClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName.ClassName)}
+                        """
+                    ))}}}
+                    ret
+                """;
+                if(!TryParse<MethodDecl.Member.Collection>(injectionCode, out var newBodyObj, out string err))
+                    throw new Exception(err);
+
+                result.AddRange(
+                    newBodyObj.Items.Values
+                );
+            } else {
+                result.Add(item);
+            }
+        }
+
+        var LocalsClause = $$$"""
+            .locals init (
+                {{{(
+                    locals is null ? "" :
+                    String.Join("\n", locals.Signatures.Values.Values.Select(
+                        Local => $@"{Local.Type} {Local.Id},"
+                    ))
+                )}}}
+                class [System.Runtime]System.Reflection.MethodInfo methodInfo
+            )
+        """;
+        if(!TryParse<MethodDecl.LocalsItem>(LocalsClause, out var res, out string err2))
+            throw new Exception(err2);
+
+        return result.Prepend(res).ToArray();
+
+    } 
+
     private static MethodData RewriteInceptionPoint(Class classRef, MethodData metadata, InterceptorData[] interceptorsClasses, IEnumerable<string> path, bool isReleaseMode)
     {
-        int labelIdx = 0;
         bool isToBeRewritten = interceptorsClasses.Any(i => i.IsRewriter);
         var stateMachineFullName = StringifyPath(metadata, classRef.Header, path, isReleaseMode, 2);
         var inoculationSightName = StringifyPath(metadata, classRef.Header, path, isReleaseMode, 0);
@@ -48,62 +132,22 @@ public static class EnumRewriter {
             ? metadata.Code.Header.Parameters.Parameters.Values.Length 
             : metadata.Code.Header.Parameters.Parameters.Values.Length + 1;
 
+        
+
         metadata.Code = metadata.Code with
         {
             Body = metadata.Code.Body with
             {
                 Items = new ARRAY<MethodDecl.Member>(
-                            metadata.Code.Body.Items.Values
-                                .SelectMany(item =>
-                                {
-                                    if (item is MethodDecl.LabelItem label)
-                                    {
-                                        return new[] { 
-                                            label with {
-                                                Value = new CodeLabel(new SimpleName(GetNextLabel(ref labelIdx)))
-                                            }
-                                        };
-                                    } else if(item is MethodDecl.MaxStackItem stack) {
-                                        return new[] {
-                                            stack with {
-                                                Value = new INT(16, 32, false)
-                                            }
-                                        };
-                                    }
-                                    else if (item is MethodDecl.InstructionItem instruction)
-                                    {
-                                        if (instruction.Value.Opcode == "ret")
-                                        {
-                                            var injectionCode = $$$"""
-                                        dup
-                                        ldstr "{{{GetCleanedString(metadata.Code.ToString())}}}"
-                                        ldstr "{{{GetCleanedString(metadata.ClassReference.ToString())}}}"
-                                        ldstr "{{{String.Join("/", path)}}}"
-                                        newobj instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::.ctor(string, string, string)
-
-                                        dup
-                                        ldc.i4.s {{{argumentsCount}}}
-                                        newarr [Inoculator.Interceptors]Inoculator.Builder.ParameterData
-                                        {{{ExtractArguments(metadata, metadata.IsStatic)}}}
-
-                                        callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_Parameters(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData[])
-                                        stfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
-                                        {{{String.Join("\n", 
-                                            interceptorsClasses.Select(
-                                                    (attrClassName, i) => $"""
-                                            dup
-                                            {GetAttributeInstance(metadata, inoculationSightName, attrClassName)}
-                                            stfld class {attrClassName.ClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName.ClassName)}
-                                            """
-                                        ))}}}
-                                        ret
-                                        """;
-                                            var res = Parse<MethodDecl.Member.Collection>(injectionCode);
-                                            return res.Items.Values;
-                                        }
-                                    }
-                                    return new[] { item };
-                                }).ToArray()
+                            HandleGlueInjection(
+                                interceptorsClasses,
+                                inoculationSightName,
+                                argumentsCount,
+                                stateMachineFullName,
+                                metadata,
+                                path,
+                                metadata.Code.Body.Items.Values
+                            ).ToArray()
                         )
                 {
                     Options = new ARRAY<MethodDecl.Member>.ArrayOptions()

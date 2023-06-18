@@ -75,13 +75,19 @@ public static class AsyncEnumRewriter {
 
 
         string stackClause = ".maxstack 16";
+        
+        var localsDecls = config.Metadata.Code.Body.Items.Values.OfType<MethodDecl.LocalsItem>().FirstOrDefault()?.Signatures?.Values?.Values;
         var LocalsClause = $@".locals init (
-            {stateMachineFullName} V_0
-            {
-                config.Metadata.Code.Body.Items.Values.OfType<MethodDecl.LocalsItem>().FirstOrDefault()?.Signatures.Values.Values.Select(
-                    i => $",{i.Type} {i.Id}"
-                ).Aggregate((a, b) => $"{a}{b}")
-            }
+            {stateMachineFullName} V_0,
+            {(
+                localsDecls is null ? string.Empty :
+                String.Join("\n", 
+                    localsDecls.Select(
+                        i => $"{i.Type} {i.Id},"
+                    )
+                )
+            )}
+            class [System.Runtime]System.Reflection.MethodInfo methodInfo
         )";
 
         var oldInstructions = config.Metadata.Code.Body.Items.Values.OfType<MethodDecl.InstructionItem>();
@@ -103,11 +109,14 @@ public static class AsyncEnumRewriter {
 
             callvirt instance void [Inoculator.Interceptors]Inoculator.Builder.MethodData::set_Parameters(class [Inoculator.Interceptors]Inoculator.Builder.ParameterData[])
             stfld class [Inoculator.Interceptors]Inoculator.Builder.MethodData {{{stateMachineFullName}}}::'<inoculated>__Metadata'
+            {{{
+                GetReflectiveMethodInstance(config.Metadata, inoculationSightName)
+            }}}
             {{{String.Join("\n",
                 config.Interceptors.Select(
                     (attrClassName, i) => $@"
                         ldloc.s    V_0
-                        {GetAttributeInstance(config.Metadata, inoculationSightName, attrClassName)}
+                        {GetAttributeInstance(attrClassName)}
                         stfld class {attrClassName.ClassName} {stateMachineFullName}::{GenerateInterceptorName(attrClassName.ClassName)}"
             ))}}}
             ldloc.s    V_0
@@ -127,7 +136,7 @@ public static class AsyncEnumRewriter {
                     .Aggregate((a, b) => $"{a}\n{b}")
             }}}
         """;
-        if(TryParse<MethodDecl.Member.Collection>(newBody, out MethodDecl.Member.Collection body, out string error)) {
+        if(!TryParse<MethodDecl.Member.Collection>(newBody, out MethodDecl.Member.Collection body, out string error)) {
             File.WriteAllText("AsyncEnum.error", newBody);
         }
 

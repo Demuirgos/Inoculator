@@ -6,6 +6,8 @@ using System.Diagnostics;
 using Inoculator.Extensions;
 using IL_Unit = RootDecl.Declaration.Collection;
 using System.IO;
+using System.Reflection;
+using System.Runtime.Versioning;
 
 namespace Inoculator.Core;
 //    <Exec WorkingDirectory="$(MSbuildProjectDirectory)\$(BaseOutputPath)$(Configuration)\$(TargetFramework)" Command='ilverify  >
@@ -52,13 +54,51 @@ public class Verifier : IntermediateIOBase<string> {
             .Aggregate((x, y) => $"{x} {y}");
             
         this.TargetFile = targetFile;
+
+        // get dotnet.exe path
+        var dotnetPath = () => {
+            var psi = new ProcessStartInfo
+            {
+                UseShellExecute = false,
+                WorkingDirectory = currentDirectory,
+                CreateNoWindow = true,
+                FileName = "dotnet",
+                Arguments = "--list-runtimes",
+                RedirectStandardOutput = true
+            };
+
+            // get dotnet verion being used
+            string? version = 
+                Assembly.GetEntryAssembly()
+                ?.GetCustomAttribute<TargetFrameworkAttribute>()
+                ?.FrameworkDisplayName
+                ?.Split(' ')
+                .Last();
+
+            var process = new Process();
+            process.StartInfo = psi;
+            process.Start();
+            process.WaitForExit();
+            var path =  
+                String.Join(' ', process.StandardOutput
+                        .ReadToEnd().Split('\n')
+                        .First(x => x.StartsWith("Microsoft.NETCore.App"))
+                        .Split(' ')[2..])[1..^2];
+
+            var subfolder = Directory.GetDirectories(path)
+                .Where(x => x.Contains(version))
+                .Last().Trim();
+            
+            return subfolder;
+        };
+
         var ilverifyPsi = new ProcessStartInfo
         {
             UseShellExecute = false,
             WorkingDirectory = currentDirectory,
             CreateNoWindow = true,
             FileName = ilverifyPath ?? ProcessName,
-            Arguments = $"{targetFile} -r \"C:\\Program Files (x86)\\dotnet\\shared\\Microsoft.NETCore.App\\7.0.0\\*.dll\" {files}",
+            Arguments = $"{targetFile} -r \"{dotnetPath()}\\*.dll\" {files}",
             RedirectStandardError = true
         };
         return ilverifyPsi;
