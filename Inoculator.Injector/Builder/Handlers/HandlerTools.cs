@@ -344,8 +344,6 @@ public static class HandlerTools {
         return $$$"""
             ldtoken {{{classPath[classPath.IndexOf(' ')..]}}}
             call class [System.Runtime]System.Type [System.Runtime]System.Type::GetTypeFromHandle(valuetype [System.Runtime]System.RuntimeTypeHandle)
-            callvirt instance string [System.Runtime]System.Type::get_FullName()
-            call class [System.Runtime]System.Type [System.Runtime]System.Type::GetType(string)
             ldstr "{{{function.Name(false)}}}"
             callvirt instance class [System.Runtime]System.Reflection.MethodInfo [System.Runtime]System.Type::GetMethod(string)
             stloc.s methodInfo
